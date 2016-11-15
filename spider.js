@@ -18,7 +18,9 @@ function Spider(todo, opts, callback) {
     //参数录入
     //
     if (!opts) { //至少需要两个参数，不然返回错误信息
-        return new Error(1000, '请至少传入链接字符串或链接数组，以及爬虫的具体工作callback函数这两个参数');
+    	console.error('请至少传入链接字符串或链接数组，以及爬虫的具体工作callback函数这两个参数');
+    	return ;
+        // return new Error(1000, '请至少传入链接字符串或链接数组，以及爬虫的具体工作callback函数这两个参数');
     }
     //让opts变成可选参数，更加灵活
     if (callback) {
@@ -113,7 +115,7 @@ function paw(url) {
         if (that.opts.decode) {
             body = iconv.decode(body, that.opts.decode);
         }
-        var $ = cheerio.load(body);
+        var $ = cheerio.load(body, {decodeEntities: false});
         try {
             that.callback($, res, body);
         } catch (e) {
