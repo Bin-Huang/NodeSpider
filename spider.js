@@ -1,36 +1,41 @@
-const EventEmitter = require('events');
-const iconv = require('iconv-lite');
-const request = require('request');
-const cheerio = require('cheerio');
-
+var EventEmitter = require('events');
+var iconv = require('iconv-lite');
+var request = require('request');
+var cheerio = require('cheerio');
+var fs = require('fs');
 
 function Spider(todo, opts, callback) {
-    this.todo = Array.isArray(todo)? todo : [todo];
+    this.todo = typeof todo === 'string' ? [todo] : todo;
     this.opts = { //选项默认设置
         repeat: 2,
-        max_connection: 20,
+        max_connection: 100,
         save_log: false,
         log_path: '',
         decode: false,
-        debug: false
+        debug: false,
+        use_jQ: true
     };
 
-    //参数录入
-    //
-    if (!opts) { //至少需要两个参数，不然返回错误信息
-    	console.error('请至少传入链接字符串或链接数组，以及爬虫的具体工作callback函数这两个参数');
-    	return ;
-        // return new Error(1000, '请至少传入链接字符串或链接数组，以及爬虫的具体工作callback函数这两个参数');
-    }
     //让opts变成可选参数，更加灵活
     if (callback) {
-        //使用参数opts覆盖默认设置，是否有更好的原生方法？？
-            var o = this.opts;
-            for (var i in opts) {
+        //opts和callback位置可以互换
+        var o;
+        var i;
+        if (typeof opts === 'object') {
+            o = this.opts;
+            for (i in opts) { //使用参数opts覆盖默认设置，是否有更好的原生方法？？
                 o[i] = opts[i];
             }
             this.opts = o;
-        this.callback = callback;
+            this.callback = callback;
+        } else if (typeof callback === 'object') {
+            o = this.opts;
+            for (i in callback) {
+                o[i] = callback[i];
+            }
+            this.opts = o;
+            this.callback = opts;
+        }
     } else {
         this.callback = opts;
     }
@@ -41,64 +46,72 @@ function Spider(todo, opts, callback) {
     this.conn_num = 0; //当前连接数
     this.stop_add_todo = false;
     this.log = [];
-    
+
     this.addTodo = addTodo;
     this.pushLog = pushLog;
+    this.initCheckout = initCheckout;
+    this.showProgress = showProgress;
 
     this.paw = paw;
     this.start = start;
 }
 
-//事件监听初始化、各参数、选项检验错误、启动工作
+//事件监听初始化、各参数、选项检验、启动工作
 function start() {
-    //检验
-    if (typeof this.todo !== 'string' && !Array.isArray(this.todo)) {
-    	console.error('todo不是字符串或数组');
-    	return ;
-        // return new Error(1001, 'todo不是字符串或数组');
-    }
-    if (typeof this.callback !== 'function') {
-    	console.error('参数callback不是函数');
-    	return ;
-        // return new Error(1002, '参数callback不是函数');
+    var init_result = this.initCheckout();
+    if (!init_result) {
+        return;
     }
 
     //事件监听
     var that = this;
-    that.nervus.on('next', function() {
-        if (that.conn_num > 0) {
-            that.conn_num--; //当conn大于0,说明是某次爬取成功触发的next事件，此时已完成一次连接.
-        }
-        if (that.conn_num < that.opts.max_connection) {
-            if (that.todo.length <= 0 && that.opts.repeat > 0) {
-                that.todo = that.fail_todo;
-                that.fail_todo = [];
-                that.repeat--;
-            }
-            if (that.todo.length <= 0 && that.conn_num <= 0) {
-                that.nervus.emit('finish');
-                return true;
-            }
+    that.nervus.on('crawl', function() {
+        if (that.todo.length > 0) {
             var next_url = that.todo[0];
             that.todo.shift();
             that.paw(next_url);
         }
     });
-    that.nervus.on('finish', function () {
-    	console.log('finish');
+    that.nervus.on('next', function() {
+        // if (that.conn_num > 0) {
+        // that.conn_num--; //当conn大于0,说明是某次爬取成功触发的next事件，此时已完成一次连接.
+        // }
+        if (that.conn_num < that.opts.max_connection) {
+            if (that.todo.length <= 0 && that.opts.repeat > 0) {
+                that.todo = that.fail_todo;
+                that.fail_todo = [];
+                that.opts.repeat--;
+            }
+            if (that.todo.length <= 0 && that.conn_num <= 0) {
+                that.nervus.emit('finish');
+                return true;
+            }
+            that.nervus.emit('crawl');
+        }
     });
-    that.nervus.emit('next');
+    that.nervus.on('back', function () {
+    	that.conn_num --;
+    	that.nervus.emit('next');
+    });
+    that.nervus.on('finish', function() {
+        console.log('finish');
+        console.log(that.log)
+    });
+
+        that.nervus.emit('crawl');
 }
 
 function paw(url) {
-	this.conn_num ++;
+    this.conn_num++;
     var that = this;
+    this.nervus.emit('next');
     request({
         url: url,
         method: 'GET',
         encoding: null
     }, function(err, res, body) {
         if (err) {
+            that.showProgress('Failed', url);
             if (that.opts.debug) { //如果是debug模式，直接报错并退出当前爬取操作
                 console.log('========================================');
                 console.log('网络request出错 [' + url + '] 建议：检查网络和url参数');
@@ -108,17 +121,18 @@ function paw(url) {
             } else { //如果不是debug模式，错误信息推送到Log，并继续
                 that.fail_todo.push(url);
                 that.pushLog({ type: 'request_failed', url: url, warn: '访问失败', detail: err });
-                that.nervus.emit('next');
+                that.nervus.emit('back');
                 return;
             }
         }
         if (that.opts.decode) {
             body = iconv.decode(body, that.opts.decode);
         }
-        var $ = cheerio.load(body, {decodeEntities: false});
+        var $ = cheerio.load(body, { decodeEntities: false });
         try {
-            that.callback($, res, body);
+            that.callback($, body, url, err, res);
         } catch (e) {
+            that.showProgress('Failed', url);
             if (that.opts.debug) {
                 console.log('========================================');
                 console.log('抓取内容出错 建议：检查callback函数，以及返回正文');
@@ -128,12 +142,13 @@ function paw(url) {
             } else {
                 that.fail_todo.push(url);
                 that.pushLog({ type: 'callback_failed', url: url, warn: 'callback报错', detail: e });
-                that.nervus.emit('next');
+                that.nervus.emit('back');
                 return;
             }
         }
+        that.showProgress('Successful', url);
         that.done.push(url);
-        that.nervus.emit('next');
+        that.nervus.emit('back');
     });
 }
 
@@ -157,14 +172,37 @@ function addTodo(new_todo) {
 }
 
 function pushLog(l) {
-	this.log.push({
-		time: Date(),
-		url: l.url,
-		type: l.type,
-		detail: l.detail,
-		warn: l.warn
-	});
+    this.log.push({
+        time: Date(),
+        url: l.url,
+        type: l.type,
+        detail: l.detail,
+        warn: l.warn
+    });
 }
 
+//爬虫初始化参数检验
+function initCheckout() {
+    var result = true;
+    if (typeof this.todo !== 'string' && !Array.isArray(this.todo)) {
+        console.error('初始化参数出错，您没有正确输入链接字符串或链接字符串的数组');
+        result = false;
+    }
+    if (typeof this.callback !== 'function') {
+        console.error('初始化参数出错: callback格式不正确');
+        result = false;
+    }
+    return result;
+}
+
+function showProgress(type, url) {
+    var all = this.todo.length + this.done.length + this.fail_todo.length + 1;
+    var pro = this.done.length + this.fail_todo.length;
+    var suc = this.done.length;
+    var fail = this.fail_todo.length;
+    var repeat = this.opts.repeat;
+    var conn = this.conn_num;
+    console.log('Pro:[' + pro + '/' + all + ']  Repeat:' + repeat + '  Suc/Fail: (' + suc + '/' + fail + ')  Conn:' + conn + '  ' + type + ' | ' + url);
+}
 
 module.exports = Spider;
