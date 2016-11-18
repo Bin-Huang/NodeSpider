@@ -242,10 +242,15 @@ Spider.prototype.showProgress = function showProgress(type, url) {
 function Pool(max, releaseFun) {
     this.data = [];
     this.max = max;
+    this.release = function () {
+        var d = this.data;
+        this.data = [];
+        releaseFun(d);
+    };
 }
 Pool.prototype.push = function(new_data) {
     this.data.push(new_data);
-    if (max && releaseFun) {
+    if (this.max) {
         if (this.data.length >= this.max) {
             this.release();
         }
@@ -255,11 +260,6 @@ Pool.prototype.get = function() {
     var d = this.data[0];
     this.data.shift();
     return d;
-};
-Pool.prototype.release = function() {
-    var d = this.data;
-    this.data = [];
-    releaseFun(d);
 };
 
 

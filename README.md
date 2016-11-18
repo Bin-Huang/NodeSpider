@@ -2,12 +2,15 @@ TODO
 - 可选的jQ
 - 释放err
 
-
 easy to use!
 ```
 var Spider = require('./spider.js');
 
-var mySpider = new Spider('http://www.baidu.com', function (err, result, $) {
+var mySpider = new Spider('http://www.baidu.com', function ($, result) {
+    console.log(result.res);
+    console.log(result.url);
+    console.log(result.body);
+    console.log(result.err);
     console.log($('head').find('title').html());
 });
 
@@ -19,24 +22,24 @@ var url = ['urlA', 'urlB', 'urlC'];
 var opts = {
         retries: 2,
         max_connection: 100,
-        save_log: false,
+        save_log: true,
         log_path: '',
         decode: false,
         debug: false,
-        jQ_support: true,
+        jQ: true,   //callback(result) {}
         download: 'picture/',
-        easy_use: true
 };
 var s = new Spider(url, opts, function($, result) {
     $('a.url').each(function () {
-        s.todo($(this));
+        s.todo($(this).text());
     });
     $('a.picture').each(function() {
-        s.download($(this), 'jpg', 3000);
+        s.download($(this).text(), 'jpg', 3000);
     });
 });
 s.todoNow('http://www.baidu.com');
 s.downloadNow(['http://xxx.jpg', 'http://ooo.jpg'], 'newFile/', 'jpg', 3000);
+s.download("http://xxx", function(err) {});
 s.start();
 ```
 
