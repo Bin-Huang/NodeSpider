@@ -14,7 +14,7 @@ function Spider(todo_list, opts, callback) {
         log_path: '',
         log_frequency: 20,
         log_more: false,
-        
+
         decode: false,
         debug: false,
         jQ: true,
@@ -53,29 +53,19 @@ function Spider(todo_list, opts, callback) {
     this.stop_add_todo_list = false;
     this.log = [];
 
-    this.todo = todo;
-    this.pushLog = pushLog;
-    this.initCheckout = initCheckout;
     this.progress = {
         Updata: progressUpdata,
         init: progressInit,
         show: progressShow
     };
-    this.crawl = crawl;
-    this.work = work;
-    this.test = function() {
-        this.opts.debug = true;
-        this.work();
-    };
 }
 
 //事件监听初始化、各参数、选项检验、启动工作
-function work() {
+Spider.prototype.work = function work() {
     var init_result = this.initCheckout();
     if (!init_result) {
         return;
     }
-
     //事件监听
     var that = this;
     that.nervus.on('crawl', function() {
@@ -112,9 +102,13 @@ function work() {
     });
 
     that.nervus.emit('crawl');
-}
+};
 
-function crawl(url) {
+Spider.prototype.test = function test() {
+    this.opts.debug = true;
+    this.work();
+};
+Spider.prototype.crawl = function crawl(url) {
     this.conn_num++;
     var that = this;
     this.nervus.emit('next');
@@ -178,7 +172,7 @@ function crawl(url) {
  * 添加待抓取链接
  * @param {string} new_todo_list 待抓取的url
  */
-function todo(new_todo_list) {
+Spider.prototype.todo = function todo(new_todo_list) {
     if (this.stop_add_todo_list) {
         return;
     }
@@ -193,7 +187,7 @@ function todo(new_todo_list) {
     return false;
 }
 
-function todoNow(url) {
+Spider.prototype.todoNow = function todoNow(url) {
     if (this.stop_add_todo_list) return;
     var x = this.todo_list.indexOf(new_todo_list);
     var y = this.done.indexOf(new_todo_list);
@@ -206,7 +200,7 @@ function todoNow(url) {
     return false;
 }
 
-function pushLog(l) {
+Spider.prototype.pushLog = function pushLog(l) {
     this.log.push({
         time: Date(),
         url: l.url,
@@ -217,7 +211,7 @@ function pushLog(l) {
 }
 
 //爬虫初始化参数检验
-function initCheckout() {
+Spider.prototype.initCheckout = function initCheckout() {
     var result = true;
     if (typeof this.todo_list !== 'string' && !Array.isArray(this.todo_list)) {
         console.error('初始化参数出错，您没有正确输入链接字符串或链接字符串的数组');
@@ -230,7 +224,7 @@ function initCheckout() {
     return result;
 }
 
-function showProgress(type, url) {
+Spider.prototype.showProgress = function showProgress(type, url) {
     var all = this.todo_list.length + this.done.length + this.fail_todo_list.length + 1;
     var pro = this.done.length + this.fail_todo_list.length;
     var suc = this.done.length;
@@ -248,24 +242,25 @@ function showProgress(type, url) {
 function Pool(max, releaseFun) {
     this.data = [];
     this.max = max;
-    this.push = function(new_data) {
-        this.data.push(new_data);
-        if (max && releaseFun) {
-            if (this.data.length >= this.max) {
-                this.release();
-            }
-        }
-    };
-    this.get = function() {
-        var d = this.data[0];
-        this.data.shift();
-        return d;
-    };
-    this.release = function() {
-        var d = this.data;
-        this.data = [];
-        releaseFun(d);
-    };
 }
+Pool.prototype.push = function(new_data) {
+    this.data.push(new_data);
+    if (max && releaseFun) {
+        if (this.data.length >= this.max) {
+            this.release();
+        }
+    }
+};
+Pool.prototype.get = function() {
+    var d = this.data[0];
+    this.data.shift();
+    return d;
+};
+Pool.prototype.release = function() {
+    var d = this.data;
+    this.data = [];
+    releaseFun(d);
+};
+
 
 module.exports = Spider;
