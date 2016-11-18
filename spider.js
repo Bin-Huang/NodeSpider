@@ -4,45 +4,49 @@ var request = require('request');
 var cheerio = require('cheerio');
 var fs = require('fs');
 
+var default_options = {
+    debug: false,
+
+    retries: 2,
+    max_connection: 100,
+
+    save_log: true,
+    log_path: '',
+    log_frequency: 20,
+    log_more: false,
+
+    decode: false,
+    jQ: true,
+
+    save_as_txt: false,
+    push_to_db: false
+};
+
 function Spider(todo_list, opts, callback) {
     this.todo_list = typeof todo_list === 'string' ? [todo_list] : todo_list;
-    this.opts = { //选项默认设置
-        retries: 2,
-        max_connection: 100,
 
-        save_log: true,
-        log_path: '',
-        log_frequency: 20,
-        log_more: false,
-
-        decode: false,
-        debug: false,
-        jQ: true,
-        save_as_txt: false,
-        push_to_db: false
-    };
-
-    //让opts变成可选参数，更加灵活
-    if (callback) {
-        //opts和callback位置可以互换
+    //让opts变成可选参数，且opts和callback位置可以互换，更加灵活
+    if (callback) {//当用户输入了opts参数
+        //opts设置覆盖
         var o;
         var i;
-        if (typeof opts === 'object') {
-            o = this.opts;
+        if (typeof opts === 'object') {//当参数opts位置在callback前
+            o = default_options;
             for (i in opts) { //使用参数opts覆盖默认设置
                 o[i] = opts[i];
             }
             this.opts = o;
             this.callback = callback;
-        } else if (typeof callback === 'object') {
-            o = this.opts;
+        } else if (typeof callback === 'object') {//当参数opts在callback后面
+            o = default_options;
             for (i in callback) {
                 o[i] = callback[i];
             }
             this.opts = o;
             this.callback = opts;
         }
-    } else {
+    } else {//当用户没有输入opts参数
+        this.opts = default_options;
         this.callback = opts;
     }
 
@@ -50,22 +54,30 @@ function Spider(todo_list, opts, callback) {
     this.fail_todo_list = []; //失败的链接
     this.nervus = new EventEmitter();
     this.conn_num = 0; //当前连接数
-    this.stop_add_todo_list = false;
-    this.log = [];
+    this.stop_add_todo = false;
 
     this.progress = {
         Updata: progressUpdata,
         init: progressInit,
         show: progressShow
     };
+    //test
+    this.start = function () {
+        console.log(this);
+    }
 }
 
 //事件监听初始化、各参数、选项检验、启动工作
-Spider.prototype.work = function work() {
+Spider.prototype.start = function start() {
     var init_result = this.initCheckout();
     if (!init_result) {
         return;
     }
+
+    if (this.opts.debug === false) {
+
+    }
+
     //事件监听
     var that = this;
     that.nervus.on('crawl', function() {
@@ -104,10 +116,6 @@ Spider.prototype.work = function work() {
     that.nervus.emit('crawl');
 };
 
-Spider.prototype.test = function test() {
-    this.opts.debug = true;
-    this.work();
-};
 Spider.prototype.crawl = function crawl(url) {
     this.conn_num++;
     var that = this;
@@ -173,7 +181,7 @@ Spider.prototype.crawl = function crawl(url) {
  * @param {string} new_todo_list 待抓取的url
  */
 Spider.prototype.todo = function todo(new_todo_list) {
-    if (this.stop_add_todo_list) {
+    if (this.stop_add_todo) {
         return;
     }
     var x = this.todo_list.indexOf(new_todo_list);
@@ -188,7 +196,7 @@ Spider.prototype.todo = function todo(new_todo_list) {
 }
 
 Spider.prototype.todoNow = function todoNow(url) {
-    if (this.stop_add_todo_list) return;
+    if (this.stop_add_todo) return;
     var x = this.todo_list.indexOf(new_todo_list);
     var y = this.done.indexOf(new_todo_list);
     var z = this.fail_todo_list.indexOf(new_todo_list);
@@ -235,14 +243,14 @@ Spider.prototype.showProgress = function showProgress(type, url) {
 }
 
 /**
- * 资源池生成函数
+ * 资源池生成函数 for Log,data_table
  * @param {number}   max      资源池最大容量
  * @param {function} releaseFun 资源池释放函数
  */
 function Pool(max, releaseFun) {
     this.data = [];
     this.max = max;
-    this.release = function () {
+    this.release = function() {
         var d = this.data;
         this.data = [];
         releaseFun(d);
@@ -256,7 +264,7 @@ Pool.prototype.push = function(new_data) {
         }
     }
 };
-Pool.prototype.get = function() {
+Pool.prototype.pop = function() {
     var d = this.data[0];
     this.data.shift();
     return d;
