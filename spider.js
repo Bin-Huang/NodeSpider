@@ -64,7 +64,7 @@ function Spider(todo_list, opts, callback) {
     //test
     this.start = function () {
         console.log(this);
-    }
+    };
 }
 
 //事件监听初始化、各参数、选项检验、启动工作
@@ -174,7 +174,7 @@ Spider.prototype.crawl = function crawl(url) {
         that.done.push(url);
         that.nervus.emit('back');
     });
-}
+};
 
 /**
  * 添加待抓取链接
@@ -193,7 +193,7 @@ Spider.prototype.todo = function todo(new_todo_list) {
         return true;
     }
     return false;
-}
+};
 
 Spider.prototype.todoNow = function todoNow(url) {
     if (this.stop_add_todo) return;
@@ -206,7 +206,7 @@ Spider.prototype.todoNow = function todoNow(url) {
         return true;
     }
     return false;
-}
+};
 
 Spider.prototype.pushLog = function pushLog(l) {
     this.log.push({
@@ -216,7 +216,7 @@ Spider.prototype.pushLog = function pushLog(l) {
         detail: l.detail,
         warn: l.warn
     });
-}
+};
 
 //爬虫初始化参数检验
 Spider.prototype.initCheckout = function initCheckout() {
@@ -230,7 +230,7 @@ Spider.prototype.initCheckout = function initCheckout() {
         result = false;
     }
     return result;
-}
+};
 
 Spider.prototype.showProgress = function showProgress(type, url) {
     var all = this.todo_list.length + this.done.length + this.fail_todo_list.length + 1;
@@ -240,28 +240,51 @@ Spider.prototype.showProgress = function showProgress(type, url) {
     var retries = this.opts.retries;
     var conn = this.conn_num;
     console.log('Pro:[' + pro + '/' + all + ']  retries:' + retries + '  Suc/Fail: (' + suc + '/' + fail + ')  Conn:' + conn + '  ' + type + ' | ' + url);
-}
+};
 
 /**
- * 资源池生成函数 for Log,data_table
- * @param {number}   max      资源池最大容量
- * @param {function} releaseFun 资源池释放函数
+ * 资源池生成函数 for log、data_table
+ * @param {number} max       最大容量。达到时将触发release函数：清空内容并写入txt
+ * @param {strint} save_path 将写入数据的txt路径
+ *
  */
-function Pool(max, releaseFun) {
+function Pool(max, save_path) {
     this.data = [];
     this.max = max;
-    this.release = function() {
-        var d = this.data;
-        this.data = [];
-        releaseFun(d);
-    };
+    this.file = save_path ? fs.createWriteStream(save_path) : false;
+    this.has_header = false; //txt文档是否有了表头
 }
-Pool.prototype.push = function(new_data) {
-    this.data.push(new_data);
-    if (this.max) {
-        if (this.data.length >= this.max) {
-            this.release();
+Pool.prototype.release = function() {
+    var d = this.data;
+    this.data = [];
+
+    if (! this.file) {
+        this.file = fs.createWriteStream('log.txt');
+    }
+    var txt = '';
+    if (!this.has_header) { //如果txt文档里没有表头，写入
+        for (var j in d[0]) {
+            txt += j + '    ';
         }
+        txt += '\n';
+        this.has_header = true;
+    }
+    for (var i = 0; i < d.length; i++) {
+        for (var j in d[i]) {
+            txt += d[i][j] + '    ';
+        }
+        txt += '\n';
+    }
+    this.file.write(txt);
+};
+Pool.prototype.push = function(new_data) {
+    if (this.max && this.max <= this.data.length) {
+        return false;
+    } else {
+        this.data.push(new_data);
+    }
+    if (this.data.length >= this.max) {
+        this.release();
     }
 };
 Pool.prototype.pop = function() {
@@ -269,6 +292,5 @@ Pool.prototype.pop = function() {
     this.data.shift();
     return d;
 };
-
 
 module.exports = Spider;
