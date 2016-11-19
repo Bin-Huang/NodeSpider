@@ -8,11 +8,10 @@ var default_options = {
     debug: false,
 
     retries: 2,
-    max_connection: 100,
+    max_connection: 20,
 
-    save_log: true,
-    log_path: '',
-    log_frequency: 20,
+    save_log: 'log.txt',
+    log_frequency: 10,
     log_more: false,
 
     decode: false,
@@ -55,6 +54,9 @@ function Spider(todo_list, opts, callback) {
     this.nervus = new EventEmitter();
     this.conn_num = 0; //当前连接数
     this.stop_add_todo = false;
+
+    this.log = new Pool(this.opts.log_frequency, this.save_log);
+    this.pushToLog = this.log.push;
 
     this.progress = {
         Updata: progressUpdata,
@@ -246,7 +248,6 @@ Spider.prototype.showProgress = function showProgress(type, url) {
  * 资源池生成函数 for log、data_table
  * @param {number} max       最大容量。达到时将触发release函数：清空内容并写入txt
  * @param {strint} save_path 将写入数据的txt路径
- *
  */
 function Pool(max, save_path) {
     this.data = [];
