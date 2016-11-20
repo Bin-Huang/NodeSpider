@@ -14,6 +14,22 @@ var default_options = {
     log_frequency: 10,
     log_more: false,
 
+    // table: {
+    //     default: 
+    //     'data': {
+    //         save_as_txt: 'data.txt',
+    //     },
+    // },
+
+    sql: {
+        host: '127.0.0.1',
+        db: 'school',
+        user: 'ben',
+        password: '123123123',
+    },
+
+    table_default_max: 5,
+
     decode: false,
     jQ: true,
 
@@ -25,18 +41,18 @@ function Spider(todo_list, opts, callback) {
     this.todo_list = typeof todo_list === 'string' ? [todo_list] : todo_list;
 
     //让opts变成可选参数，且opts和callback位置可以互换，更加灵活
-    if (callback) {//当用户输入了opts参数
+    if (callback) { //当用户输入了opts参数
         //opts设置覆盖
         var o;
         var i;
-        if (typeof opts === 'object') {//当参数opts位置在callback前
+        if (typeof opts === 'object') { //当参数opts位置在callback前
             o = default_options;
             for (i in opts) { //使用参数opts覆盖默认设置
                 o[i] = opts[i];
             }
             this.opts = o;
             this.callback = callback;
-        } else if (typeof callback === 'object') {//当参数opts在callback后面
+        } else if (typeof callback === 'object') { //当参数opts在callback后面
             o = default_options;
             for (i in callback) {
                 o[i] = callback[i];
@@ -44,7 +60,7 @@ function Spider(todo_list, opts, callback) {
             this.opts = o;
             this.callback = opts;
         }
-    } else {//当用户没有输入opts参数
+    } else { //当用户没有输入opts参数
         this.opts = default_options;
         this.callback = opts;
     }
@@ -58,13 +74,17 @@ function Spider(todo_list, opts, callback) {
     this.log = new Pool(this.opts.log_frequency, this.save_log);
     this.pushToLog = this.log.push;
 
+    this.table = {
+        'data': new Pool(5, 'data.txt'),
+    };
+
     this.progress = {
         Updata: progressUpdata,
         init: progressInit,
         show: progressShow
     };
     //test
-    this.start = function () {
+    this.start = function() {
         console.log(this);
     };
 }
@@ -244,6 +264,17 @@ Spider.prototype.showProgress = function showProgress(type, url) {
     console.log('Pro:[' + pro + '/' + all + ']  retries:' + retries + '  Suc/Fail: (' + suc + '/' + fail + ')  Conn:' + conn + '  ' + type + ' | ' + url);
 };
 
+Spider.prototype.push = function push(data, destination) {
+    if (!destination) {
+        this.table['data'].push(data);//如果不输入位置参数，默认推送到data表
+        return;
+    }
+    if (!this.table[destination]) { //如果目标table不存在，新建它
+        this.table[destination] = new Pool(5, destination + '.txt');
+    }
+    this.table[destination].push(data);
+};
+
 /**
  * 资源池生成函数 for log、data_table
  * @param {number} max       最大容量。达到时将触发release函数：清空内容并写入txt
@@ -259,7 +290,7 @@ Pool.prototype.release = function() {
     var d = this.data;
     this.data = [];
 
-    if (! this.file) {
+    if (!this.file) {
         this.file = fs.createWriteStream('log.txt');
     }
     var txt = '';
