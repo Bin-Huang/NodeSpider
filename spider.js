@@ -37,6 +37,7 @@ var default_options = {
     push_to_db: false
 };
 
+
 function Spider(todo_list, opts, callback) {
     this.todo_list = typeof todo_list === 'string' ? [todo_list] : todo_list;
 
@@ -65,24 +66,19 @@ function Spider(todo_list, opts, callback) {
         this.callback = opts;
     }
 
-    this.done = []; //已完成的链接
-    this.fail_todo_list = []; //失败的链接
+    this.done_list = []; //已完成的链接
+    this.fail_list = []; //失败的链接
     this.nervus = new EventEmitter();
-    this.conn_num = 0; //当前连接数
     this.stop_add_todo = false;
 
     this.log = new Pool(this.opts.log_frequency, this.save_log);
-    this.pushToLog = this.log.push;
 
     this.table = {
         'data': new Pool(5, 'data.txt'),
     };
 
-    this.progress = {
-        Updata: progressUpdata,
-        init: progressInit,
-        show: progressShow
-    };
+    var that = this;
+
     //test
     this.start = function() {
         console.log(this);
@@ -91,6 +87,10 @@ function Spider(todo_list, opts, callback) {
 
 //事件监听初始化、各参数、选项检验、启动工作
 Spider.prototype.start = function start() {
+    var conn_num = 0; //当前连接数
+    var pointer = 0; //指针，用于按顺序读取todo_list的元素
+    var that = this;
+
     var init_result = this.initCheckout();
     if (!init_result) {
         return;
@@ -101,33 +101,40 @@ Spider.prototype.start = function start() {
     }
 
     //事件监听
-    var that = this;
     that.nervus.on('crawl', function() {
-        if (that.todo_list.length > 0) {
-            var next_url = that.todo_list[0];
-            that.todo_list.shift();
+        if (that.todo_list.length > pointer) {
+            var next_url = that.todo_list[pointer];
+            pointer++;
+            conn_num++;
             that.crawl(next_url);
         }
     });
     that.nervus.on('next', function() {
-        // if (that.conn_num > 0) {
-        // that.conn_num--; //当conn大于0,说明是某次爬取成功触发的next事件，此时已完成一次连接.
-        // }
-        if (that.conn_num < that.opts.max_connection) {
-            if (that.todo_list.length <= 0 && that.opts.retries > 0) {
-                that.todo_list = that.fail_todo_list;
-                that.fail_todo_list = [];
+        if (conn_num < that.opts.max_connection) {
+            //当todo_list链接已爬完，如果重复次数大于0，对失败链接进行重爬
+            if (that.todo_list.length <= pointer && that.opts.retries > 0) {
+                that.todo_list = that.fail_list;
+                pointer = 0;
+                that.fail_list = [];
                 that.opts.retries--;
             }
-            if (that.todo_list.length <= 0 && that.conn_num <= 0) {
+            //如果todo_list已爬完，重复次数为0或已无失败链接，且当前连接数为0，表示爬取总工作已结束
+            if (that.todo_list.length <= pointer && conn_num <= 0) {
                 that.nervus.emit('finish');
                 return true;
             }
+
             that.nervus.emit('crawl');
         }
     });
-    that.nervus.on('back', function() {
-        that.conn_num--;
+    that.nervus.on('succeeded', function(url) {
+        conn_num--;
+        that.done_list.push(url);
+        that.nervus.emit('next');
+    });
+    that.nervus.on('failed', function(url) {
+        conn_num--;
+        that.fail_list.push(url);
         that.nervus.emit('next');
     });
     that.nervus.on('finish', function() {
@@ -135,35 +142,45 @@ Spider.prototype.start = function start() {
         console.log(that.log);
     });
 
-    that.nervus.emit('crawl');
+    //火力全开，启动爬取
+    for (var i = 0; i < that.opts.max_connection; i++) {
+        that.nervus.emit('next');
+    }
+
+    // 展示进度
+    function showProgress(url) {
+        var all = that.todo_list.length; //总进度（不包括重爬）
+        var done = pointer; //已完成进度
+        var suc = that.done_list.length; //成功链接数
+        var fail = that.fail_list.length; //失败链接数
+        var retry = that.opts.retries; //当前剩下的重爬次数
+        console.log('Progress: [' + done + '/' + all + '],  suc/fail: [' + suc + '/' + fail + '],  retries: ' + retry + ',  url:' + url);
+    }
 };
 
 Spider.prototype.crawl = function crawl(url) {
-    this.conn_num++;
     var that = this;
-    this.nervus.emit('next');
+    var err = {};
     request({
         url: url,
         method: 'GET',
         encoding: null
     }, function(err, res, body) {
         if (err) {
-            that.showProgress('Failed', url);
-            if (that.opts.debug) { //如果是debug模式，直接报错并退出当前爬取操作
-                console.log('========================================');
-                console.log('网络request出错 [' + url + '] 建议：检查网络和url参数');
-                console.error(err);
-                console.log('========================================');
-            } else { //如果不是debug模式，错误信息推送到Log，并继续
-                that.fail_todo_list.push(url);
-                that.pushLog({ type: 'request_failed', url: url, warn: '访问失败', detail: err });
-                that.nervus.emit('back');
-            }
+            err = {
+                type: 'HTTP_Request_Err',
+                url: url,
+                detail: err,
+                warn: '访问失败，请检查链接与目标站点访问情况'
+            };
+            whenErr(err);
             return;
         }
+
         if (that.opts.decode) {
-            body = iconv.decode(body, that.opts.decode);
+            body = iconv.decode(body, that.opts.decode); //根据opts强制文本转码
         }
+
         var result = {
             err: err,
             body: body,
@@ -173,29 +190,35 @@ Spider.prototype.crawl = function crawl(url) {
         try {
             if (that.opts.jQ) {
                 var $ = cheerio.load(body, { decodeEntities: false });
-                that.callback($, result);
+                that.callback($, result); //调用用户脚本
             } else {
-                that.callback(result);
+                that.callback(result); //调用用户脚本
             }
         } catch (e) {
-            that.showProgress('Failed', url);
-            if (that.opts.debug) {
-                console.log('========================================');
-                console.log('抓取内容出错 建议：检查callback函数，以及返回正文');
-                console.log(e);
-                console.log('========================================');
-                return;
-            } else {
-                that.fail_todo_list.push(url);
-                that.pushLog({ type: 'callback_failed', url: url, warn: 'callback报错', detail: e });
-                that.nervus.emit('back');
-                return;
-            }
+            err = {
+                type: 'Crawl_Err',
+                url: url,
+                detail: err,
+                warn: '爬取失败，请检查callback函数与返回正文'
+            };
+            whenErr(err);
+            return;
         }
-        that.showProgress('Successful', url);
-        that.done.push(url);
-        that.nervus.emit('back');
+
+        that.nervus.emit('succeeded', url);
     });
+
+    function whenErr(err) {
+        if (this.opts.debug) { //如果是debug模式，报错并退出抓取
+            console.log('['+err.type+'] '+err.url+' Warn: '+ err.warn+' Detail: '+err.detail);
+            console.log('停止爬取');
+        } else { //如果不是debug模式，将错误推送Log并继续抓取
+            this.fail_list.push(url);
+            this.pushLog(err, true);
+        }
+        that.nervus.emit('failed', url);
+    }
+
 };
 
 /**
@@ -207,8 +230,8 @@ Spider.prototype.todo = function todo(new_todo_list) {
         return;
     }
     var x = this.todo_list.indexOf(new_todo_list);
-    var y = this.done.indexOf(new_todo_list);
-    var z = this.fail_todo_list.indexOf(new_todo_list);
+    var y = this.done_list.indexOf(new_todo_list);
+    var z = this.fail_list.indexOf(new_todo_list);
     //如果这个链接不存在于待抓取列表、抓取成功列表、抓取失败列表，则添加到待抓取列表
     if (x === -1 && y === -1 && z === -1) {
         this.todo_list.push(new_todo_list);
@@ -220,8 +243,8 @@ Spider.prototype.todo = function todo(new_todo_list) {
 Spider.prototype.todoNow = function todoNow(url) {
     if (this.stop_add_todo) return;
     var x = this.todo_list.indexOf(new_todo_list);
-    var y = this.done.indexOf(new_todo_list);
-    var z = this.fail_todo_list.indexOf(new_todo_list);
+    var y = this.done_list.indexOf(new_todo_list);
+    var z = this.fail_list.indexOf(new_todo_list);
     //如果这个链接不存在于待抓取列表、抓取成功列表、抓取失败列表，则添加到待抓取列表
     if (x === -1 && y === -1 && z === -1) {
         this.todo_list.push(new_todo_list);
@@ -230,14 +253,22 @@ Spider.prototype.todoNow = function todoNow(url) {
     return false;
 };
 
-Spider.prototype.pushLog = function pushLog(l) {
-    this.log.push({
-        time: Date(),
-        url: l.url,
-        type: l.type,
-        detail: l.detail,
-        warn: l.warn
-    });
+/**
+ * 尝试向Log推送日志内容
+ * @param  {object}  info  信息对象，包括url、type、detail、warn属性
+ * @param  {Boolean} isErr 是否为错误信息（是则强制推动内容到log
+ */
+Spider.prototype.pushLog = function pushLog(info, isErr) {
+    if (this.opts.log_more || isErr) {
+        var news = {
+            time: Date(),
+            url: info.url,
+            type: info.type,
+            warn: info.warn,
+            detail: info.detail
+        };
+        this.log.push(news);
+    }
 };
 
 //爬虫初始化参数检验
@@ -254,19 +285,10 @@ Spider.prototype.initCheckout = function initCheckout() {
     return result;
 };
 
-Spider.prototype.showProgress = function showProgress(type, url) {
-    var all = this.todo_list.length + this.done.length + this.fail_todo_list.length + 1;
-    var pro = this.done.length + this.fail_todo_list.length;
-    var suc = this.done.length;
-    var fail = this.fail_todo_list.length;
-    var retries = this.opts.retries;
-    var conn = this.conn_num;
-    console.log('Pro:[' + pro + '/' + all + ']  retries:' + retries + '  Suc/Fail: (' + suc + '/' + fail + ')  Conn:' + conn + '  ' + type + ' | ' + url);
-};
 
 Spider.prototype.push = function push(data, destination) {
     if (!destination) {
-        this.table['data'].push(data);//如果不输入位置参数，默认推送到data表
+        this.table['data'].push(data); //如果不输入位置参数，默认推送到data表
         return;
     }
     if (!this.table[destination]) { //如果目标table不存在，新建它
@@ -274,6 +296,8 @@ Spider.prototype.push = function push(data, destination) {
     }
     this.table[destination].push(data);
 };
+
+
 
 /**
  * 资源池生成函数 for log、data_table
@@ -291,7 +315,7 @@ Pool.prototype.release = function() {
     this.data = [];
 
     if (!this.file) {
-        this.file = fs.createWriteStream('log.txt');
+        return ;
     }
     var txt = '';
     if (!this.has_header) { //如果txt文档里没有表头，写入
