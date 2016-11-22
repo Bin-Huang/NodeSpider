@@ -5,7 +5,7 @@ var cheerio = require('cheerio');
 var fs = require('fs');
 
 var default_options = {
-    debug: false,
+    debug: true,
 
     retries: 2,
     max_connection: 20,
@@ -15,10 +15,10 @@ var default_options = {
     log_more: false,
 
     // table: {
-    //     default: 
-    //     'data': {
-    //         save_as_txt: 'data.txt',
-    //     },
+    //   default: 
+    //   'data': {
+    //       save_as_txt: 'data.txt',
+    //   },
     // },
 
     sql: {
@@ -73,8 +73,7 @@ function Spider(todo_list, opts, callback) {
 
     this.log = new Pool(this.opts.log_frequency, this.save_log);
 
-    this.table = {
-    };
+    this.table = {};
 
     var that = this;
 
@@ -125,20 +124,23 @@ Spider.prototype.start = function start() {
         }
     });
     that.nervus.on('succeeded', function(url) {
+        showProgress(url);
         conn_num--;
         that.done_list.push(url);
         that.nervus.emit('next');
     });
     that.nervus.on('failed', function(url) {
+        showProgress(url);
         conn_num--;
         that.fail_list.push(url);
         that.nervus.emit('next');
     });
     that.nervus.on('finish', function() {
         console.log('finish');
-        for(var i in that.table) {
+        for (var i in that.table) {
             that.table[i].release();
         }
+        // //just debug
         // console.log(that.log);
     });
 
@@ -211,7 +213,7 @@ Spider.prototype.crawl = function crawl(url) {
 
     function whenErr(err) {
         if (that.opts.debug) { //如果是debug模式，报错并退出抓取
-            console.log('[' + err.type + '] ' + err.url + ' Warn: ' + err.warn + ' Detail: ' + err.detail);
+            console.log('\n=============ERROR===============\n\n' + '[Type]: ' + err.type + '\n\n[Url]: ' + err.url + '\n\n' + '[Warn]: ' + err.warn + '\n\n' + '[Detail]: ' + err.detail + '\n');
             console.log('停止爬取');
         } else { //如果不是debug模式，将错误推送Log并继续抓取
             that.fail_list.push(url);
@@ -237,6 +239,8 @@ Spider.prototype.todo = function todo(new_todo_list) {
     if (x === -1 && y === -1 && z === -1) {
         this.todo_list.push(new_todo_list);
         return true;
+    } else {
+        console.log('todo:　链接已存在');
     }
     return false;
 };
@@ -289,7 +293,7 @@ Spider.prototype.initCheckout = function initCheckout() {
 
 Spider.prototype.push = function push(data, destination) {
     if (!destination) {
-        destination = 'data';//如果不指定table，默认推送到data
+        destination = 'data'; //如果不指定table，默认推送到data
     }
     if (!this.table[destination]) { //如果目标table不存在，新建它
         this.table[destination] = new Pool(5, destination + '.txt');
@@ -301,38 +305,46 @@ Spider.prototype.push = function push(data, destination) {
 
 /**
  * 资源池生成函数 for log、data_table
- * @param {number} max       最大容量。达到时将触发release函数：清空内容并写入txt
+ * @param {number} max     最大容量。达到时将触发release函数：清空内容并写入txt
  * @param {strint} save_path 将写入数据的txt路径
+ * @param {array} header 表头数组
  */
-function Pool(max, save_path) {
+function Pool(max, save_path, header) {
     this.data = [];
     this.max = max;
     this.file = false;
     this.path = save_path || new Date().getTime() + '.txt';
-    this.has_header = false; //txt文档是否有了表头
+    this.header = header || false; //表头
 }
 Pool.prototype.release = function() {
-    if (! this.file) { //第一次release？生成写入流
-        this.file = fs.createWriteStream(this.path);
-    }
-
-    var d = this.data;
+    var d = this.data; //读取并清空数据池
     this.data = [];
-
-    if (!this.file) {
+    if (d === []) {
         return;
+    } //如果无新数据，停止下面操作
+
+    if (!this.header) { //如果没有表头，新建
+        this.header = [];
+        for (var i in d[0]) {
+            this.header.push(i); //将第一个数据对象的所有属性名作为表头关键字
+        }
     }
-    var txt = '';
-    if (!this.has_header) { //如果txt文档里没有表头，写入
-        for (var j in d[0]) {
-            txt += j + '    ';
+
+    if (!this.file) { //第一次release？新建写入流，并写入表头
+        this.file = fs.createWriteStream(this.path);
+        var txt = '';
+        for (var i = 0; i < this.header.length; i++) {
+            txt += this.header[i] + '\t';
         }
         txt += '\n';
-        this.has_header = true;
+        this.file.write(txt);
     }
+
+    //根据表头将新数据写入本地文本
+    var txt = '';
     for (var i = 0; i < d.length; i++) {
-        for (var j in d[i]) {
-            txt += d[i][j] + '    ';
+        for (var j = 0; j < this.header.length; j++) {
+            txt += d[i][this.header[j]] + '\t';
         }
         txt += '\n';
     }
