@@ -30,7 +30,7 @@ var default_options = {
 
     table_default_max: 5,
 
-    decode: false,
+    decode: 'utf-8',
     jQ: true,
 
     save_as_txt: false,
@@ -74,15 +74,11 @@ function Spider(todo_list, opts, callback) {
     this.log = new Pool(this.opts.log_frequency, this.save_log);
 
     this.table = {
-        'data': new Pool(5, 'data.txt'),
     };
 
     var that = this;
 
-    //test
-    this.start = function() {
-        console.log(this);
-    };
+
 }
 
 //事件监听初始化、各参数、选项检验、启动工作
@@ -92,6 +88,7 @@ Spider.prototype.start = function start() {
     var that = this;
 
     var init_result = this.initCheckout();
+
     if (!init_result) {
         return;
     }
@@ -139,7 +136,10 @@ Spider.prototype.start = function start() {
     });
     that.nervus.on('finish', function() {
         console.log('finish');
-        console.log(that.log);
+        for(var i in that.table) {
+            that.table[i].release();
+        }
+        // console.log(that.log);
     });
 
     //火力全开，启动爬取
@@ -178,7 +178,8 @@ Spider.prototype.crawl = function crawl(url) {
         }
 
         if (that.opts.decode) {
-            body = iconv.decode(body, that.opts.decode); //根据opts强制文本转码
+            // body = iconv.decode(body, that.opts.decode); //根据opts强制文本转码
+            body = iconv.decode(body, that.opts.decode);
         }
 
         var result = {
@@ -198,7 +199,7 @@ Spider.prototype.crawl = function crawl(url) {
             err = {
                 type: 'Crawl_Err',
                 url: url,
-                detail: err,
+                detail: e,
                 warn: '爬取失败，请检查callback函数与返回正文'
             };
             whenErr(err);
@@ -209,12 +210,12 @@ Spider.prototype.crawl = function crawl(url) {
     });
 
     function whenErr(err) {
-        if (this.opts.debug) { //如果是debug模式，报错并退出抓取
-            console.log('['+err.type+'] '+err.url+' Warn: '+ err.warn+' Detail: '+err.detail);
+        if (that.opts.debug) { //如果是debug模式，报错并退出抓取
+            console.log('[' + err.type + '] ' + err.url + ' Warn: ' + err.warn + ' Detail: ' + err.detail);
             console.log('停止爬取');
         } else { //如果不是debug模式，将错误推送Log并继续抓取
-            this.fail_list.push(url);
-            this.pushLog(err, true);
+            that.fail_list.push(url);
+            that.pushLog(err, true);
         }
         that.nervus.emit('failed', url);
     }
@@ -288,8 +289,7 @@ Spider.prototype.initCheckout = function initCheckout() {
 
 Spider.prototype.push = function push(data, destination) {
     if (!destination) {
-        this.table['data'].push(data); //如果不输入位置参数，默认推送到data表
-        return;
+        destination = 'data';//如果不指定table，默认推送到data
     }
     if (!this.table[destination]) { //如果目标table不存在，新建它
         this.table[destination] = new Pool(5, destination + '.txt');
@@ -307,15 +307,20 @@ Spider.prototype.push = function push(data, destination) {
 function Pool(max, save_path) {
     this.data = [];
     this.max = max;
-    this.file = save_path ? fs.createWriteStream(save_path) : false;
+    this.file = false;
+    this.path = save_path || new Date().getTime() + '.txt';
     this.has_header = false; //txt文档是否有了表头
 }
 Pool.prototype.release = function() {
+    if (! this.file) { //第一次release？生成写入流
+        this.file = fs.createWriteStream(this.path);
+    }
+
     var d = this.data;
     this.data = [];
 
     if (!this.file) {
-        return ;
+        return;
     }
     var txt = '';
     if (!this.has_header) { //如果txt文档里没有表头，写入
