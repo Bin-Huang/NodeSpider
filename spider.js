@@ -75,7 +75,7 @@ function Spider(todo_list, opts, callback) {
 
     this.table = {};
 
-    var that = this;
+    // var that = this;
 
 
 }
@@ -226,18 +226,15 @@ Spider.prototype.crawl = function crawl(url) {
 
 /**
  * 添加待抓取链接
- * @param {string} new_todo_list 待抓取的url
+ * @param {string} new_todo 待抓取的url
  */
-Spider.prototype.todo = function todo(new_todo_list) {
+Spider.prototype.todo = function todo(new_todo) {
     if (this.stop_add_todo) {
         return;
     }
-    var x = this.todo_list.indexOf(new_todo_list);
-    var y = this.done_list.indexOf(new_todo_list);
-    var z = this.fail_list.indexOf(new_todo_list);
-    //如果这个链接不存在于待抓取列表、抓取成功列表、抓取失败列表，则添加到待抓取列表
-    if (x === -1 && y === -1 && z === -1) {
-        this.todo_list.push(new_todo_list);
+    //如果链接不重复（不存在与todo_list）
+    if (this.todo_list.indexOf(new_todo) === -1) {
+        this.todo_list.push(new_todo);
         return true;
     } else {
         console.log('todo:　链接已存在');
@@ -245,18 +242,15 @@ Spider.prototype.todo = function todo(new_todo_list) {
     return false;
 };
 
-Spider.prototype.todoNow = function todoNow(url) {
-    if (this.stop_add_todo) return;
-    var x = this.todo_list.indexOf(new_todo_list);
-    var y = this.done_list.indexOf(new_todo_list);
-    var z = this.fail_list.indexOf(new_todo_list);
-    //如果这个链接不存在于待抓取列表、抓取成功列表、抓取失败列表，则添加到待抓取列表
-    if (x === -1 && y === -1 && z === -1) {
-        this.todo_list.push(new_todo_list);
-        return true;
-    }
-    return false;
-};
+// Spider.prototype.todoNow = function todoNow(url) {
+//     if (this.stop_add_todo) return;
+//     //如果链接不重复（不存在与todo_list）
+//     if (this.todo_list.indexOf(new_todo_list) === -1) {
+//         this.todo_list.push(new_todo_list);
+//         return true;
+//     }
+//     return false;
+// };
 
 /**
  * 尝试向Log推送日志内容
@@ -323,17 +317,19 @@ Pool.prototype.release = function() {
         return;
     } //如果无新数据，停止下面操作
 
+    var i;
     if (!this.header) { //如果没有表头，新建
         this.header = [];
-        for (var i in d[0]) {
+        for (i in d[0]) {
             this.header.push(i); //将第一个数据对象的所有属性名作为表头关键字
         }
     }
 
+    var txt = '';
     if (!this.file) { //第一次release？新建写入流，并写入表头
         this.file = fs.createWriteStream(this.path);
-        var txt = '';
-        for (var i = 0; i < this.header.length; i++) {
+        txt = '';
+        for (i = 0; i < this.header.length; i++) {
             txt += this.header[i] + '\t';
         }
         txt += '\n';
@@ -341,8 +337,8 @@ Pool.prototype.release = function() {
     }
 
     //根据表头将新数据写入本地文本
-    var txt = '';
-    for (var i = 0; i < d.length; i++) {
+    txt = '';
+    for (i = 0; i < d.length; i++) {
         for (var j = 0; j < this.header.length; j++) {
             txt += d[i][this.header[j]] + '\t';
         }
