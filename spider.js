@@ -4,6 +4,7 @@ var request = require('request');
 var cheerio = require('cheerio');
 var fs = require('fs');
 
+//如果你想自定义默认设置，修改这里
 var default_options = {
     debug: true,
 
@@ -77,7 +78,6 @@ function Spider(todo_list, opts, callback) {
 
     // var that = this;
 
-
 }
 
 //事件监听初始化、各参数、选项检验、启动工作
@@ -86,8 +86,8 @@ Spider.prototype.start = function start() {
     var pointer = 0; //指针，用于按顺序读取todo_list的元素
     var that = this;
 
+    //参数初始化检测，错误则全面停止爬取工作
     var init_result = this.initCheckout();
-
     if (!init_result) {
         return;
     }
@@ -96,7 +96,11 @@ Spider.prototype.start = function start() {
 
     }
 
-    //事件监听
+    /////////////
+    //事件监听 //
+    ////////////
+    
+    
     that.nervus.on('crawl', function() {
         if (that.todo_list.length > pointer) {
             var next_url = that.todo_list[pointer];
@@ -123,40 +127,41 @@ Spider.prototype.start = function start() {
             that.nervus.emit('crawl');
         }
     });
+    //当爬取某个链接成功后
     that.nervus.on('succeeded', function(url) {
         showProgress(url);
         conn_num--;
         that.done_list.push(url);
         that.nervus.emit('next');
     });
+    //当爬取某个链接失败后
     that.nervus.on('failed', function(url) {
         showProgress(url);
         conn_num--;
         that.fail_list.push(url);
         that.nervus.emit('next');
     });
+    //当爬取工作结束时
     that.nervus.on('finish', function() {
         console.log('finish');
         for (var i in that.table) {
-            that.table[i].release();
+            that.table[i].release();//将数据池中还来不及保存的内容保存到本地
         }
         // //just debug
         // console.log(that.log);
     });
 
     //火力全开，启动爬取
-    for (var i = 0; i < that.opts.max_connection; i++) {
         that.nervus.emit('next');
-    }
 
-    // 展示进度
     function showProgress(url) {
         var all = that.todo_list.length; //总进度（不包括重爬）
         var done = pointer; //已完成进度
         var suc = that.done_list.length; //成功链接数
         var fail = that.fail_list.length; //失败链接数
         var retry = that.opts.retries; //当前剩下的重爬次数
-        console.log('Progress: [' + done + '/' + all + '],  suc/fail: [' + suc + '/' + fail + '],  retries: ' + retry + ',  url:' + url);
+        var conn = conn_num;//当前连接数
+        console.log('Progress: [' + done + '/' + all + '],  suc/fail: [' + suc + '/' + fail + '],  retries: ' + retry + ',  conn: ['+conn+']  url:' + url);
     }
 };
 
@@ -168,19 +173,20 @@ Spider.prototype.crawl = function crawl(url) {
         method: 'GET',
         encoding: null
     }, function(err, res, body) {
+        //如果请求失败，进行错误处理并停止对该链接的抓取工作
         if (err) {
             err = {
                 type: 'HTTP_Request_Err',
                 url: url,
                 detail: err,
-                warn: '访问失败，请检查链接与目标站点访问情况'
+                suggest: '访问失败，请检查链接与目标站点访问情况'
             };
             whenErr(err);
             return;
         }
 
+        //根据opts设置，对爬取body进行转码（转为utf-8）
         if (that.opts.decode) {
-            // body = iconv.decode(body, that.opts.decode); //根据opts强制文本转码
             body = iconv.decode(body, that.opts.decode);
         }
 
@@ -190,6 +196,7 @@ Spider.prototype.crawl = function crawl(url) {
             res: res,
             url: url
         };
+        //尝试执行用户脚本，如果失败进行错误处理并停止对该链接的抓取工作
         try {
             if (that.opts.jQ) {
                 var $ = cheerio.load(body, { decodeEntities: false });
@@ -202,18 +209,23 @@ Spider.prototype.crawl = function crawl(url) {
                 type: 'Crawl_Err',
                 url: url,
                 detail: e,
-                warn: '爬取失败，请检查callback函数与返回正文'
+                suggest: '爬取失败，请检查callback函数与返回正文'
             };
             whenErr(err);
             return;
         }
 
+        //能运行到这里，没有经历报错并return，说明执行成功
         that.nervus.emit('succeeded', url);
     });
-
+    /**
+     * 错误处理函数。根据是否为debug模式，调整错误处理的方式
+     * @param  {object} err 错误信息对象，要求包括type、url、detail、suggest等属性
+     * @return {}     无
+     */
     function whenErr(err) {
         if (that.opts.debug) { //如果是debug模式，报错并退出抓取
-            console.log('\n=============ERROR===============\n\n' + '[Type]: ' + err.type + '\n\n[Url]: ' + err.url + '\n\n' + '[Warn]: ' + err.warn + '\n\n' + '[Detail]: ' + err.detail + '\n');
+            console.log('\n=============ERROR===============\n\n' + '[Type]: ' + err.type + '\n\n[Url]: ' + err.url + '\n\n' + '[Suggest]: ' + err.suggest + '\n\n' + '[Detail]: ' + err.detail + '\n');
             console.log('停止爬取');
         } else { //如果不是debug模式，将错误推送Log并继续抓取
             that.fail_list.push(url);
@@ -254,7 +266,7 @@ Spider.prototype.todo = function todo(new_todo) {
 
 /**
  * 尝试向Log推送日志内容
- * @param  {object}  info  信息对象，包括url、type、detail、warn属性
+ * @param  {object}  info  信息对象，包括url、type、detail、suggest属性
  * @param  {Boolean} isErr 是否为错误信息（是则强制推动内容到log
  */
 Spider.prototype.pushLog = function pushLog(info, isErr) {
@@ -263,7 +275,7 @@ Spider.prototype.pushLog = function pushLog(info, isErr) {
             time: Date(),
             url: info.url,
             type: info.type,
-            warn: info.warn,
+            suggest: info.suggest,
             detail: info.detail
         };
         this.log.push(news);
