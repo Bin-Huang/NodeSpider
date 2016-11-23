@@ -38,6 +38,11 @@ var default_options = {
     push_to_db: false
 };
 
+var global_value = {
+    conn_num: 0, //当前连接数
+    pointer: 0 //当前todo_list中未爬取链接位置（指针）
+};
+
 
 function Spider(todo_list, opts, callback) {
     this.todo_list = typeof todo_list === 'string' ? [todo_list] : todo_list;
@@ -82,8 +87,6 @@ function Spider(todo_list, opts, callback) {
 
 //事件监听初始化、各参数、选项检验、启动工作
 Spider.prototype.start = function start() {
-    var conn_num = 0; //当前连接数
-    var pointer = 0; //指针，用于按顺序读取todo_list的元素
     var that = this;
 
     //参数初始化检测，错误则全面停止爬取工作
@@ -96,77 +99,76 @@ Spider.prototype.start = function start() {
 
     }
 
-    /////////////
-    //事件监听 //
-    ////////////
-    
-    
-    that.nervus.on('crawl', function() {
-        if (that.todo_list.length > pointer) {
-            var next_url = that.todo_list[pointer];
-            pointer++;
-            conn_num++;
-            that.crawl(next_url);
-        }
-    });
-    that.nervus.on('next', function() {
-        if (conn_num < that.opts.max_connection) {
-            //当todo_list链接已爬完，如果重复次数大于0，对失败链接进行重爬
-            if (that.todo_list.length <= pointer && that.opts.retries > 0) {
-                that.todo_list = that.fail_list;
-                pointer = 0;
-                that.fail_list = [];
-                that.opts.retries--;
-            }
-            //如果todo_list已爬完，重复次数为0或已无失败链接，且当前连接数为0，表示爬取总工作已结束
-            if (that.todo_list.length <= pointer && conn_num <= 0) {
-                that.nervus.emit('finish');
-                return true;
-            }
-
-            that.nervus.emit('crawl');
-        }
-    });
-    //当爬取某个链接成功后
-    that.nervus.on('succeeded', function(url) {
-        showProgress(url);
-        conn_num--;
-        that.done_list.push(url);
-        that.nervus.emit('next');
-    });
-    //当爬取某个链接失败后
-    that.nervus.on('failed', function(url) {
-        showProgress(url);
-        conn_num--;
-        that.fail_list.push(url);
-        that.nervus.emit('next');
-    });
-    //当爬取工作结束时
-    that.nervus.on('finish', function() {
-        console.log('finish');
-        for (var i in that.table) {
-            that.table[i].release();//将数据池中还来不及保存的内容保存到本地
-        }
-        // //just debug
-        // console.log(that.log);
-    });
-
     //火力全开，启动爬取
-        that.nervus.emit('next');
 
-    function showProgress(url) {
-        var all = that.todo_list.length; //总进度（不包括重爬）
-        var done = pointer; //已完成进度
-        var suc = that.done_list.length; //成功链接数
-        var fail = that.fail_list.length; //失败链接数
-        var retry = that.opts.retries; //当前剩下的重爬次数
-        var conn = conn_num;//当前连接数
-        console.log('Progress: [' + done + '/' + all + '],  suc/fail: [' + suc + '/' + fail + '],  retries: ' + retry + ',  conn: ['+conn+']  url:' + url);
+    this.crawl();
+};
+
+
+Spider.prototype.finish = function finish() {
+    console.log('finish');
+    for (var i in this.table) {
+        this.table[i].release(); //将数据池中还来不及保存的内容保存到本地
+    }
+};
+Spider.prototype.next = function next() {
+    // if (global_value.conn_num < this.opts.max_connection) {
+    //     if (this.todo_list.length <= global_value.pointer) {
+    //         if (global_value.conn_num === 0) {
+    //             if (this.opts.retries > 0 && this.fail_list.length > 0) {
+    //                 this.todo_list = this.fail_list;
+    //                 global_value.pointer = 0;
+    //                 this.fail_list = [];
+    //                 this.opts.retries--;
+    //             } else { //如果剩余重试次数等于0，爬取工作进入最后整理阶段
+    //                 this.finish();
+    //                 return true;
+    //             }
+    //         } else {
+    //             return; //当conn_num不等于0，说明todo_list可能只是暂时没有新链接（新链接可能在抓回来的路上），直接返回并无视此次next请求
+    //         }
+    //     } else {
+    //         this.crawl();
+    //     }
+    // }
+
+    //如果当前连接数达到最大连接数，无视此次next请求
+    if (global_value.conn_num >= this.opts.max_connection) {
+        return; 
+    }
+
+    //如果todo_list存在新链接则爬取
+    if (this.todo_list.length > global_value.pointer) {
+        this.crawl();
+    } else {
+        //当todo_list不存在新链接
+        
+        //如果当前连接数不为0，新的链接可能正在爬取回来的路上。直接无视此次next请求
+        if (global_value.conn_num !== 0) {
+            return; 
+        }
+
+        //如果当前连接数为0，判断当前剩余重试数与失败链接清单
+        if (this.opts.retries > 0 && this.fail_list.length > 0) {
+            //开始重爬失败链接
+            this.todo_list = this.fail_list;
+            global_value.pointer = 0;
+            this.fail_list = [];
+            this.opts.retries--;
+            this.crawl();
+        } else { //如果剩余重试次数等于0，爬取工作停止，进入最后的整理阶段
+            this.finish();
+            return true;
+        }
     }
 };
 
-Spider.prototype.crawl = function crawl(url) {
+Spider.prototype.crawl = function crawl() {
     var that = this;
+    var url = that.todo_list[global_value.pointer];
+    global_value.pointer++;
+    global_value.conn_num++;
+
     var err = {};
     request({
         url: url,
@@ -216,8 +218,14 @@ Spider.prototype.crawl = function crawl(url) {
         }
 
         //能运行到这里，没有经历报错并return，说明执行成功
-        that.nervus.emit('succeeded', url);
+        showProgress(url);
+        global_value.conn_num--;
+        that.done_list.push(url);
+        that.next();
     });
+
+    this.next(); //进行多进程抓取
+
     /**
      * 错误处理函数。根据是否为debug模式，调整错误处理的方式
      * @param  {object} err 错误信息对象，要求包括type、url、detail、suggest等属性
@@ -231,7 +239,20 @@ Spider.prototype.crawl = function crawl(url) {
             that.fail_list.push(url);
             that.pushLog(err, true);
         }
-        that.nervus.emit('failed', url);
+        showProgress(url);
+        global_value.conn_num--;
+        that.fail_list.push(url);
+        that.next();
+    }
+
+    function showProgress(url) {
+        var all = that.todo_list.length; //总进度（不包括重爬）
+        var done = global_value.pointer; //已完成进度
+        var suc = that.done_list.length; //成功链接数
+        var fail = that.fail_list.length; //失败链接数
+        var retry = that.opts.retries; //当前剩下的重爬次数
+        var conn = global_value.conn_num; //当前连接数
+        console.log('Progress: [' + done + '/' + all + '],  suc/fail: [' + suc + '/' + fail + '],  retries: ' + retry + ',  conn: [' + conn + ']  url:' + url);
     }
 
 };
@@ -249,7 +270,9 @@ Spider.prototype.todo = function todo(new_todo) {
         this.todo_list.push(new_todo);
         return true;
     } else {
-        console.log('todo:　链接已存在');
+        if (this.opts.debug) {
+            console.log('todo:　链接已存在');
+        }
     }
     return false;
 };
