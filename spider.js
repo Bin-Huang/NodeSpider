@@ -3,6 +3,10 @@ var iconv = require('iconv-lite');
 var request = require('request');
 var cheerio = require('cheerio');
 var fs = require('fs');
+var filenamifyUrl = require('filenamify-url');
+var mkdirp = require('mkdirp');
+var path = require('path');
+var url = require('url');
 
 //如果你想自定义默认设置，修改这里
 var default_options = {
@@ -14,6 +18,8 @@ var default_options = {
     save_log: 'log.txt',
     log_frequency: 10,
     log_more: false,
+
+    download_path: 'download/',
 
     // table: {
     //   default: 
@@ -40,7 +46,7 @@ var default_options = {
 
 var global_value = {
     conn_num: 0, //当前连接数
-    pointer: 0 //当前todo_list中未爬取链接位置（指针）
+    pointer: 0, //当前todo_list中未爬取链接位置（指针）
 };
 
 
@@ -74,6 +80,10 @@ function Spider(todo_list, opts, callback) {
 
     this.done_list = []; //已完成的链接
     this.fail_list = []; //失败的链接
+
+    this.download_list = [];
+    this.download_fail = [];
+
     this.nervus = new EventEmitter();
     this.stop_add_todo = false;
 
@@ -134,7 +144,7 @@ Spider.prototype.next = function next() {
 
     //如果当前连接数达到最大连接数，无视此次next请求
     if (global_value.conn_num >= this.opts.max_connection) {
-        return; 
+        return;
     }
 
     //如果todo_list存在新链接则爬取
@@ -142,10 +152,10 @@ Spider.prototype.next = function next() {
         this.crawl();
     } else {
         //当todo_list不存在新链接
-        
+
         //如果当前连接数不为0，新的链接可能正在爬取回来的路上。直接无视此次next请求
         if (global_value.conn_num !== 0) {
-            return; 
+            return;
         }
 
         //如果当前连接数为0，判断当前剩余重试数与失败链接清单
@@ -165,64 +175,105 @@ Spider.prototype.next = function next() {
 
 Spider.prototype.crawl = function crawl() {
     var that = this;
-    var url = that.todo_list[global_value.pointer];
+    var u = that.todo_list[global_value.pointer];
     global_value.pointer++;
     global_value.conn_num++;
 
-    var err = {};
-    request({
-        url: url,
-        method: 'GET',
-        encoding: null
-    }, function(err, res, body) {
-        //如果请求失败，进行错误处理并停止对该链接的抓取工作
-        if (err) {
-            err = {
-                type: 'HTTP_Request_Err',
-                url: url,
-                detail: err,
-                suggest: '访问失败，请检查链接与目标站点访问情况'
-            };
-            whenErr(err);
-            return;
-        }
+    if (/]/.test(u)) { //如果检测到']',说明是下载链接
+        var o = u.split(']');
+        var real_url = o[0];
+        var extension = o[1];
+        var path = o[2];
+        var file_name = real_url.slice(real_url.lastIndexOf('/') + 1) + '.' + extension;
 
-        //根据opts设置，对爬取body进行转码（转为utf-8）
-        if (that.opts.decode) {
-            body = iconv.decode(body, that.opts.decode);
-        }
-
-        var result = {
-            err: err,
-            body: body,
-            res: res,
-            url: url
-        };
-        //尝试执行用户脚本，如果失败进行错误处理并停止对该链接的抓取工作
-        try {
-            if (that.opts.jQ) {
-                var $ = cheerio.load(body, { decodeEntities: false });
-                that.callback($, result); //调用用户脚本
-            } else {
-                that.callback(result); //调用用户脚本
+        mkdirp(path, function(e) { //确保文件夹存在
+            if (e) {
+                e = {
+                    url: u,
+                    type: 'Folder_Create_Err',
+                    detail: e,
+                    suggest: '自动新建文件夹失败,请检查path'
+                };
+                whenErr(e);
+                return;
             }
-        } catch (e) {
-            err = {
-                type: 'Crawl_Err',
-                url: url,
-                detail: e,
-                suggest: '爬取失败，请检查callback函数与返回正文'
-            };
-            whenErr(err);
-            return;
-        }
+            var write = fs.createWriteStream(path + file_name);
+            //todo: download设置文件最小值。因为错误网址可能指向网站404界面，也会被下载
+            var req = request
+                .get(real_url)
+                .on('error', function(e) {
+                    var suggest = '网络请求失败,请检查url以及网络情况';
+                    whenErr({ type: 'HTTP_Request_Err', url: u, suggest: suggest, detail: e });
+                }).pipe(write);
 
-        //能运行到这里，没有经历报错并return，说明执行成功
-        showProgress(url);
-        global_value.conn_num--;
-        that.done_list.push(url);
-        that.next();
-    });
+            write.on('error', function(e) {
+                var suggest = '内容保存失败';
+                whenErr({ type: 'File_Save_Err', url: u, suggest: suggest, detail: e });
+            });
+            write.on('finish', function() {
+                showProgress(u);
+                global_value.conn_num--;
+                that.done_list.push(u);
+                that.next();
+            });
+
+        });
+
+    } else { //未检测到，说明是普通待抓取链接
+        request({
+            url: u,
+            method: 'GET',
+            encoding: null
+        }, function(err, res, body) {
+            //如果请求失败，进行错误处理并停止对该链接的抓取工作
+            if (err) {
+                err = {
+                    type: 'HTTP_Request_Err',
+                    url: u,
+                    detail: err,
+                    suggest: '访问失败，请检查链接与目标站点访问情况'
+                };
+                whenErr(err);
+                return;
+            }
+
+            //根据opts设置，对爬取body进行转码（转为utf-8）
+            if (that.opts.decode) {
+                body = iconv.decode(body, that.opts.decode);
+            }
+
+            var result = {
+                err: err,
+                body: body,
+                res: res,
+                url: u
+            };
+            //尝试执行用户脚本，如果失败进行错误处理并停止对该链接的抓取工作
+            try {
+                if (that.opts.jQ) {
+                    var $ = cheerio.load(body, { decodeEntities: false });
+                    that.callback($, result); //调用用户脚本
+                } else {
+                    that.callback(result); //调用用户脚本
+                }
+            } catch (e) {
+                err = {
+                    type: 'Crawl_Err',
+                    url: u,
+                    detail: e,
+                    suggest: '爬取失败，请检查callback函数与返回正文'
+                };
+                whenErr(err);
+                return;
+            }
+
+            //能运行到这里，没有经历报错并return，说明执行成功
+            showProgress(u);
+            global_value.conn_num--;
+            that.done_list.push(u);
+            that.next();
+        });
+    }
 
     this.next(); //进行多进程抓取
 
@@ -236,16 +287,15 @@ Spider.prototype.crawl = function crawl() {
             console.log('\n=============ERROR===============\n\n' + '[Type]: ' + err.type + '\n\n[Url]: ' + err.url + '\n\n' + '[Suggest]: ' + err.suggest + '\n\n' + '[Detail]: ' + err.detail + '\n');
             console.log('停止爬取');
         } else { //如果不是debug模式，将错误推送Log并继续抓取
-            that.fail_list.push(url);
+            that.fail_list.push(u);
             that.pushLog(err, true);
+            showProgress(u);
+            global_value.conn_num--;
+            that.next();
         }
-        showProgress(url);
-        global_value.conn_num--;
-        that.fail_list.push(url);
-        that.next();
     }
 
-    function showProgress(url) {
+    function showProgress(u) {
         var all = that.todo_list.length; //总进度（不包括重爬）
         var done = global_value.pointer; //已完成进度
         var suc = that.done_list.length; //成功链接数
@@ -255,6 +305,34 @@ Spider.prototype.crawl = function crawl() {
         console.log('Progress: [' + done + '/' + all + '],  suc/fail: [' + suc + '/' + fail + '],  retries: ' + retry + ',  conn: [' + conn + ']  url:' + url);
     }
 
+    function downloadFun(u, p) {
+        var req = request(u);
+        var write = fs.createWriteStream(p);
+        req.on('error', function(e) {
+            var suggest = '网络请求失败,请检查url以及网络情况';
+            whenErr({ type: 'HTTP_Request_Err', url: u, suggest: suggest, detail: e });
+        });
+        w.on('error', function(e) {
+            var suggest = '内容保存失败';
+            whenErr({ type: 'File_Save_Err', url: u, suggest: suggest, detail: e });
+        });
+        req.pipe(write);
+    }
+    that.todo = function(new_todo) {
+        if (new_todo[0] === '/') {
+            if (new_todo[1] === '/') {
+                new_todo = url.parse(u).protocol + new_todo;
+            } else {
+                new_todo = url.parse(u).protocol +'//'+ url.parse(u).host + new_todo;
+            }
+        }
+        //如果链接不重复（不存在与todo_list）
+        if (this.todo_list.indexOf(new_todo) === -1) {
+            this.todo_list.push(new_todo);
+            return true;
+        } 
+        return false;
+    };
 };
 
 /**
@@ -277,6 +355,31 @@ Spider.prototype.todo = function todo(new_todo) {
     return false;
 };
 
+Spider.prototype.download = function download(u, extension, path) {
+    path = path ? path : this.opts.download_path;
+
+    //错误检测？
+    if (this.stop_add_todo) {
+        return;
+    }
+
+    //将后缀名和保存路径添加在路径后面。为什么要这么做？
+    //1.下载内容时需要后缀名和保存路径这两个变量
+    //2.方便让函数creawl识别这是一个下载链接（检测到字符']'）
+    //3.方便检查是否已存在于todo_list，防止重复（如果使用对象，两个分别声明但相同内容的对象并不相等）
+    var new_todo = u + ']' + extension + ']' + path;
+
+    //如果链接不重复（不存在于todo_list）
+    if (this.todo_list.indexOf(new_todo) === -1) {
+        this.todo_list.push(new_todo);
+        return true;
+    } else {
+        if (this.opts.debug) {
+            console.log('todo:　链接已存在');
+        }
+    }
+    return false;
+};
 // Spider.prototype.todoNow = function todoNow(url) {
 //     if (this.stop_add_todo) return;
 //     //如果链接不重复（不存在与todo_list）
