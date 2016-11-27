@@ -1,0 +1,27 @@
+{
+  "name": "nodespider",
+  "version": "1.0.0",
+  "description": "web crawler/spider for NodeJs, more easy to use",
+  "main": "spider.js",
+  "dependencies": {
+    "cheerio": "^0.22.0",
+    "filenamify-url": "^1.0.0",
+    "iconv-lite": "^0.4.13",
+    "mkdirp": "^0.5.1",
+    "request": "^2.78.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Ben-Hwang/NodeSpider.git"
+  },
+  "author": "Ben Huang",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Ben-Hwang/NodeSpider/issues"
+  },
+  "homepage": "https://github.com/Ben-Hwang/NodeSpider#readme"
+}

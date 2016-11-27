@@ -21,13 +21,7 @@ var default_options = {
 
     download_path: 'download/',
 
-    // table: {
-    //   default: 
-    //   'data': {
-    //       save_as_txt: 'data.txt',
-    //   },
-    // },
-
+ 
     sql: {
         host: '127.0.0.1',
         db: 'school',
