@@ -1,12 +1,13 @@
-var Spider = require('./spider.js');
-var s = new Spider('http://www.baidu.com', {debug: true},function ($,result) {
-	$('a').each(function () {
-		var url = $(this).attr('href');
-			s.todo(url);
-	});
-	console.log(s.fail_list);
+var NodeSpider = require('./spider.js');
+
+var mySpider = new NodeSpider('http://www.baidu.com', function ($) {
+    console.log($('head').find('title').text());
+    $('a').each(function() {
+        mySpider.todo($(this).attr('href'));
+    });
 });
-s.start();
+
+mySpider.start();
 // 成功抓广工头像
 // var Spider = require('./spider.js');
 // var data = require('./data.js');
