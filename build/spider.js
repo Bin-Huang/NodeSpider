@@ -1,3 +1,5 @@
+function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { step("next", value); }, function (err) { step("throw", err); }); } } return step("next"); }); }; }
+
 // const EventEmitter = require("events");
 const iconv = require('iconv-lite');
 const request = require('request');
@@ -10,7 +12,7 @@ const List = require('./List');
 let default_option = {
     max_process: 20,
     jq: true,
-    toUTFd8: false,
+    toUTFd8: false
 };
 
 // 简单上手的回掉函数 + 自由定制的事件驱动
@@ -21,8 +23,7 @@ class Spider {
         this._option = default_option;
 
         this._status = {
-            process_num: 0, //当前正在进行的任务数量
-        };
+            process_num: 0 };
 
         this._todo_list = new List();
         this._download_list = new List();
@@ -31,8 +32,10 @@ class Spider {
         this._todo_retry_list = new List();
         this._download_retry_list = new List();
 
-    }
+        // this.log = new Pool(this.setting.log_frequency, this.save_log);
 
+        // this.table = {};
+    }
 
     start(urls, callback) {
         if (callback === 'undefined') {
@@ -76,17 +79,15 @@ class Spider {
             return false;
         }
 
-        this._asyncCapture(task.url, task.opts, task.callback)
-            .then(() => {
-                this._status.process_num--;
-                this._taskManager();
-            })
-            .catch((error) => {
-                console.log(error);
-                this._status.process_num--;
-                this._taskManager();
-                // TODO: 错误处理
-            });
+        this._asyncCapture(task.url, task.opts, task.callback).then(() => {
+            this._status.process_num--;
+            this._taskManager();
+        }).catch(error => {
+            console.log(error);
+            this._status.process_num--;
+            this._taskManager();
+            // TODO: 错误处理
+        });
         return true;
     }
 
@@ -102,71 +103,74 @@ class Spider {
             info.retry_callback();
             return false;
         }
-        this._asyncDownload(url, opts, path)
-            .then(() => {
-                this._status.process_num--;
-                this._taskManager();
-            })
-            .catch((error) => {
-                this._status.process_num--;
-                console.log(error);
-                this._taskManager();
-                // TODO: 错误处理
-            });
+        this._asyncDownload(url, opts, path).then(() => {
+            this._status.process_num--;
+            this._taskManager();
+        }).catch(error => {
+            this._status.process_num--;
+            console.log(error);
+            this._taskManager();
+            // TODO: 错误处理
+        });
         return true; // 如果有待重试下载的任务，执行并忽略下面步骤
     }
 
-    async _asyncCapture(url, opts, callback) {
-        let [error, response, body] = await this.get(url, opts);
-        let $;
-        if (!error) {
-            try {
-                body = body.toString();
-                // 根据任务设置和全局设置，确定如何编码正文
-                let toUTFd8 = this._option.toUTFd8;
-                if (opts && opts.toUTFd8 !== undefined) {
-                    toUTFd8 = opts.toUTFd8;
-                }
-                if (toUTFd8) body = iconv.decode(body, toUTFd8);
+    _asyncCapture(url, opts, callback) {
+        var _this = this;
 
-                // 根据任务设置和全局设置，确定是否加载jQ
-                if (opts && opts.jq !== undefined) {
-                    $ = this.loadJq(body, url);
-                } else if (this._option.jq) {
-                    $ = this.loadJq(body, url)
-                }
+        return _asyncToGenerator(function* () {
+            let [error, response, body] = yield _this.get(url, opts);
+            let $;
+            if (!error) {
+                try {
+                    body = body.toString();
+                    // 根据任务设置和全局设置，确定如何编码正文
+                    let toUTFd8 = _this._option.toUTFd8;
+                    if (opts && opts.toUTFd8 !== undefined) {
+                        toUTFd8 = opts.toUTFd8;
+                    }
+                    if (toUTFd8) body = iconv.decode(body, toUTFd8);
 
-            } catch (err) {
-                error = err;
+                    // 根据任务设置和全局设置，确定是否加载jQ
+                    if (opts && opts.jq !== undefined) {
+                        $ = _this.loadJq(body, url);
+                    } else if (_this._option.jq) {
+                        $ = _this.loadJq(body, url);
+                    }
+                } catch (err) {
+                    error = err;
+                }
             }
-        }
 
-        let current = {
-            url: url,
-            option: opts,
-            callback: callback,
-            response: response,
-            body: body,
-        };
-        callback(error, current, $);
+            let current = {
+                url: url,
+                option: opts,
+                callback: callback,
+                response: response,
+                body: body
+            };
+            callback(error, current, $);
+        })();
     }
 
-    async _asyncDownload(url, opts, path) {
-        return new Promise(function (resolve, reject) {
-            let download = request(url);
-            let write = fs.createWriteStream(path);
-            // TODO: 本地空间是否足够 ?
-            download.on('error', function (error) {
-                reject(error);
+    _asyncDownload(url, opts, path) {
+        return _asyncToGenerator(function* () {
+            return new Promise(function (resolve, reject) {
+                let download = request(url);
+                let write = fs.createWriteStream(path);
+                // TODO: 本地空间是否足够 ?
+                download.on('error', function (error) {
+                    reject(error);
+                });
+                write.on('error', function (error) {
+                    reject(error);
+                });
+                download.pipe(write);
+                write.on('finish', function () {
+                    resolve();
+                });
             });
-            write.on('error', function (error) {
-                reject(error);
-            });
-            download.pipe(write);
-            write.on('finish', function () {
-                resolve();
-            });
-        });
+        })();
     }
 
     /**
@@ -205,9 +209,7 @@ class Spider {
         return $;
     }
 
-    retry(num, callback) {
-
-    }
+    retry(num, callback) {}
 
     log(log) {}
 
@@ -235,7 +237,8 @@ class Spider {
 
         if (!item) {
             return false;
-        } else if (typeof item === 'string') { //如果item是一个字符串
+        } else if (typeof item === 'string') {
+            //如果item是一个字符串
             return this._todo_list.add({
                 url: item,
                 opts,
@@ -246,7 +249,14 @@ class Spider {
             for (let url of item) {
                 this.todo(url, opts, callback);
             }
-        } else if (typeof item === 'object') { // 当item是一个jQ对象
+        } else if (typeof item === 'object') {
+            // 当item是一个jQ对象
+            // let href = url.parse(item.current_url);
+            // // 如果出现 路径为类似 '/a.html/' 的情况，删除最后那个 '/'，以免接下来出错
+            // if (href.pathname.length > 1 && href.pathname[href.pathname.length - 1] === '/') {
+            //     href.pathname = href.pathname.slice(0, href.pathname.length - 1);
+            // }
+            // href.directory_path = href.pathname.slice(0, href.pathname.lastIndexOf('/'));   // 链接路径的上级路径
             let that = this;
             item.attr('href', function (index, new_url) {
                 // 类似 '#header 1'这种锚链，只会导致加载重复内容，故直接跳过，不添加到待爬取列表
@@ -277,7 +287,6 @@ class Spider {
             opts = callback;
             callback = x;
         }
-
     }
 
     /**
@@ -331,8 +340,17 @@ class Spider {
         return result;
     }
 
+    push(data, destination) {
+        if (!destination) {
+            destination = 'data'; //如果不指定table，默认推送到data
+        }
+        if (!this.table[destination]) {
+            //如果目标table不存在，新建它
+            this.table[destination] = new Pool(5, destination + '.txt');
+        }
+        this.table[destination].push(data);
+    }
 }
-
 
 /**
  * 资源池生成函数 for log、data_table
@@ -357,7 +375,8 @@ class Pool {
         } //如果无新数据，停止下面操作
 
         var i;
-        if (!this.header) { //如果没有表头，新建
+        if (!this.header) {
+            //如果没有表头，新建
             this.header = [];
             for (i in d[0]) {
                 this.header.push(i); //将第一个数据对象的所有属性名作为表头关键字
@@ -365,7 +384,8 @@ class Pool {
         }
 
         var txt = '';
-        if (!this.file) { //第一次release？新建写入流，并写入表头
+        if (!this.file) {
+            //第一次release？新建写入流，并写入表头
             this.file = fs.createWriteStream(this.path);
             txt = '';
             for (i = 0; i < this.header.length; i++) {
@@ -449,8 +469,5 @@ class Tabulation {
         this.rownum = 0;
     }
 }
-
-
-
 
 module.exports = Spider;
