@@ -8,14 +8,14 @@ const url = require('url');
 
 let default_setting = {
     max_process: 20,
-    decode: false,
     jq: true,
-};
+    decode: false,
+}
 
 class Spider {
     constructor(user_setting = {}) {
-        Object.assign(user_setting, default_setting);
-        this._setting = user_setting;
+        Object.assign(default_setting, user_setting);
+        this._setting = default_setting;
 
         this._status = {
             process_num: 0, //当前正在进行的任务数量
@@ -24,6 +24,7 @@ class Spider {
         this._todo_list = new List();
         this._download_list = new List();
 
+        // TODO: 使用链表的插队机制，解决重试问题，不需要再有更多的list
         this._todo_retry_list = new List();
         this._download_retry_list = new List();
 
@@ -57,7 +58,6 @@ class Spider {
         // 不同待完成任务拥有不同优先级： 下载重试任务 > 抓取重试任务 > 下载任务 > 抓取任务
         let task = this._download_retry_list.get();
         if (task) return this._doDownloadTask(task);
-        // TODO: 将 各种任务函数整合在一起
 
         task = this._todo_retry_list.get();
         if (task) return this._doCaptureTask(task);
@@ -68,6 +68,7 @@ class Spider {
         task = this._todo_list.get();
         if (task) return this._doCaptureTask(task);
 
+        this._status.process_num --;
     }
 
     _doCaptureTask(task) {
@@ -79,13 +80,11 @@ class Spider {
 
         this._asyncCapture(task.url, task.opts, task.callback)
             .then(() => {
-                this._status.is_capturing = false; // 抓取工作已经完成
                 this._status.process_num--;
                 this._taskManager();
             })
             .catch((error) => {
                 console.log(error);
-                this._status.is_capturing = false; // 抓取工作已经完成
                 this._status.process_num--;
                 this._taskManager();
                 // TODO: 错误处理
@@ -119,9 +118,8 @@ class Spider {
         return true; // 如果有待重试下载的任务，执行并忽略下面步骤
     }
 
-    // TODO: 用 Promise 替代 async 和 await ? 因为用的不多
     async _asyncCapture(url, opts, callback) {
-        let [error, response, body] = await this._request(url, opts);
+        let [error, response, body] = await this.get(url, opts);
         let $;
         if (!error) {
             try {
@@ -176,7 +174,7 @@ class Spider {
     /**
      * 发送网络请求
      */
-    _request(url, opts) {
+    get(url, opts) {
         // TODO: 根据opts，更先进的请求
         return new Promise(function (resolve, reject) {
             request({
@@ -244,7 +242,6 @@ class Spider {
             throw new Error('todo need a function-type callback');
         }
 
-
         let info = {
             retries: null
         };
@@ -255,8 +252,7 @@ class Spider {
 
         if (!item) {
             return false;
-        }
-        else if (typeof item === 'string') {    //如果item是一个字符串
+        } else if (typeof item === 'string') { //如果item是一个字符串
             return this._todo_list.add({
                 url: item,
                 opts,
@@ -267,7 +263,7 @@ class Spider {
             for (let url of item) {
                 this.todo(url, opts, callback);
             }
-        } else if (typeof item === 'object') {  // 当item是一个jQ对象
+        } else if (typeof item === 'object') { // 当item是一个jQ对象
             // let href = url.parse(item.current_url);
             // // 如果出现 路径为类似 '/a.html/' 的情况，删除最后那个 '/'，以免接下来出错
             // if (href.pathname.length > 1 && href.pathname[href.pathname.length - 1] === '/') {
