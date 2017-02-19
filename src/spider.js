@@ -6,16 +6,19 @@ const fs = require('fs');
 const mkdirp = require('mkdirp');
 const url = require('url');
 
-let default_setting = {
+
+let default_option = {
     max_process: 20,
     jq: true,
-    decode: false,
-}
+    toUTFd8: false,
+};
+
+// 简单上手的回掉函数 + 自由定制的事件驱动
 
 class Spider {
-    constructor(user_setting = {}) {
-        Object.assign(default_setting, user_setting);
-        this._setting = default_setting;
+    constructor(user_option = {}) {
+        Object.assign(default_option, user_option);
+        this._option = default_option;
 
         this._status = {
             process_num: 0, //当前正在进行的任务数量
@@ -49,7 +52,7 @@ class Spider {
     }
 
     _taskManager() {
-        if (this._status.process_num >= this._setting.max_process) {
+        if (this._status.process_num >= this._option.max_process) {
             return false; //当网络连接达到限制设置，直接停止此次工作
         }
         this._status.process_num++;
@@ -125,16 +128,16 @@ class Spider {
             try {
                 body = body.toString();
                 // 根据任务设置和全局设置，确定如何编码正文
-                let decode = this._setting.decode;
-                if (opts && opts.decode) {
-                    decode = opts.decode;
+                let toUTFd8 = this._option.toUTFd8;
+                if (opts && opts.toUTFd8 !== undefined) {
+                    toUTFd8 = opts.toUTFd8;
                 }
-                if (decode) body = this.decode(body, decode);
+                if (toUTFd8) body = iconv.decode(body, toUTFd8);
 
                 // 根据任务设置和全局设置，确定是否加载jQ
                 if (opts && opts.jq !== undefined) {
                     $ = this.loadJq(body, url);
-                } else if (this._setting.jq) {
+                } else if (this._option.jq) {
                     $ = this.loadJq(body, url)
                 }
 
@@ -186,21 +189,6 @@ class Spider {
             });
         });
     }
-
-
-    // 根据rule转码规则对body进行转码，如果rule参数不存在，返回false
-    decode(body, rule) {
-        if (!rule) return false;
-        let result;
-        //TODO
-        try {
-            result = iconv.decode(body, rule);
-        } catch (e) {
-
-        }
-        return result;
-    }
-
 
     /**
      * 根据body加载jQuery对象，并根据当前url扩展jQuery对象path方法，以此获得属性的绝对路径
@@ -306,7 +294,7 @@ class Spider {
     /**
      *
      */
-    download(url, opts, path = this._setting.download_path, errorCallback) {
+    download(url, opts, path = this._option.download_path, errorCallback) {
         // 让opts变成可选参数
         if (typeof opts === 'string') {
             let x = opts;
@@ -329,7 +317,7 @@ class Spider {
     }
 
     pushLog(info, isErr) {
-        if (this._setting.log_more || isErr) {
+        if (this._option.log_more || isErr) {
             var news = {
                 time: Date(),
                 url: info.url,
