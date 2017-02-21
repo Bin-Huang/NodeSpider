@@ -15,10 +15,12 @@ class Chain {
     constructor() {
         this.head = null;
         this.end = this.head;
+        this._length = 0;
     }
     // 在尾部增加新的链环
     add(value) {
         let new_link = new Link(value);
+        this._length ++;
         if (this.head) {
             this.end.next = new_link;
             this.end = new_link;
@@ -32,6 +34,7 @@ class Chain {
         if (!current) return null;
         else {
             this.head = this.head.next; //丢弃头链环，回收已遍历链节的内存
+            this._length --;
             return current.value;
         }
     }

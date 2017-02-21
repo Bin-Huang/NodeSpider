@@ -5,14 +5,15 @@ const iconv = require('iconv-lite');
 const request = require('request');
 const cheerio = require('cheerio');
 const fs = require('fs');
-const mkdirp = require('mkdirp');
 const url = require('url');
 const List = require('./List');
+const { TxtTable, JsonTable } = require('./Table');
+const charset = require('charset');
 
 let default_option = {
     max_process: 20,
     jq: true,
-    toUTFd8: false
+    toUTF8: false
 };
 
 // 简单上手的回掉函数 + 自由定制的事件驱动
@@ -32,9 +33,7 @@ class Spider {
         this._todo_retry_list = new List();
         this._download_retry_list = new List();
 
-        // this.log = new Pool(this.setting.log_frequency, this.save_log);
-
-        // this.table = {};
+        this._table = {};
     }
 
     start(urls, callback) {
@@ -123,13 +122,15 @@ class Spider {
             let $;
             if (!error) {
                 try {
-                    body = body.toString();
                     // 根据任务设置和全局设置，确定如何编码正文
-                    let toUTFd8 = _this._option.toUTFd8;
-                    if (opts && opts.toUTFd8 !== undefined) {
-                        toUTFd8 = opts.toUTFd8;
+                    let toUTF8 = _this._option.toUTF8;
+                    if (opts && opts.toUTF8 !== undefined) {
+                        toUTF8 = opts.toUTF8;
                     }
-                    if (toUTFd8) body = iconv.decode(body, toUTFd8);
+                    if (toUTF8) {
+                        let cha = charset(response.headers, body) || 'utf8';
+                        body = iconv.decode(body, cha);
+                    }
 
                     // 根据任务设置和全局设置，确定是否加载jQ
                     if (opts && opts.jq !== undefined) {
@@ -251,12 +252,6 @@ class Spider {
             }
         } else if (typeof item === 'object') {
             // 当item是一个jQ对象
-            // let href = url.parse(item.current_url);
-            // // 如果出现 路径为类似 '/a.html/' 的情况，删除最后那个 '/'，以免接下来出错
-            // if (href.pathname.length > 1 && href.pathname[href.pathname.length - 1] === '/') {
-            //     href.pathname = href.pathname.slice(0, href.pathname.length - 1);
-            // }
-            // href.directory_path = href.pathname.slice(0, href.pathname.lastIndexOf('/'));   // 链接路径的上级路径
             let that = this;
             item.attr('href', function (index, new_url) {
                 // 类似 '#header 1'这种锚链，只会导致加载重复内容，故直接跳过，不添加到待爬取列表
@@ -286,6 +281,25 @@ class Spider {
             let x = opts;
             opts = callback;
             callback = x;
+        }
+    }
+
+    save(item, data) {
+        //TODO: 如果item为对象，则为数据库。通过用户在 item 中自定义的标识符来判断是否已存在
+        // 暂时只完成保存到文本的功能，所以默认 item 为文件路径字符串
+        if (this._table[item]) {
+            this._table[item].add(data);
+            return true;
+        }
+        //如果不存在，则新建一个table实例
+        let header = Object.keys(data);
+        // 根据路径中的文件后缀名，决定新建哪种table
+        if (/.txt$/.test(item)) {
+            this._table[item] = new TxtTable(item, header);
+            this._table[item].add(data);
+        } else {
+            this._table[item] = new JsonTable(item, header);
+            this._table[item].add(data);
         }
     }
 
@@ -340,16 +354,6 @@ class Spider {
         return result;
     }
 
-    push(data, destination) {
-        if (!destination) {
-            destination = 'data'; //如果不指定table，默认推送到data
-        }
-        if (!this.table[destination]) {
-            //如果目标table不存在，新建它
-            this.table[destination] = new Pool(5, destination + '.txt');
-        }
-        this.table[destination].push(data);
-    }
 }
 
 /**

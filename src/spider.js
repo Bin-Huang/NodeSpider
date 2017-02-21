@@ -3,14 +3,15 @@ const iconv = require('iconv-lite');
 const request = require('request');
 const cheerio = require('cheerio');
 const fs = require('fs');
-const mkdirp = require('mkdirp');
 const url = require('url');
 const List = require('./List');
+const {TxtTable, JsonTable} = require('./Table');
+const charset = require('charset');
 
 let default_option = {
-    max_process: 20,
+    max_process: 50,
     jq: true,
-    toUTFd8: false,
+    toUTF8: false,
 };
 
 // 简单上手的回掉函数 + 自由定制的事件驱动
@@ -31,6 +32,7 @@ class Spider {
         this._todo_retry_list = new List();
         this._download_retry_list = new List();
 
+        this._table = {};
     }
 
 
@@ -121,13 +123,15 @@ class Spider {
         let $;
         if (!error) {
             try {
-                body = body.toString();
                 // 根据任务设置和全局设置，确定如何编码正文
-                let toUTFd8 = this._option.toUTFd8;
-                if (opts && opts.toUTFd8 !== undefined) {
-                    toUTFd8 = opts.toUTFd8;
+                let toUTF8 = this._option.toUTF8;
+                if (opts && opts.toUTF8 !== undefined) {
+                    toUTF8 = opts.toUTF8;
                 }
-                if (toUTFd8) body = iconv.decode(body, toUTFd8);
+                if (toUTF8) {
+                    let cha = charset(response.headers, body) || 'utf8';
+                    body = iconv.decode(body, cha);
+                }
 
                 // 根据任务设置和全局设置，确定是否加载jQ
                 if (opts && opts.jq !== undefined) {
@@ -278,6 +282,26 @@ class Spider {
             callback = x;
         }
 
+    }
+
+    save(item, data) {
+        //TODO: 如果item为对象，则为数据库。通过用户在 item 中自定义的标识符来判断是否已存在
+        // 暂时只完成保存到文本的功能，所以默认 item 为文件路径字符串
+        if (this._table[item]) {
+            this._table[item].add(data);
+            return true;
+        }
+        //如果不存在，则新建一个table实例
+        let header = Object.keys(data);
+        // 根据路径中的文件后缀名，决定新建哪种table
+        if (/.txt$/.test(item)) {
+            this._table[item] = new TxtTable(item, header);
+            this._table[item].add(data);
+        }
+        else {
+            this._table[item] = new JsonTable(item, header);
+            this._table[item].add(data);
+        }
     }
 
     /**

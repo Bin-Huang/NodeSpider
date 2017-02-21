@@ -1,32 +1,26 @@
 # NodeSpider
 
-10 lines of code to develop a web crawler as a geek
+20 lines of code to develop a web crawler as a geek.
 
-nodespider is a web crawler 
+nodespider 是一个 容易上手、开发迅速、易于扩展的轻量级爬虫框架。通过各种简单好用的api方法，帮助开发者用较少的代码开发出满足工作的爬虫。
 
 ```javascript
 let s = new NodeSpider({
-
+    toUtf8: true,   // 自动转码页面为 utf-8
+    // ...
 });
-
-s.start('http://www.google.com', function(err, current, $) {
+s.start('https://en.wikipedia.org/wiki/Main_Page', function (err, current, $) {
     if (err) {
-        s.retry(err, 3, function(err) {
-            s.save('log.json', err);
+        s.retry(err, 3, function () {
+            s.save('log', err);
         });
         return ;
     }
-    console.log($('title').text());
-
     s.todo($('a'), current.callback);
-    s.download($('img'), 'src', './myFolder', function (err) {
-        if (err) s.retry(err, 2, function() {s.log(err)});
+    s.save('wiki.json', {
+        title: $('title').text(),
+        sumary: $('p').text(),
     });
-
-    s.save('my-table.txt', {
-        name: $('#name').text();
-        age: $('span .man #age').text();
-    })
 });
 ```
 
