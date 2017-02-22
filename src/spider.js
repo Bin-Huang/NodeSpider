@@ -1,4 +1,3 @@
-// const EventEmitter = require("events");
 const iconv = require('iconv-lite');
 const request = require('request');
 const cheerio = require('cheerio');
@@ -72,13 +71,7 @@ class Spider {
     }
 
     _doCaptureTask(task) {
-        // 如果 重试次数 达到 限制
-        if (task.info.retries === 0) {
-            task.info.retry_callback();
-            return false;
-        }
-
-        this._asyncCapture(task.url, task.opts, task.callback)
+        this._asyncCapture(task)
             .then(() => {
                 this._status.process_num--;
                 this._taskManager();
@@ -93,18 +86,7 @@ class Spider {
     }
 
     _doDownloadTask(task) {
-        let {
-            url,
-            opts,
-            path,
-            info
-        } = task;
-        // 如果 重试次数 达到 限制
-        if (info.retries === 0) {
-            info.retry_callback();
-            return false;
-        }
-        this._asyncDownload(url, opts, path)
+        this._asyncDownload(task)
             .then(() => {
                 this._status.process_num--;
                 this._taskManager();
@@ -118,15 +100,15 @@ class Spider {
         return true; // 如果有待重试下载的任务，执行并忽略下面步骤
     }
 
-    async _asyncCapture(url, opts, callback) {
-        let [error, response, body] = await this.get(url, opts);
+    async _asyncCapture(task) {
+        let [error, response, body] = await this.get(task.url, task.opts);
         let $;
         if (!error) {
             try {
                 // 根据任务设置和全局设置，确定如何编码正文
                 let toUTF8 = this._option.toUTF8;
-                if (opts && opts.toUTF8 !== undefined) {
-                    toUTF8 = opts.toUTF8;
+                if (task.opts && task.opts.toUTF8 !== undefined) {
+                    toUTF8 = task.opts.toUTF8;
                 }
                 if (toUTF8) {
                     let cha = charset(response.headers, body) || 'utf8';
@@ -134,25 +116,29 @@ class Spider {
                 }
 
                 // 根据任务设置和全局设置，确定是否加载jQ
-                if (opts && opts.jq !== undefined) {
-                    $ = this.loadJq(body, url);
+                if (task.opts && task.opts.jq !== undefined) {
+                    $ = this.loadJq(body, task.url);
                 } else if (this._option.jq) {
-                    $ = this.loadJq(body, url)
+                    $ = this.loadJq(body, task.url)
                 }
 
             } catch (err) {
                 error = err;
             }
         }
-
+        
+        // 带有更详细信息的 error， for spider.prototype.retry
+        if (error) {
+            error.task = task;
+        }
         let current = {
-            url: url,
-            option: opts,
-            callback: callback,
+            url: task.url,
+            opts: task.opts,
+            callback: task.callback,
             response: response,
             body: body,
         };
-        callback(error, current, $);
+        task.callback(error, current, $);
     }
 
     async _asyncDownload(url, opts, path) {
@@ -209,11 +195,28 @@ class Spider {
         return $;
     }
 
-    retry(num, callback) {
-
+    retry(err, max_retry_num, final_callback) {
+        if (! err) return false;
+        if (! final_callback) {
+            final_callback = (err) => {
+                this.save('log', err);
+            }
+        }
+        if (err.task.info.max_retry_num === null) {
+            err.task.info.max_retry_num = max_retry_num - 1;    // 本次使用了一次重试机会，故 -1
+            err.task.info.final_callback = final_callback;
+            this._todo_list.queue.jump(err.task);
+            return true;
+        }
+        if (err.task.info.max_retry_num !== 0) {
+            err.task.info.max_retry_num --;
+            this._todo_list.queue.jump(err.task);
+            return true;
+        }
+        else {
+            err.task.info.final_callback(err);
+        }
     }
-
-    log(log) {}
 
     todo(item, opts, callback) {
         //当调用todo时，opts参数和callback参数位置可以颠倒，并让opts为可选参数
@@ -229,10 +232,6 @@ class Spider {
             throw new Error('todo need a function-type callback');
         }
 
-        let info = {
-            retries: null
-        };
-
         // TODO Warn
         // 如果是 javascirpt: void(0) https://www.zhihu.com/question/20626694
         // 如果是 undefined
@@ -244,7 +243,10 @@ class Spider {
                 url: item,
                 opts,
                 callback,
-                info
+                info: {
+                    max_retry_num: null,
+                    final_callback: null
+                }
             });
         } else if (Array.isArray(item)) {
             for (let url of item) {
@@ -329,18 +331,6 @@ class Spider {
         });
     }
 
-    pushLog(info, isErr) {
-        if (this._option.log_more || isErr) {
-            var news = {
-                time: Date(),
-                url: info.url,
-                type: info.type,
-                suggest: info.suggest,
-                detail: info.detail
-            };
-            this.log.push(news);
-        }
-    }
 
     initCheckout() {
         var result = true;
@@ -356,124 +346,6 @@ class Spider {
     }
 
 }
-
-
-/**
- * 资源池生成函数 for log、data_table
- * @param {number} max     最大容量。达到时将触发release函数：清空内容并写入txt
- * @param {strint} save_path 将写入数据的txt路径
- * @param {array} header 表头数组
- */
-class Pool {
-    constructor(max, save_path, header) {
-        this.data = [];
-        this.max = max;
-        this.file = false;
-        this.path = save_path || new Date().getTime() + '.txt';
-        this.header = header || false; //表头
-    }
-
-    release() {
-        var d = this.data; //读取并清空数据池
-        this.data = [];
-        if (d === []) {
-            return;
-        } //如果无新数据，停止下面操作
-
-        var i;
-        if (!this.header) { //如果没有表头，新建
-            this.header = [];
-            for (i in d[0]) {
-                this.header.push(i); //将第一个数据对象的所有属性名作为表头关键字
-            }
-        }
-
-        var txt = '';
-        if (!this.file) { //第一次release？新建写入流，并写入表头
-            this.file = fs.createWriteStream(this.path);
-            txt = '';
-            for (i = 0; i < this.header.length; i++) {
-                txt += this.header[i] + '\t';
-            }
-            txt += '\n';
-            this.file.write(txt);
-        }
-
-        //根据表头将新数据写入本地文本
-        txt = '';
-        for (i = 0; i < d.length; i++) {
-            for (var j = 0; j < this.header.length; j++) {
-                txt += d[i][this.header[j]] + '\t';
-            }
-            txt += '\n';
-        }
-        this.file.write(txt);
-    }
-
-    push(new_data) {
-        if (this.max && this.max <= this.data.length) {
-            return false;
-        } else {
-            this.data.push(new_data);
-        }
-        if (this.data.length >= this.max) {
-            this.release();
-        }
-    }
-
-    pop() {
-        var d = this.data[0];
-        this.data.shift();
-        return d;
-    }
-
-}
-
-/**
- * 表头元素灵活可变的数据表格
- */
-class Tabulation {
-    constructor() {
-        this.store = {};
-        this.colnum = 0; //列数
-        this.rownum = 0; //行数
-    }
-    /**
-     * 以参数new_data的属性名为表头关键字，将对应属性值插入到表格中
-     * 特点： 1. 允许遗漏某元素的数据（自动设为 null）
-     *       2. 允许插入新的表头元素及对应值（之前项的对应值设为 null）
-     */
-    insert(new_data) {
-        //  根据表头信息，新建一个各项表头元素值为空的数据对象data
-        let data = {};
-        for (let i of Object.keys(this.store)) {
-            data[i] = null;
-        }
-        // 使用带插入的信息对象new_data覆盖（并扩充）data对象
-        Object.assign(data, new_data);
-        // 将data中信息写入store
-        for (let heading in data) {
-            //  如果新数据中存在新的表头元素，则新建它
-            if (!this.store[heading]) {
-                this.store[heading] = new Array(this.rownum).fill(null);
-                this.colnum++;
-            }
-            this.store[heading].push(data[heading]);
-        }
-        this.rownum++;
-        return this;
-    }
-    get() {
-        return this.store;
-    }
-    clear() {
-        for (var i in this.store) {
-            this.store[i] = [];
-        }
-        this.rownum = 0;
-    }
-}
-
 
 
 

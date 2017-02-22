@@ -16,6 +16,7 @@ s.start('https://en.wikipedia.org/wiki/Main_Page', function (err, current, $) {
         });
         return ;
     }
+    console.log($('title').text());
     s.todo($('a'), current.callback);
     s.save('wiki.json', {
         title: $('title').text(),
