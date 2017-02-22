@@ -1,3 +1,6 @@
+// TODO: 更好的报错机制: 报错建议？以及去除多余的 console.error
+// TODO: 更好的命名方式和注释，让外国人看懂
+// TODO: 解决 save 方法保存json格式不好用的问题： 没有[],直接也没有逗号隔开
 const iconv = require('iconv-lite');
 const request = require('request');
 const cheerio = require('cheerio');
@@ -27,10 +30,6 @@ class Spider {
         this._todo_list = new List();
         this._download_list = new List();
 
-        // TODO: 使用链表的插队机制，解决重试问题，不需要再有更多的list
-        this._todo_retry_list = new List();
-        this._download_retry_list = new List();
-
         this._table = {};
     }
 
@@ -54,14 +53,8 @@ class Spider {
         this._status.process_num++;
         this._taskManager();
 
-        // 不同待完成任务拥有不同优先级： 下载重试任务 > 抓取重试任务 > 下载任务 > 抓取任务
-        let task = this._download_retry_list.get();
-        if (task) return this._doDownloadTask(task);
-
-        task = this._todo_retry_list.get();
-        if (task) return this._doCaptureTask(task);
-
-        task = this._download_list.get();
+        // 不同待完成任务拥有不同优先级： 下载任务 > 抓取任务
+        let task = this._download_list.get();
         if (task) return this._doDownloadTask(task);
 
         task = this._todo_list.get();
