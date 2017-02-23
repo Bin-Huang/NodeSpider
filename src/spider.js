@@ -1,6 +1,8 @@
+// TODO: request 传入 opts，以及更多的 option，类似 proxy
 // TODO: 更好的报错机制: 报错建议？以及去除多余的 console.error
 // TODO: 更好的命名方式和注释，让外国人看懂
 // TODO: 解决 save 方法保存json格式不好用的问题： 没有[],直接也没有逗号隔开
+// BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
 const iconv = require('iconv-lite');
 const request = require('request');
 const cheerio = require('cheerio');
@@ -11,14 +13,14 @@ const {TxtTable, JsonTable} = require('./Table');
 const charset = require('charset');
 
 let default_option = {
-    max_process: 50,
+    max_process: 40,
     jq: true,
-    toUTF8: false,
+    toUTF8: true,
 };
 
 // 简单上手的回掉函数 + 自由定制的事件驱动
 
-class Spider {
+class NodeSpider {
     constructor(user_option = {}) {
         Object.assign(default_option, user_option);
         this._option = default_option;
@@ -34,14 +36,14 @@ class Spider {
     }
 
 
-    start(urls, callback) {
+    start(url, callback) {
         if (callback === 'undefined') {
             console.error('callback is undefined');
             return;
         }
         //参数初始化检测，错误则全面停止爬取工作
 
-        this.todo(urls, callback);
+        this.todo(url, callback);
 
         this._taskManager();
     }
@@ -120,10 +122,10 @@ class Spider {
             }
         }
         
-        // 带有更详细信息的 error， for spider.prototype.retry
-        if (error) {
-            error.task = task;
-        }
+        // 带有更详细信息的 error， for NodeSpider.prototype.retry
+        if (error) error.task = task;
+        else error = null;
+
         let current = {
             url: task.url,
             opts: task.opts,
@@ -175,7 +177,7 @@ class Spider {
      * @param {string} current_url
      * @returns {object}
      * 
-     * @memberOf Spider
+     * @memberOf NodeSpider
      */
     loadJq(body, current_url) {
         let $;
@@ -190,6 +192,9 @@ class Spider {
 
     retry(err, max_retry_num, final_callback) {
         if (! err) return false;
+
+        max_retry_num = max_retry_num || 3; //默认3次
+
         if (! final_callback) {
             final_callback = (err) => {
                 this.save('log', err);
@@ -342,4 +347,4 @@ class Spider {
 
 
 
-module.exports = Spider;
+module.exports = NodeSpider;

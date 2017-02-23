@@ -4,36 +4,28 @@
 
 nodespider 是一个 容易上手、开发迅速、易于扩展的轻量级爬虫框架。通过各种简单好用的api方法，帮助开发者用较少的代码开发出满足工作的爬虫。
 
-Nodespider is designed to hel. Through a variety of simple and easy to use API method to help developers with less code developed to meet the work of reptiles.
-
 ```javascript
 let s = new NodeSpider({
-    toUtf8: true,   // Convert html to UTF8 if necessary
-    // You can also config more...
+    toUtf8: true,   // 自动转码页面为 utf-8
+    // ...
 });
 s.start('https://en.wikipedia.org/wiki/Main_Page', function (err, current, $) {
     if (err) {
-        s.retry(err);   // When there are a error, tell NodeSpider to retry.
+        s.retry(err);   // 自动对错误进行重试
         return ;
     }
 
-    // The jQuery you can use to extract data or select element even on the sever
+    // 直接使用 jQuery 操作、选择内容
     console.log($('title').text()); 
 
-    // Add new urls to NodeSpider's todo-list(queue urls to crawle).
-    // Convert relative url into absolute url automatically, never wrong about the relative url in page.
-    // If the url is existed in todo-list or has been crawled, it will not be added and return false.
-    s.todo($('a#next_page').attr('href'), current.callback);
-
+    // 添加新链接至待爬取列表，自动补全相对路径，自动去重
     s.todo($('a'), current.callback);
 
-    // It is so easy to save data from the website to local.
+    // 轻松将内容保存到本地
     s.save('./mydata.json', {
         title: $('title').text(),
         sumary: $('p').text(),
-        picture_url: $('img').attr('href')
     });
-
 });
 ```
 
@@ -41,24 +33,25 @@ s.start('https://en.wikipedia.org/wiki/Main_Page', function (err, current, $) {
 - server-side DOM & jQuery you can use to parse page
 - 
 
-# Initialization
+# 初始化
 
-## new NodeSpider([option])
+## 通过 `new NodeSpider()` 新建爬虫实例
 ```javascript
 var NodeSpider = require('NodeSpider');
 
-var s = new NodeSpider();   //create an instance of NodeSpider
+var s = new NodeSpider();   //新建实例
+
 ```
 
-## Option
+## option
 
-You can config the instance when you create.
+新建爬虫实例的同时，你还可以对实例进行设置
 
 ```javascript
 var s = new NodeSpider({
     toUTF8: true,
     max_process: 30
-    // and more...
+    // 或者更多 ...
 });
 ```
 
@@ -67,12 +60,12 @@ var s = new NodeSpider({
 ```javascript
 var option = {
     max_process: 40,    //最大同时抓取任务的数目，默认： 40
-    toUTF8: false,  //是否自动将返回正文转码为 utf-8。默认： false
+    toUTF8: true,  //是否自动将返回正文转码为 utf-8。默认： True
     jq: true   //是否加载 jQuery 并传入 callback 爬取函数。默认： true
 };
 ```
 
-# Method
+# 方法
 
 ## NodeSpider.prototype.start(url, callback)
 
@@ -109,7 +102,6 @@ NodeSpider.start('http://www.google.com', function(err, current, $){
 
 ## NodeSpider.prototype.todo(item, [opts,] callback)
 
-add new urs(s) to NodeSpider's todo-list. 
 方法 todo 用来添加新的链接到待爬取列表，并为其指定 callback 抓取函数。
 重复的链接将自动取消添加并返回`false`，所以你不用担心重复抓取的问题。
 同时，你可以选择性的为其指定爬取设置（爬取该链接时，该设置将覆盖全局设置）
@@ -188,7 +180,6 @@ s.save('student.json', {
 ```
 
 ## NodeSpider.prototype.retry(err[, max_retry_num[, final_callback]])
-
 遇到不可避免的错误，使用 retry 重试本次抓取任务
 
 ```javascript
@@ -196,12 +187,12 @@ var s = new NodeSpider();
 s.start('http://some_url_maybe_wrong', function(err, current, $) {
     if (err) {
         s.retry(err);
-        // equal to 
-        s.retry(err, 3)
-        // equal to 
-        s.retry(err, 3, function (err) {
-            s.save('log', err);
-        }
+        // or
+        // s.retry(err, 3)
+        // or
+        // s.retry(err, 3, function (err) {
+        //  s.save('log', err);
+        // }
     }
 })
 ```
