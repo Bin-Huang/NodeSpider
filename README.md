@@ -38,7 +38,11 @@ s.start('https://en.wikipedia.org/wiki/Main_Page', function (err, current, $) {
 });
 ```
 
-[TOC]
+# Installation
+
+```
+npm install nodespider
+```
 
 # Initialization
 
@@ -79,7 +83,7 @@ The url to start with. It can be a string or an array of string.
 
 the function about what you want to do after received response. 
 
-There are three parameters: 
+There are three parameters: err, current and $
 
 `err`
 
@@ -100,7 +104,6 @@ In NodeSpider, all tasks will be executed Asynchronously. But you can get inform
 You can use the `$` to operate element just like jQuery in browser. It can help you to extract urls and data more easily.
 
 ```javascript
-
 NodeSpider.start('http://www.google.com', function (err, current, $) {
 
     if (err) console.log(err);
@@ -124,7 +127,8 @@ Add new web-crawl task to spider's todo-list. The task will be executed automati
 The url(s) you want to crawl. It can be a url `string`, array of urls, and jQuery element object that possess `href` attribute.
 
 If it is jQuery element object, nodespider will convert relative url into absolute url automatically, never wrong about the relative url in page.
-```
+
+```javascript
 s.todo('http://www.google.com', yourCallback);
 s.todo(['http://www.wiki.com', 'http://www.amazon.con'], yourCallback);
 
@@ -145,7 +149,8 @@ var opts = {
 **callback** type: function
 
 the callback function for the task, about how to scrape the web
-```
+
+```javascript
 function (err, current, $) {
     // your code
 }

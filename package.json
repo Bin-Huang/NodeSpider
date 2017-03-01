@@ -1,6 +1,6 @@
 {
   "name": "nodespider",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "20 lines of code to develop a web crawler as a geek",
   "main": "index.js",
   "dependencies": {
