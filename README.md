@@ -2,44 +2,49 @@
 
 20 lines of code to develop a web crawler as a geek.
 
-nodespider 是一个 容易上手、开发迅速、易于扩展的轻量级爬虫框架。通过各种简单好用的api方法，帮助开发者用较少的代码开发出满足工作的爬虫。
-
 Nodespider is designed to hel. Through a variety of simple and easy to use API method to help developers with less code developed to meet the work of reptiles.
+
+NodeSpider is designed to 
+
+Easier and more efficient to crawl a website and extract data, NodeSpider can save your time.
 
 ```javascript
 let s = new NodeSpider({
     toUtf8: true,   // Convert html to UTF8 if necessary
-    // You can also config more...
+    // more...
 });
+
+// start crawling with a url and callback
 s.start('https://en.wikipedia.org/wiki/Main_Page', function (err, current, $) {
     if (err) {
-        s.retry(err);   // When there are a error, tell NodeSpider to retry.
+        s.retry(err);   //retry the task
         return ;
     }
 
-    // The jQuery you can use to extract data or select element even on the sever
+    // You can use jQuery to extract data or select element
     console.log($('title').text()); 
 
-    // Add new urls to NodeSpider's todo-list(queue urls to crawle).
-    // Convert relative url into absolute url automatically, never wrong about the relative url in page.
-    // If the url is existed in todo-list or has been crawled, it will not be added and return false.
+    // Add new task to NodeSpider's todo-list.
+    // Never worry about the url is existed or has been crawled
     s.todo($('a#next_page').attr('href'), current.callback);
 
+    // Get the url(s) from jQuery selected Element
+    // Will convert relative url into absolute url automatically, never wrong about the relative url in page.
     s.todo($('a'), current.callback);
 
-    // It is so easy to save data from the website to local.
+    // Easy to save data from the website to local.
     s.save('./mydata.json', {
         title: $('title').text(),
         sumary: $('p').text(),
         picture_url: $('img').attr('href')
     });
 
+    // And more interesting thing...
 });
 ```
 
 # Features
 - server-side DOM & jQuery you can use to parse page
-- 
 
 # Initialization
 
@@ -50,76 +55,81 @@ var NodeSpider = require('NodeSpider');
 var s = new NodeSpider();   //create an instance of NodeSpider
 ```
 
-## Option
-
 You can config the instance when you create.
 
 ```javascript
 var s = new NodeSpider({
     toUTF8: true,
-    max_process: 30
+    max_process: 40
     // and more...
 });
 ```
 
-下面是你可以自由设置的设置项
+**option:**
 
-```javascript
-var option = {
-    max_process: 40,    //最大同时抓取任务的数目，默认： 40
-    toUTF8: false,  //是否自动将返回正文转码为 utf-8。默认： false
-    jq: true   //是否加载 jQuery 并传入 callback 爬取函数。默认： true
-};
-```
+- **toUTF8** (default: `true`) If true, convert html to UTF8 if necessary.
+- **jq** (default: `true`) Whether you need jQuery on the sever.
+- **max_process** (default: 40) Max number of crawling tasks executed asynchronously.
 
 # Method
 
-## NodeSpider.prototype.start(url, callback)
+## NodeSpider.prototype.start(start_url, callback)
 
-传入开始链接，并为该链接（们）指定 callback 爬取函数
+Start web crawling with start_url(s)
 
-**url** type: {string | array}
+**start_url** type: {string | array}
 
-需要被爬取的链接，可以是 url 字符串，也可以是 url 组成的数组，甚至是一个jQuery选择对象。
+The url to start with. It can be a string or an array of string.
 
 **callback** type: {function}
 
-为该链接设置 callback 爬取函数。
+the function about what you want to do after received response. 
+
+There are three parameters: 
+
+`err`
+
+If there are not error in the task, it is `null`
+
+`current`
+
+In NodeSpider, all tasks will be executed Asynchronously. But you can get information about the current task through the 'current' parameter.
+
+- `current.url` current task's url
+- `current.callback` current task's callback
+- `current.response` current response from website
+- `current.body` current html body
+- `current.opts` the special option for current task
+
+`$` 
+
+You can use the `$` to operate element just like jQuery in browser. It can help you to extract urls and data more easily.
 
 ```javascript
-NodeSpider.start('http://www.google.com', function(err, current, $){
-    if (err) console.log(err);  //请求过程中遇到的错误，正常情况下为 null
 
-    // NodeSpider 通过异步的方式请求网络并抓取。
-    // 你可通过 current 获得当前爬取任务的信息
-    console.log(current.url);   // 当前链接
-    console.log(current.callback);  // 当前爬取函数
-    console.log(current.response);  // 服务器回应
-    console.log(current.body);  // 返回正文
-    console.log(current.opts);  // 当前该任务的设置
+NodeSpider.start('http://www.google.com', function (err, current, $) {
 
-    // 你可以使用 jQuery 来操作、选择你需要的内容
-    // （如果你在初始化时设置 {jq: false}, 则 $ 无法使用）
+    if (err) console.log(err);
+
+    // get information from current task
+    console.log(current.url);
+    console.log(current.response);
+
+    // Use the $ to operate/select Elements
     console.log($('title').text());
-    $('a').each(function () {
-        console.log($(this).attr('href'));
-    })
+
 });
 ```
 
 ## NodeSpider.prototype.todo(item, [opts,] callback)
 
-add new urs(s) to NodeSpider's todo-list. 
-方法 todo 用来添加新的链接到待爬取列表，并为其指定 callback 抓取函数。
-重复的链接将自动取消添加并返回`false`，所以你不用担心重复抓取的问题。
-同时，你可以选择性的为其指定爬取设置（爬取该链接时，该设置将覆盖全局设置）
+Add new web-crawl task to spider's todo-list. The task will be executed automatically.
 
 **item**    type: string, array or jQuery
 
-你可以传入一个 url 字符串，或者是 url 组成的数组，甚至是一个jQuery选择对象。
-当传入的是一个jQuery选择对象时，nodespider 将自动获取其中每一元素节点的 href 属性，并根据当前任务自动补全相对路径为绝对路径。
-所以当在callback抓取函数中调用 todo 时，建议你传入jquery对象，这会减轻你工作负担
+The url(s) you want to crawl. It can be a url `string`, array of urls, and jQuery element object that possess `href` attribute.
 
+If it is jQuery element object, nodespider will convert relative url into absolute url automatically, never wrong about the relative url in page.
 ```
 s.todo('http://www.google.com', yourCallback);
 s.todo(['http://www.wiki.com', 'http://www.amazon.con'], yourCallback);
@@ -129,90 +139,89 @@ function yourCallback(err, current, $) {
 }
 ```
 
-**opts** 可选 type: object
-
-本次爬取工作的专门设置
+**opts** type: object
+*optional* Special option for this task
 ```
 var opts = {
-
+    jq: true
+    //...
 }
 ```
 
 **callback** type: function
 
-指定本次爬取工作的callback 爬取函数, 当爬虫获得网页内容后调用
+the callback function for the task, about how to scrape the web
 ```
 function (err, current, $) {
-
+    // your code
 }
 ```
 
 ## NodeSpider.prototype.save(path, data)
-方法 save 可以帮助你将对象格式的数据以各种格式保存到本地，这在抓取数据时非常有用
+Method save help you to save/collect data from website to local easier.
 
 - path type: string
 
-指定保存路径。不用担心路径及文件是否存在，NodeSpider将自动帮你创建。
-文件的不同扩展名将决定数据在文件中的表现形式。
+The path to save data. 
+If path or file does not exist, nodespider will create it automatically.
+
+
+Different file extension lead to defferent mode to save data.
 ```javascript
 var s = new NodeSpider();
 var data = {type: 'cat', color: 'white'};
 
-//data数据将以json形式保存
+// save as json
 s.save('./myFolder/myData.json', data); 
 
-//data中的数据将以表格形式保存。以属性名为表头，以'\t'、'\n'为分隔。
-//当你复制所有内容到 Excel，你会喜欢它的
+// save as txt, using '\t','\n' as separator.
+// if you copy all to Excel, you will like that :)
 s.save('./myFolder/myData.txt', data); 
 
-//如果没有指定扩展名，则以json形式保存
+// if there are no file extension, save as json by default
 s.save('./myFolder/myData', data);
 ```
 
 - data type: object
 
-需要保存的数据对象。
-需要注意的是：当你首次向一个文件保存数据时，这个文件将与数据中各属性名相绑定。此后保存数据到文件，只会保存对应数据名的内容。
+Data you want to save/collect.
+
 ```javascript
-// mydata.json 与 data属性名 ['name', 'age'] 相绑定
 s.save('student.json', {
     name: 'ben',
     age: 20
-});
-
-
-s.save('student.json', {
-    name: 'ben',
-    score: 'A'  // score 不在 header, 所以 'A' 不会被保存
 });
 ```
 
 ## NodeSpider.prototype.retry(err[, max_retry_num[, final_callback]])
 
-遇到不可避免的错误，使用 retry 重试本次抓取任务
+Method `retry` can help you to retry failed task.
 
 ```javascript
 var s = new NodeSpider();
 s.start('http://some_url_maybe_wrong', function(err, current, $) {
     if (err) {
         s.retry(err);
-        // equal to 
-        s.retry(err, 3)
-        // equal to 
-        s.retry(err, 3, function (err) {
-            s.save('log', err);
-        }
+        // as
+        // s.retry(err, 3);
+        // as
+        // s.retry(err, 3, function (err) {
+        //    s.save('log', err);
+        // };
     }
 })
 ```
 **err** type: {Error}
 
-直接将被传入 callback 抓取函数的error，作为 retry 方法的参数
+the error passed into the callback.
 
 **max_retry_num** type: {number}
 
-可选。设置最大的重试次数，默认为 3。
+*optional* Number of retries if the request fails. Default `3`
 
 **final_callback** type: {function}
 
-可选。设置达到最大重试次数后所需要执行的函数。默认等价于：`function (err) {this.save('log', err)}`
+*optional* the function to execute when a task failure more than max_retry_num.
+There are only parameter `error`.
+
+Default: save error as data to log, equal to `function (err){s.save('log', err)}`.
