@@ -1,5 +1,10 @@
 function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { step("next", value); }, function (err) { step("throw", err); }); } } return step("next"); }); }; }
 
+// TODO: request 传入 opts，以及更多的 option，类似 proxy
+// TODO: 更好的报错机制: 报错建议？以及去除多余的 console.error
+// TODO: 更好的命名方式和注释，让外国人看懂
+// TODO: 解决 save 方法保存json格式不好用的问题： 没有[],直接也没有逗号隔开
+// BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
 const iconv = require('iconv-lite');
 const request = require('request');
 const cheerio = require('cheerio');
@@ -10,14 +15,14 @@ const { TxtTable, JsonTable } = require('./Table');
 const charset = require('charset');
 
 let default_option = {
-    max_process: 50,
+    max_process: 40,
     jq: true,
-    toUTF8: false
+    toUTF8: true
 };
 
 // 简单上手的回掉函数 + 自由定制的事件驱动
 
-class Spider {
+class NodeSpider {
     constructor(user_option = {}) {
         Object.assign(default_option, user_option);
         this._option = default_option;
@@ -28,21 +33,17 @@ class Spider {
         this._todo_list = new List();
         this._download_list = new List();
 
-        // TODO: 使用链表的插队机制，解决重试问题，不需要再有更多的list
-        this._todo_retry_list = new List();
-        this._download_retry_list = new List();
-
         this._table = {};
     }
 
-    start(urls, callback) {
+    start(url, callback) {
         if (callback === 'undefined') {
             console.error('callback is undefined');
             return;
         }
         //参数初始化检测，错误则全面停止爬取工作
 
-        this.todo(urls, callback);
+        this.todo(url, callback);
 
         this._taskManager();
     }
@@ -54,14 +55,8 @@ class Spider {
         this._status.process_num++;
         this._taskManager();
 
-        // 不同待完成任务拥有不同优先级： 下载重试任务 > 抓取重试任务 > 下载任务 > 抓取任务
-        let task = this._download_retry_list.get();
-        if (task) return this._doDownloadTask(task);
-
-        task = this._todo_retry_list.get();
-        if (task) return this._doCaptureTask(task);
-
-        task = this._download_list.get();
+        // 不同待完成任务拥有不同优先级： 下载任务 > 抓取任务
+        let task = this._download_list.get();
         if (task) return this._doDownloadTask(task);
 
         task = this._todo_list.get();
@@ -125,10 +120,9 @@ class Spider {
                 }
             }
 
-            // 带有更详细信息的 error， for spider.prototype.retry
-            if (error) {
-                error.task = task;
-            }
+            // 带有更详细信息的 error， for NodeSpider.prototype.retry
+            if (error) error.task = task;else error = null;
+
             let current = {
                 url: task.url,
                 opts: task.opts,
@@ -183,7 +177,7 @@ class Spider {
      * @param {string} current_url
      * @returns {object}
      * 
-     * @memberOf Spider
+     * @memberOf NodeSpider
      */
     loadJq(body, current_url) {
         let $;
@@ -198,6 +192,9 @@ class Spider {
 
     retry(err, max_retry_num, final_callback) {
         if (!err) return false;
+
+        max_retry_num = max_retry_num || 3; //默认3次
+
         if (!final_callback) {
             final_callback = err => {
                 this.save('log', err);
@@ -207,13 +204,11 @@ class Spider {
             err.task.info.max_retry_num = max_retry_num - 1; // 本次使用了一次重试机会，故 -1
             err.task.info.final_callback = final_callback;
             this._todo_list.queue.jump(err.task);
-            console.log('err');
             return true;
         }
         if (err.task.info.max_retry_num !== 0) {
             err.task.info.max_retry_num--;
             this._todo_list.queue.jump(err.task);
-            console.log('err');
             return true;
         } else {
             err.task.info.final_callback(err);
@@ -348,4 +343,4 @@ class Spider {
 
 }
 
-module.exports = Spider;
+module.exports = NodeSpider;

@@ -1,10 +1,5 @@
-# NodeSpider
 
 20 lines of code to develop a web crawler as a geek.
-
-Nodespider is designed to hel. Through a variety of simple and easy to use API method to help developers with less code developed to meet the work of reptiles.
-
-NodeSpider is designed to 
 
 Easier and more efficient to crawl a website and extract data, NodeSpider can save your time.
 
@@ -43,8 +38,7 @@ s.start('https://en.wikipedia.org/wiki/Main_Page', function (err, current, $) {
 });
 ```
 
-# Features
-- server-side DOM & jQuery you can use to parse page
+[TOC]
 
 # Initialization
 
@@ -160,7 +154,7 @@ function (err, current, $) {
 ## NodeSpider.prototype.save(path, data)
 Method save help you to save/collect data from website to local easier.
 
-- path type: string
+**path** type: string
 
 The path to save data. 
 If path or file does not exist, nodespider will create it automatically.
@@ -182,7 +176,7 @@ s.save('./myFolder/myData.txt', data);
 s.save('./myFolder/myData', data);
 ```
 
-- data type: object
+**data** type: object
 
 Data you want to save/collect.
 

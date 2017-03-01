@@ -1,9 +1,9 @@
-// TODO: ChainLikedQueue 的命名，是否 Queue 更合适？
+// TODO: LinkedQueue 的命名，是否 Queue 更合适？
 
 /**
  * 链环（链节）类
  */
-class Link {
+class Node {
     constructor(value) {
         this.value = value;
         this.next = null;
@@ -12,7 +12,7 @@ class Link {
 /**
  * 可遍历的链表类（我叫它纸巾类）
  */
-class ChainLikedQueue {
+class LinkedQueue {
     constructor() {
         this.head = null;
         this.end = this.head;
@@ -20,13 +20,13 @@ class ChainLikedQueue {
     }
     // 在尾部增加新的链环
     add(value) {
-        let new_link = new Link(value);
+        let new_node = new Node(value);
         this._length++;
         if (this.head) {
-            this.end.next = new_link;
-            this.end = new_link;
+            this.end.next = new_node;
+            this.end = new_node;
         } else {
-            this.head = this.end = new_link;
+            this.head = this.end = new_node;
         }
     }
     // 返回头链环的值，并抛弃头链环（让第二个链环成为头链环）（你可以理解为抽面巾纸）
@@ -40,10 +40,10 @@ class ChainLikedQueue {
     }
     // 插队，让 新接环 成为 头链环
     jump(value) {
-        let new_link = new Link(value);
+        let new_node = new Node(value);
         this._length++;
-        new_link.next = this.head;
-        this.head = new_link;
+        new_node.next = this.head;
+        this.head = new_node;
     }
 }
 /**
@@ -52,7 +52,7 @@ class ChainLikedQueue {
 class List {
     constructor() {
         this.store = new Set();
-        this.queue = new ChainLikedQueue(); //待完成的爬取任务的队列
+        this.queue = new LinkedQueue(); //待完成的爬取任务的队列
     }
     // 添加新的爬取任务。如果链接是添加过的，自动取消
     add({ url, opts, callback, info }) {
