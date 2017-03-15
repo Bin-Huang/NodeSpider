@@ -178,7 +178,37 @@ class NodeSpider {
     loadJq(body, current_url) {
         let $;
         $ = cheerio.load(body);
-        $.fn.current_url = current_url; // 扩展jQ，使其可以访问当前链接值，为 todo 相对路径补全工作服务
+
+        /**
+         * 扩充 jQ 方法：根据节点的 href 获得有效的 url 绝对路径。返回值为字符串或数组
+         * 例子： $('a').url()
+         * 
+         * 类似 'javascirpt: void(0)' 不会有返回
+         * 类似 '#key' 的锚链接等效于当前链接
+         */ 
+        $.fn.url = function() {
+            let result = [];
+            $(this).each(function() {
+                let new_url = $(this).attr('href');
+
+                // 如果是类似 'javascirpt: void(0)' 的 js 代码，直接跳过
+                if (/^javascript/.test(new_url)) return false;
+
+                // 如果是锚，等效与当前 url 路径
+                if (new_url[0] === '#') return result.push(current_url);
+
+                // 如果是相对路径，补全路径为绝对路径
+                if (new_url && !/^https?:\/\//.test(new_url)) {
+                    new_url = url.resolve(current_url, new_url);
+                }
+                result.push(new_url);
+            });
+            if (result.length < 2) [result] = result;
+            return result;
+        };
+
+
+
         return $;
     }
 
@@ -208,6 +238,9 @@ class NodeSpider {
         }
     }
 
+    addTask(task) {
+        
+    }
     todo(item, opts, callback) {
         //当调用todo时，opts参数和callback参数位置可以颠倒，并让opts为可选参数
         if (typeof opts === 'function') {
@@ -320,7 +353,6 @@ class NodeSpider {
             }
         });
     }
-
 
 }
 
