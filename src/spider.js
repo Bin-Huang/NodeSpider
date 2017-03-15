@@ -37,11 +37,7 @@ class NodeSpider {
 
 
     start(url, callback) {
-        if (callback === 'undefined') {
-            console.error('callback is undefined');
-            return;
-        }
-        //参数初始化检测，错误则全面停止爬取工作
+        // TODO: init check
 
         this.todo(url, callback);
 
@@ -181,12 +177,8 @@ class NodeSpider {
      */
     loadJq(body, current_url) {
         let $;
-        try {
-            $ = cheerio.load(body);
-            $.fn.current_url = current_url; // 扩展jQ，使其可以访问当前链接值，为 todo 相对路径补全工作服务
-        } catch (e) {
-            console.log(e);
-        }
+        $ = cheerio.load(body);
+        $.fn.current_url = current_url; // 扩展jQ，使其可以访问当前链接值，为 todo 相对路径补全工作服务
         return $;
     }
 
@@ -329,19 +321,6 @@ class NodeSpider {
         });
     }
 
-
-    initCheckout() {
-        var result = true;
-        if (typeof this.todo_list !== "string" && !Array.isArray(this.todo_list)) {
-            console.error("初始化参数出错，您没有正确输入链接字符串或链接字符串的数组");
-            result = false;
-        }
-        if (typeof this.callback !== "function") {
-            console.error("初始化参数出错: callback格式不正确");
-            result = false;
-        }
-        return result;
-    }
 
 }
 

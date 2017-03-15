@@ -5,29 +5,26 @@ Easier and more efficient to crawl a website and extract data, NodeSpider can sa
 
 ```javascript
 let s = new NodeSpider({
-    toUtf8: true,   // Convert html to UTF8 if necessary
-    // more...
+    toUtf8: true,   // Convert body to UTF8 if necessary
+    // or more...
 });
 
-// start crawling with a url and callback
 s.start('https://en.wikipedia.org/wiki/Main_Page', function (err, current, $) {
     if (err) {
-        s.retry(err);   //retry the task
-        return ;
+        return s.retry(err);   //retry when there are a error
     }
 
-    // You can use jQuery to extract data or select element
+    // Yes, you can use jQuery 
     console.log($('title').text()); 
 
     // Add new task to NodeSpider's todo-list.
-    // Never worry about the url is existed or has been crawled
-    s.todo($('a#next_page').attr('href'), current.callback);
+    s.todo($('#next_page').attr('href'), current.callback);
 
-    // Get the url(s) from jQuery selected Element
-    // Will convert relative url into absolute url automatically, never wrong about the relative url in page.
-    s.todo($('a'), current.callback);
+    // You can also write like that:
+    // Before add to todo-list, convert relative url into absolute if necessary
+    s.todo($('#pre_page'), current.callback);
 
-    // Easy to save data from the website to local.
+    // Easy to save data
     s.save('./mydata.json', {
         title: $('title').text(),
         sumary: $('p').text(),
