@@ -14,9 +14,10 @@ import Table = require("./Table");
 import charset = require("charset");
 
 let defaultOption = {
-    max_process: 40,
+    multiTasking: 40,
     jq: true,
     toUTF8: true,
+    defaultRetry: 3,
 };
 
 enum TaskType {
@@ -24,31 +25,56 @@ enum TaskType {
     download,
 };
 
+// for spider.prototype.addTask
 interface ITask {
     type: TaskType;
     url: string;
     callback: (err, currentTask, $) => void;
+
+}
+
+// for spider.prototype._TODOLIST item
+interface ITaskItem extends ITask {
+    info: {
+        maxRetry: number;
+        retried: number;
+        finalErrorCallback: (err: IError) => void;
+    }
+}
+
+// for callback err and spider.prototype.retry
+interface IError {
+    task: ITaskItem;
 }
 interface IStatus {
-
+    _working: boolean;
+    _currentMultiTask: number;
+}
+interface IOption {
+    multiTasking: number;
+    jq: boolean;
+    toUTF8: boolean;
+    defaultRetry: number;
 }
 // 简单上手的回掉函数 + 自由定制的事件驱动
 
 class NodeSpider {
-    protected option: object;
-    protected todoList: List;
-    protected status: IStatus;
-    constructor(user_option = {}) {
-        Object.assign(defaultOption, user_option);
-        this.option = defaultOption;
+    protected _OPTION: IOption;
+    protected _TODOLIST: List;
+    protected _STATUS: IStatus;
+    protected _TABLE: object;
+    constructor(userOption = {}) {
+        Object.assign(defaultOption, userOption);
+        this._OPTION = defaultOption;
 
-        this.status = {
-            process_num: 0, // 当前正在进行的任务数量
+        this._STATUS = {
+            _currentMultiTask: 0, // 当前正在进行的任务数量
+            _working: false,
         };
 
-        this.todoList = new List();
+        this._TODOLIST = new List();
 
-        this._table = {};
+        this._TABLE = {};
     }
 
     /**
@@ -57,54 +83,87 @@ class NodeSpider {
      * @memberOf NodeSpider
      */
     public addTask(task: ITask) {
-        this.todoList.add(task.url, task);
+        (task as ITaskItem).info = {
+            finalErrorCallback: null,
+            maxRetry: null,
+            retried: 0,
+        }
+        this._TODOLIST.add(task.url, task);
+
+        // 为什么这么设计：
+        // 当没有任务，爬虫却没有关闭（待机），添加新任务将让爬虫再次执行新任务
+        if (this._STATUS._working) {
+            this._performATask();
+        }
     }
 
     /**
-     * 检测链接是否已添加过爬虫的 todo-list
+     * 检测链接是否已添加过
      * @param {any} url 待检查的链接
      * @returns {boolean}
      * @memberOf NodeSpider
      */
     public check(url) {
-        return this.todoList.check(url);
+        return this._TODOLIST.check(url);
     }
 
-    start(url, callback) {
+    public start(url, callback) {
         // TODO: init check
 
         this.todo(url, callback);
 
-        this._taskManager();
+        this._STATUS._working = true;
+        this._performATask();
     }
 
-    _taskManager() {
-        if (this.status.process_num >= this.option.max_process) {
+    // 重写
+    public retry(err: IError, maxRetry: number, finalErrorCallback: (err: IError) => void ) {
+        maxRetry = maxRetry || this._OPTION.defaultRetry;
+
+        if (! finalErrorCallback) {
+            finalErrorCallback = (err) => {
+                this.save("log", err);
+            }
+        }
+
+        if (err.task.info.maxRetry === null) {
+            err.task.info.maxRetry = maxRetry;    // 本次使用了一次重试机会，故 -1
+            err.task.info.finalErrorCallback = finalErrorCallback;
+        }
+
+        if (err.task.info.maxRetry > err.task.info.retried) {
+            err.task.info.retried += 1;
+            this._TODOLIST.jump(err.task.url, err.task);
+        } else {
+            err.task.info.finalErrorCallback(err);
+        }
+
+    }
+    protected _performATask() {
+        if (this._STATUS._currentMultiTask >= this._OPTION.multiTasking) {
             return false; //当网络连接达到限制设置，直接停止此次工作
         }
-        this.status.process_num++;
-        this._taskManager();
+        this._STATUS._currentMultiTask++;
+        this._performATask();
 
-        // 不同待完成任务拥有不同优先级： 下载任务 > 抓取任务
-        let task = this._download_list.get();
-        if (task) return this._doDownloadTask(task);
+        let task = this._TODOLIST.next();
+        if (task) {
+            this._doCrawlingTask(task);
+        }
 
-        task = this.todoList.get();
-        if (task) return this._docrawlingTask(task);
-
-        this.status.process_num--;
+        this._STATUS._currentMultiTask--;
     }
 
-    _docrawlingTask(task) {
-        this._asynccrawling(task)
+    protected _doCrawlingTask(task) {
+        this._asyncCrawling(task)
             .then(() => {
-                this.status.process_num--;
-                this._taskManager();
+                this._STATUS._currentMultiTask--;
+                this._performATask();
             })
             .catch((error) => {
                 console.log(error);
-                this.status.process_num--;
-                this._taskManager();
+                this._STATUS._currentMultiTask--;
+                this._performATask();
                 // TODO: 错误处理
             });
         return true;
@@ -113,25 +172,25 @@ class NodeSpider {
     _doDownloadTask(task) {
         this._asyncDownload(task)
             .then(() => {
-                this.status.process_num--;
-                this._taskManager();
+                this._STATUS._currentMultiTask--;
+                this._performATask();
             })
             .catch((error) => {
-                this.status.process_num--;
+                this._STATUS._currentMultiTask--;
                 console.log(error);
-                this._taskManager();
+                this._performATask();
                 // TODO: 错误处理
             });
         return true; // 如果有待重试下载的任务，执行并忽略下面步骤
     }
 
-    async _asynccrawling(task) {
+    protected async _asyncCrawling(task) {
         let [error, response, body] = await this.get(task.url, task.opts);
         let $;
         if (!error) {
             try {
                 // 根据任务设置和全局设置，确定如何编码正文
-                let toUTF8 = this.option.toUTF8;
+                let toUTF8 = this._OPTION.toUTF8;
                 if (task.opts && task.opts.toUTF8 !== undefined) {
                     toUTF8 = task.opts.toUTF8;
                 }
@@ -142,19 +201,20 @@ class NodeSpider {
 
                 // 根据任务设置和全局设置，确定是否加载jQ
                 if (task.opts && task.opts.jq !== undefined) {
-                    $ = this.loadJq(body, task.url);
-                } else if (this.option.jq) {
-                    $ = this.loadJq(body, task.url)
+                    $ = this._loadJQ(body, task.url);
+                } else if (this._OPTION.jq) {
+                    $ = this._loadJQ(body, task.url)
                 }
 
             } catch (err) {
                 error = err;
             }
         }
-        
-        // 带有更详细信息的 error， for NodeSpider.prototype.retry
-        if (error) error.task = task;
-        else error = null;
+
+        // 更多信息的错误 for spider.prototype.retry
+        if (error) {
+            error.task = task;
+        }
 
         let current = {
             url: task.url,
@@ -166,7 +226,7 @@ class NodeSpider {
         task.callback(error, current, $);
     }
 
-    async _asyncDownload(url, opts, path) {
+    protected async _asyncDownload(url, opts, path) {
         return new Promise(function (resolve, reject) {
             let download = request(url);
             let write = fs.createWriteStream(path);
@@ -207,7 +267,7 @@ class NodeSpider {
      * @returns {object}
      * @memberOf NodeSpider
      */
-    protected loadJq(body, current_url) {
+    protected _loadJQ(body, current_url) {
         let $;
         $ = cheerio.load(body);
 
@@ -247,31 +307,6 @@ class NodeSpider {
         return $;
     }
 
-    retry(err, max_retry_num, final_callback) {
-        if (! err) return false;
-
-        max_retry_num = max_retry_num || 3; //默认3次
-
-        if (! final_callback) {
-            final_callback = (err) => {
-                this.save('log', err);
-            }
-        }
-        if (err.task.info.max_retry_num === null) {
-            err.task.info.max_retry_num = max_retry_num - 1;    // 本次使用了一次重试机会，故 -1
-            err.task.info.final_callback = final_callback;
-            this.todoList.queue.jump(err.task);
-            return true;
-        }
-        if (err.task.info.max_retry_num !== 0) {
-            err.task.info.max_retry_num --;
-            this.todoList.queue.jump(err.task);
-            return true;
-        }
-        else {
-            err.task.info.final_callback(err);
-        }
-    }
 
     todo(item, opts, callback) {
         //当调用todo时，opts参数和callback参数位置可以颠倒，并让opts为可选参数
@@ -294,12 +329,12 @@ class NodeSpider {
         if (!item) {
             return false;
         } else if (typeof item === 'string') { //如果item是一个字符串
-            return this.todoList.add({
+            return this._TODOLIST.add({
                 url: item,
                 opts,
                 callback,
                 info: {
-                    max_retry_num: null,
+                    maxRetry_num: null,
                     final_callback: null
                 }
             });
@@ -344,27 +379,27 @@ class NodeSpider {
     save(item, data) {
         //TODO: 如果item为对象，则为数据库。通过用户在 item 中自定义的标识符来判断是否已存在
         // 暂时只完成保存到文本的功能，所以默认 item 为文件路径字符串
-        if (this._table[item]) {
-            this._table[item].add(data);
+        if (this._TABLE[item]) {
+            this._TABLE[item].add(data);
             return true;
         }
         //如果不存在，则新建一个table实例
         let header = Object.keys(data);
         // 根据路径中的文件后缀名，决定新建哪种table
         if (/.txt$/.test(item)) {
-            this._table[item] = new TxtTable(item, header);
-            this._table[item].add(data);
+            this._TABLE[item] = new TxtTable(item, header);
+            this._TABLE[item].add(data);
         }
         else {
-            this._table[item] = new JsonTable(item, header);
-            this._table[item].add(data);
+            this._TABLE[item] = new JsonTable(item, header);
+            this._TABLE[item].add(data);
         }
     }
 
     /**
      *
      */
-    download(url, opts, path = this.option.download_path, errorCallback) {
+    download(url, opts, path = this._OPTION.download_path, errorCallback) {
         // 让opts变成可选参数
         if (typeof opts === 'string') {
             let x = opts;
