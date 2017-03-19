@@ -1,7 +1,6 @@
-const fs = require('fs-extra');
+import fs = require("fs-extra");
 
 class Table {
-
     /**
      * Creates an instance of Table.
      * @param {Array} header the header of Table
@@ -65,7 +64,9 @@ class JsonTable extends Table {
      * @memberOf TxtTable
      */
     constructor(path, header) {
-        if (typeof path !== 'string' || !Array.isArray(header)) throw new Error('the string-typed parameter "path" and array-typed "header" is required');
+        if (typeof path !== 'string' || !Array.isArray(header)) {
+            throw new Error('the string-typed parameter "path" and array-typed "header" is required');
+        }
         super(header);
         fs.ensureFileSync(path, (err) => {
             if (err) throw err;
@@ -85,4 +86,4 @@ class JsonTable extends Table {
     }
 }
 
-module.exports = {TxtTable, JsonTable};
+exports = {TxtTable, JsonTable};

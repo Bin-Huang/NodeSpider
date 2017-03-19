@@ -3,38 +3,72 @@
 // TODO: 更好的命名方式和注释，让外国人看懂
 // TODO: 解决 save 方法保存json格式不好用的问题： 没有[],直接也没有逗号隔开
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
-const iconv = require('iconv-lite');
-const request = require('request');
-const cheerio = require('cheerio');
-const fs = require('fs');
-const url = require('url');
-const List = require('./List');
-const {TxtTable, JsonTable} = require('./Table');
-const charset = require('charset');
 
-let default_option = {
+import iconv = require("iconv-lite");
+import request = require("request");
+import cheerio = require("cheerio");
+import fs = require("fs");
+import url = require("url");
+import List = require("./List");
+import Table = require("./Table");
+import charset = require("charset");
+
+let defaultOption = {
     max_process: 40,
     jq: true,
     toUTF8: true,
 };
 
+enum TaskType {
+    crawling,
+    download,
+};
+
+interface ITask {
+    type: TaskType;
+    url: string;
+    callback: (err, currentTask, $) => void;
+}
+interface IStatus {
+
+}
 // 简单上手的回掉函数 + 自由定制的事件驱动
 
 class NodeSpider {
+    protected option: object;
+    protected todoList: List;
+    protected status: IStatus;
     constructor(user_option = {}) {
-        Object.assign(default_option, user_option);
-        this._option = default_option;
+        Object.assign(defaultOption, user_option);
+        this.option = defaultOption;
 
-        this._status = {
-            process_num: 0, //当前正在进行的任务数量
+        this.status = {
+            process_num: 0, // 当前正在进行的任务数量
         };
 
-        this._todo_list = new List();
-        this._download_list = new List();
+        this.todoList = new List();
 
         this._table = {};
     }
 
+    /**
+     * 向爬虫的 todo-list 添加新的任务(不检查是否重复链接)
+     * @param {ITask} task
+     * @memberOf NodeSpider
+     */
+    public addTask(task: ITask) {
+        this.todoList.add(task.url, task);
+    }
+
+    /**
+     * 检测链接是否已添加过爬虫的 todo-list
+     * @param {any} url 待检查的链接
+     * @returns {boolean}
+     * @memberOf NodeSpider
+     */
+    public check(url) {
+        return this.todoList.check(url);
+    }
 
     start(url, callback) {
         // TODO: init check
@@ -45,31 +79,31 @@ class NodeSpider {
     }
 
     _taskManager() {
-        if (this._status.process_num >= this._option.max_process) {
+        if (this.status.process_num >= this.option.max_process) {
             return false; //当网络连接达到限制设置，直接停止此次工作
         }
-        this._status.process_num++;
+        this.status.process_num++;
         this._taskManager();
 
         // 不同待完成任务拥有不同优先级： 下载任务 > 抓取任务
         let task = this._download_list.get();
         if (task) return this._doDownloadTask(task);
 
-        task = this._todo_list.get();
-        if (task) return this._doCaptureTask(task);
+        task = this.todoList.get();
+        if (task) return this._docrawlingTask(task);
 
-        this._status.process_num--;
+        this.status.process_num--;
     }
 
-    _doCaptureTask(task) {
-        this._asyncCapture(task)
+    _docrawlingTask(task) {
+        this._asynccrawling(task)
             .then(() => {
-                this._status.process_num--;
+                this.status.process_num--;
                 this._taskManager();
             })
             .catch((error) => {
                 console.log(error);
-                this._status.process_num--;
+                this.status.process_num--;
                 this._taskManager();
                 // TODO: 错误处理
             });
@@ -79,11 +113,11 @@ class NodeSpider {
     _doDownloadTask(task) {
         this._asyncDownload(task)
             .then(() => {
-                this._status.process_num--;
+                this.status.process_num--;
                 this._taskManager();
             })
             .catch((error) => {
-                this._status.process_num--;
+                this.status.process_num--;
                 console.log(error);
                 this._taskManager();
                 // TODO: 错误处理
@@ -91,13 +125,13 @@ class NodeSpider {
         return true; // 如果有待重试下载的任务，执行并忽略下面步骤
     }
 
-    async _asyncCapture(task) {
+    async _asynccrawling(task) {
         let [error, response, body] = await this.get(task.url, task.opts);
         let $;
         if (!error) {
             try {
                 // 根据任务设置和全局设置，确定如何编码正文
-                let toUTF8 = this._option.toUTF8;
+                let toUTF8 = this.option.toUTF8;
                 if (task.opts && task.opts.toUTF8 !== undefined) {
                     toUTF8 = task.opts.toUTF8;
                 }
@@ -109,7 +143,7 @@ class NodeSpider {
                 // 根据任务设置和全局设置，确定是否加载jQ
                 if (task.opts && task.opts.jq !== undefined) {
                     $ = this.loadJq(body, task.url);
-                } else if (this._option.jq) {
+                } else if (this.option.jq) {
                     $ = this.loadJq(body, task.url)
                 }
 
@@ -168,21 +202,18 @@ class NodeSpider {
 
     /**
      * 根据body加载jQuery对象，并根据当前url扩展jQuery对象path方法，以此获得属性的绝对路径
-     * 
      * @param {string} body 正文
      * @param {string} current_url
      * @returns {object}
-     * 
      * @memberOf NodeSpider
      */
-    loadJq(body, current_url) {
+    protected loadJq(body, current_url) {
         let $;
         $ = cheerio.load(body);
 
         /**
          * 扩充 jQ 方法：根据节点的 href 获得有效的 url 绝对路径。返回值为字符串或数组
          * 例子： $('a').url()
-         * 
          * 类似 'javascirpt: void(0)' 不会有返回
          * 类似 '#key' 的锚链接等效于当前链接
          */ 
@@ -192,10 +223,14 @@ class NodeSpider {
                 let new_url = $(this).attr('href');
 
                 // 如果是类似 'javascirpt: void(0)' 的 js 代码，直接跳过
-                if (/^javascript/.test(new_url)) return false;
+                if (/^javascript/.test(new_url)) {
+                    return false;
+                }
 
                 // 如果是锚，等效与当前 url 路径
-                if (new_url[0] === '#') return result.push(current_url);
+                if (new_url[0] === '#') {
+                    return result.push(current_url);
+                }
 
                 // 如果是相对路径，补全路径为绝对路径
                 if (new_url && !/^https?:\/\//.test(new_url)) {
@@ -203,11 +238,11 @@ class NodeSpider {
                 }
                 result.push(new_url);
             });
-            if (result.length < 2) [result] = result;
+            if (result.length < 2) {
+                [result] = result;
+            }
             return result;
         };
-
-
 
         return $;
     }
@@ -225,12 +260,12 @@ class NodeSpider {
         if (err.task.info.max_retry_num === null) {
             err.task.info.max_retry_num = max_retry_num - 1;    // 本次使用了一次重试机会，故 -1
             err.task.info.final_callback = final_callback;
-            this._todo_list.queue.jump(err.task);
+            this.todoList.queue.jump(err.task);
             return true;
         }
         if (err.task.info.max_retry_num !== 0) {
             err.task.info.max_retry_num --;
-            this._todo_list.queue.jump(err.task);
+            this.todoList.queue.jump(err.task);
             return true;
         }
         else {
@@ -238,9 +273,6 @@ class NodeSpider {
         }
     }
 
-    addTask(task) {
-        
-    }
     todo(item, opts, callback) {
         //当调用todo时，opts参数和callback参数位置可以颠倒，并让opts为可选参数
         if (typeof opts === 'function') {
@@ -262,7 +294,7 @@ class NodeSpider {
         if (!item) {
             return false;
         } else if (typeof item === 'string') { //如果item是一个字符串
-            return this._todo_list.add({
+            return this.todoList.add({
                 url: item,
                 opts,
                 callback,
@@ -332,7 +364,7 @@ class NodeSpider {
     /**
      *
      */
-    download(url, opts, path = this._option.download_path, errorCallback) {
+    download(url, opts, path = this.option.download_path, errorCallback) {
         // 让opts变成可选参数
         if (typeof opts === 'string') {
             let x = opts;
@@ -356,6 +388,4 @@ class NodeSpider {
 
 }
 
-
-
-module.exports = NodeSpider;
+export = NodeSpider;
