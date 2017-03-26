@@ -1,12 +1,12 @@
-import fs = require("fs-extra");
+import * as fs from "fs-extra";
 
 class Table {
     /**
      * Creates an instance of Table.
      * @param {Array} header the header of Table
-     * 
      * @memberOf Table
      */
+    public header: string[];
     constructor(header) {
         if (!Array.isArray(header)) {
             throw new Error('To create a Table must need an array-typed parameter');
@@ -16,13 +16,11 @@ class Table {
 
 }
 
-
-class TxtTable extends Table {
+export class TxtTable extends Table {
     /**
      * Creates an instance of TxtTable.
      * @param {string} path 写入文件路径
      * @param {array} header 表头
-     * 
      * @memberOf TxtTable
      */
     constructor(path, header) {
@@ -55,7 +53,7 @@ class TxtTable extends Table {
 }
 
 
-class JsonTable extends Table {
+export class JsonTable extends Table {
     /**
      * Creates an instance of TxtTable.
      * @param {string} path 写入文件路径
@@ -85,5 +83,3 @@ class JsonTable extends Table {
         fs.writeJsonSync(this.path, data, {flag: 'a'});
     }
 }
-
-exports = {TxtTable, JsonTable};

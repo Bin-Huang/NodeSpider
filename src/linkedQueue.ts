@@ -6,7 +6,7 @@ interface ILinkNode {
 /**
  * 可遍历的链表类
  */
-class LinkedQueue {
+export default class LinkedQueue {
     protected _HEAD: ILinkNode;
     protected _END: ILinkNode;
     protected _LENGTH: number;
@@ -90,4 +90,3 @@ class LinkedQueue {
 
 };
 
-export = LinkedQueue;

@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * 可遍历的链表类
  */
@@ -76,5 +77,5 @@ class LinkedQueue {
         return this._LENGTH;
     }
 }
+exports.default = LinkedQueue;
 ;
-module.exports = LinkedQueue;

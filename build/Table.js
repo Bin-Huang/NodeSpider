@@ -2,12 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs-extra");
 class Table {
-    /**
-     * Creates an instance of Table.
-     * @param {Array} header the header of Table
-     *
-     * @memberOf Table
-     */
     constructor(header) {
         if (!Array.isArray(header)) {
             throw new Error('To create a Table must need an array-typed parameter');
@@ -20,7 +14,6 @@ class TxtTable extends Table {
      * Creates an instance of TxtTable.
      * @param {string} path 写入文件路径
      * @param {array} header 表头
-     *
      * @memberOf TxtTable
      */
     constructor(path, header) {
@@ -52,6 +45,7 @@ class TxtTable extends Table {
         this.stream.write(chunk);
     }
 }
+exports.TxtTable = TxtTable;
 class JsonTable extends Table {
     /**
      * Creates an instance of TxtTable.
@@ -82,4 +76,4 @@ class JsonTable extends Table {
         fs.writeJsonSync(this.path, data, { flag: 'a' });
     }
 }
-exports = { TxtTable, JsonTable };
+exports.JsonTable = JsonTable;

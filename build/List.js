@@ -1,12 +1,10 @@
 "use strict";
-const LinkedQueue = require("./LinkedQueue");
-/**
- * 清单类 for todo_list、download_list
- */
+Object.defineProperty(exports, "__esModule", { value: true });
+const LinkedQueue_1 = require("./LinkedQueue");
 class List {
     constructor() {
         this._SET = new Set();
-        this._QUEUE = new LinkedQueue();
+        this._QUEUE = new LinkedQueue_1.default();
     }
     /**
      * 添加新的项目到清单末尾（不管唯一标识码是否重复，建议添加前先 check）
@@ -42,7 +40,7 @@ class List {
      * @memberOf List
      */
     next() {
-        return this._QUEUE.next();
+        return (this._QUEUE.next());
     }
     /**
      * 返回清单中未读取项目的数量
@@ -59,4 +57,4 @@ class List {
         return this._SET.size;
     }
 }
-module.exports = List;
+exports.default = List;

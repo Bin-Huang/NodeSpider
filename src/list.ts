@@ -1,10 +1,6 @@
-import LinkedQueue = require("./LinkedQueue");
+import LinkedQueue from "./LinkedQueue";
 
-
-/**
- * 清单类 for todo_list、download_list
- */
-class List {
+export default class List<T> {
     protected _SET: Set < any > ;
     protected _QUEUE: LinkedQueue;
     constructor() {
@@ -18,7 +14,7 @@ class List {
      * @param {*} item 新项目的值
      * @memberOf List
      */
-    public add(id: string, item: any) {
+    public add(id: string, item: T) {
         this._QUEUE.add(item);
         this._SET.add(id);
     }
@@ -28,7 +24,7 @@ class List {
      * @param {string} id 新的项目的唯一标识码
      * @param {*} item 新项目的值
      */
-    public jump(id: string, item: any) {
+    public jump(id: string, item: T) {
         this._QUEUE.jump(item);
         this._SET.add(id);
     }
@@ -49,7 +45,7 @@ class List {
      * @memberOf List
      */
     public next() {
-        return this._QUEUE.next();
+        return (this._QUEUE.next()) as T;
     }
 
     /**
@@ -69,5 +65,3 @@ class List {
     }
 
 }
-
-export = List;
