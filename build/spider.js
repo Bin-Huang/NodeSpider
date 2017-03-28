@@ -16,6 +16,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 // TODO: 递归换成事件监听
 const charset = require("charset");
 const cheerio = require("cheerio");
+const EventEmitter = require("events");
 const fs = require("fs");
 const iconv = require("iconv-lite");
 const request = require("request");
@@ -45,8 +46,9 @@ const defaultOption = {
     multiTasking: 40,
     preToUtf8: true,
 };
-class NodeSpider {
+class NodeSpider extends EventEmitter {
     constructor(userOption = {}) {
+        super();
         Object.assign(defaultOption, userOption);
         this._OPTION = defaultOption;
         this._STATUS = {
@@ -55,6 +57,8 @@ class NodeSpider {
         };
         this._TODOLIST = new List_1.default();
         this._TABLE = {};
+        this.on("start_a_crawling_task", () => this._STATUS._currentMultiTask++);
+        this.on("done_a_crawling_task", () => this._STATUS._currentMultiTask--);
     }
     /**
      * 向爬虫的 todo-list 添加新的任务(不检查是否重复链接)
@@ -157,29 +161,27 @@ class NodeSpider {
         });
     }
     _performATask() {
-        if (this._STATUS._currentMultiTask >= this._OPTION.multiTasking) {
-            return false; //当网络连接达到限制设置，直接停止此次工作
-        }
-        this._STATUS._currentMultiTask++;
-        this._performATask();
-        let task = this._TODOLIST.next();
-        if (task) {
-            if (task.type === TaskType.crawling) {
-                this._asyncCrawling(task)
-                    .then(() => {
-                    this._STATUS._currentMultiTask--;
-                    this._performATask();
-                })
-                    .catch((error) => {
-                    console.log(error);
-                    this._STATUS._currentMultiTask--;
-                    this._performATask();
-                    // TODO: 错误处理
-                });
+        while (this._STATUS._currentMultiTask < this._OPTION.multiTasking) {
+            let task = this._TODOLIST.next();
+            if (task) {
+                this._STATUS._currentMultiTask++;
+                if (task.type === TaskType.crawling) {
+                    this._asyncCrawling(task)
+                        .then(() => {
+                        this._STATUS._currentMultiTask--;
+                        this._performATask();
+                    })
+                        .catch((error) => {
+                        console.log(error);
+                        this._STATUS._currentMultiTask--;
+                        this._performATask();
+                        // TODO: 错误处理
+                    });
+                }
             }
-        }
-        else {
-            this._STATUS._currentMultiTask--;
+            else {
+                break;
+            }
         }
     }
     _loadJq(body, task) {

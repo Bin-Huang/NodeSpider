@@ -7,13 +7,13 @@
 // TODO: 递归换成事件监听
 import * as charset from "charset";
 import * as cheerio from "cheerio";
+import * as EventEmitter from "events";
 import * as fs from "fs";
 import * as iconv from "iconv-lite";
 import * as request from "request";
 import * as url from "url";
 import List from "./List";
 import { JsonTable, TxtTable } from "./Table";
-
 // import iconv = require("iconv-lite");
 // import request = require("request");
 // import cheerio = require("cheerio");
@@ -41,8 +41,8 @@ interface ITask {
     type: TaskType;
     url: string;
     callback: (err, currentTask, $) => void;
-    jq ? : boolean;
-    preToUtf8 ? : boolean;
+    jq ?: boolean;
+    preToUtf8 ?: boolean;
 }
 
 // for spider.prototype._TODOLIST item
@@ -51,7 +51,7 @@ interface ITaskItem extends ITask {
         maxRetry: number;
         retried: number;
         finalErrorCallback: (currentTask: ITaskItem) => void;
-    }
+    };
 }
 
 interface IStatus {
@@ -68,12 +68,13 @@ const defaultOption: IOption = {
     preToUtf8: true,
 };
 
-class NodeSpider {
+class NodeSpider extends EventEmitter {
     protected _OPTION: IOption;
     protected _TODOLIST: List <ITaskItem> ;
     protected _STATUS: IStatus;
     protected _TABLE: object;
     constructor(userOption = {}) {
+        super();
         Object.assign(defaultOption, userOption);
         this._OPTION = defaultOption;
 
@@ -85,6 +86,9 @@ class NodeSpider {
         this._TODOLIST = new List <ITaskItem> ();
 
         this._TABLE = {};
+
+        this.on("start_a_crawling_task", () => this._STATUS._currentMultiTask ++);
+        this.on("done_a_crawling_task", () => this._STATUS._currentMultiTask --);
     }
 
     /**
@@ -203,30 +207,29 @@ class NodeSpider {
     }
 
     protected _performATask() {
-        if (this._STATUS._currentMultiTask >= this._OPTION.multiTasking) {
-            return false; //当网络连接达到限制设置，直接停止此次工作
-        }
-        this._STATUS._currentMultiTask++;
-        this._performATask();
+        while (this._STATUS._currentMultiTask < this._OPTION.multiTasking) {
+            let task = this._TODOLIST.next();
+            if (task) {
+                this._STATUS._currentMultiTask ++;
 
-        let task = this._TODOLIST.next();
-        if (task) {
-            if (task.type === TaskType.crawling) {
-                this._asyncCrawling(task)
-                    .then(() => {
-                        this._STATUS._currentMultiTask--;
-                        this._performATask();
-                    })
-                    .catch((error) => {
-                        console.log(error);
-                        this._STATUS._currentMultiTask--;
-                        this._performATask();
-                        // TODO: 错误处理
-                    });
+                if (task.type === TaskType.crawling) {
+                    this._asyncCrawling(task)
+                        .then(() => {
+                            this._STATUS._currentMultiTask--;
+                            this._performATask();
+                        })
+                        .catch((error) => {
+                            console.log(error);
+                            this._STATUS._currentMultiTask--;
+                            this._performATask();
+                            // TODO: 错误处理
+                        });
+                }
+            } else {
+                break;
             }
-        } else {
-            this._STATUS._currentMultiTask--;
         }
+
     }
 
     protected _loadJq(body: string, task: ITaskItem) {
@@ -276,6 +279,7 @@ class NodeSpider {
 
         };
         return $;
+
     }
 
     protected async _asyncCrawling(currentTask: ITaskItem) {
