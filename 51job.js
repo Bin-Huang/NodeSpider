@@ -1,17 +1,17 @@
 const NodeSpider = require("./build/spider");
 let s = new NodeSpider({
-    multiTasking: 1
+    // multiTasking: 1
 });
 
 let dataCallback = (err, currentTask, $) => {
     if (err) {
         console.log(err)
-        return s.retry(currentTask);
+        // return s.retry(currentTask);
     }
     s.save("data", {
-        title: $(".cn").find("h1")[0].attr("title"),
-        wage: $(".cn").find("strong")[0].text(),
-        company: $(".cn").find("p")[0].find("a")[0].text(),
+        title: $(".cn").find("h1").attr("title"),
+        wage: $(".cn").find("strong").text(),
+        company: $(".cn").find("p").find("a").text(),
     })
 }
 
@@ -20,14 +20,22 @@ let num = 1000;
 s.start(beginUrl, function(err, currentTask, $) {
     if (err) {
         console.log(err)
-        s.retry(currentTask);
+        // s.retry(currentTask);
         return ;
     }
-    $(".el").find("a").todo(dataCallback);
-    console.log(s._TODOLIST._QUEUE)
+    console.log(currentTask.url);
+    $(".el").find("p").find("span").find("a").todo(dataCallback);
+    // $("a").todo();
+
+    console.log(num)
     if (num > 1) {
         num --;
-        // console.log($(".dw_page").find("a").url())
-        $(".dw_page").find("a").todo();
+        let urls =         $(".p_in").find("ul").find("li").find("a").todo();
+        console.log(urls)
+        // urls.map((u) => {
+        //     console.log(s.check(u));
+        // })
+        $(".p_in").find("ul").find("li").find("a").todo();
+
     }
 });

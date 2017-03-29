@@ -2,6 +2,7 @@
 // TODO: 更好的报错机制: 报错建议？以及去除多余的 console.error
 // TODO: 解决 save 方法保存json格式不好用的问题： 没有[],直接也没有逗号隔开
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
+// TODO: 当一个页面 url 指向已存在资源路径，但是添加了不同的查询语句，将跳过去重
 import * as charset from "charset";
 import * as cheerio from "cheerio";
 import { EventEmitter } from "events";
@@ -85,12 +86,13 @@ class NodeSpider extends EventEmitter {
      * @memberOf NodeSpider
      */
     public addTask(task: ITask) {
-        (task as ITask).info = {
+        task.info = {
             finalErrorCallback: null,
             maxRetry: null,
             retried: 0,
         };
-        this._TODOLIST.add(task.url, (task as ITask));
+        this._TODOLIST.add(task.url, task);
+        // this._fire();
     }
 
     /**
@@ -303,8 +305,7 @@ class NodeSpider extends EventEmitter {
         (currentTask as any).response = response;
         (currentTask as any).error = error;
 
-        // currentTask.callback(error, currentTask, $);
-        currentTask.callback(error, response, $);
+        currentTask.callback(error, currentTask, $);
 
     }
 

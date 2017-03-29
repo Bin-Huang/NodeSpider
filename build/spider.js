@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 // TODO: 更好的报错机制: 报错建议？以及去除多余的 console.error
 // TODO: 解决 save 方法保存json格式不好用的问题： 没有[],直接也没有逗号隔开
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
+// TODO: 当一个页面 url 指向已存在资源路径，但是添加了不同的查询语句，将跳过去重
 const charset = require("charset");
 const cheerio = require("cheerio");
 const events_1 = require("events");
@@ -63,6 +64,7 @@ class NodeSpider extends events_1.EventEmitter {
             retried: 0,
         };
         this._TODOLIST.add(task.url, task);
+        // this._fire();
     }
     /**
      * 检测链接是否已添加过
@@ -212,7 +214,6 @@ class NodeSpider extends events_1.EventEmitter {
                     if (typeof option === "object") {
                         Object.assign(new_task, option);
                     }
-                    console.log(new_task);
                     thisSpider.addTask(new_task);
                 }
             });
@@ -251,8 +252,7 @@ class NodeSpider extends events_1.EventEmitter {
             }
             currentTask.response = response;
             currentTask.error = error;
-            // currentTask.callback(error, currentTask, $);
-            currentTask.callback(error, response, $);
+            currentTask.callback(error, currentTask, $);
         });
     }
     _asyncDownload(url, opts, path) {
