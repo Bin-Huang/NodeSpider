@@ -16,7 +16,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 // TODO: 递归换成事件监听
 const charset = require("charset");
 const cheerio = require("cheerio");
-const EventEmitter = require("events");
+const events_1 = require("events");
 const fs = require("fs");
 const iconv = require("iconv-lite");
 const request = require("request");
@@ -46,7 +46,7 @@ const defaultOption = {
     multiTasking: 40,
     preToUtf8: true,
 };
-class NodeSpider extends EventEmitter {
+class NodeSpider extends events_1.EventEmitter {
     constructor(userOption = {}) {
         super();
         Object.assign(defaultOption, userOption);
@@ -57,8 +57,11 @@ class NodeSpider extends EventEmitter {
         };
         this._TODOLIST = new List_1.default();
         this._TABLE = {};
-        this.on("start_a_crawling_task", () => this._STATUS._currentMultiTask++);
-        this.on("done_a_crawling_task", () => this._STATUS._currentMultiTask--);
+        this.on("start_a_task", (type) => this._STATUS._currentMultiTask++);
+        this.on("done_a_task", (type) => {
+            this._STATUS._currentMultiTask--;
+            // this._fire();
+        });
     }
     /**
      * 向爬虫的 todo-list 添加新的任务(不检查是否重复链接)
@@ -72,11 +75,6 @@ class NodeSpider extends EventEmitter {
             retried: 0,
         };
         this._TODOLIST.add(task.url, task);
-        // 为什么这么设计：
-        // 当没有任务，爬虫却没有关闭（待机），添加新任务将让爬虫再次执行新任务
-        if (this._STATUS._working) {
-            this._performATask();
-        }
     }
     /**
      * 检测链接是否已添加过
@@ -97,7 +95,9 @@ class NodeSpider extends EventEmitter {
             });
         }
         this._STATUS._working = true;
-        this._performATask();
+        setInterval(() => {
+            this._fire();
+        }, 100);
     }
     // 重写
     retry(currentTask, maxRetry, finalErrorCallback) {
@@ -160,27 +160,25 @@ class NodeSpider extends EventEmitter {
             });
         });
     }
-    _performATask() {
+    _fire() {
         while (this._STATUS._currentMultiTask < this._OPTION.multiTasking) {
             let task = this._TODOLIST.next();
-            if (task) {
-                this._STATUS._currentMultiTask++;
+            if (!task) {
+                break;
+            }
+            else {
+                this.emit("start_a_task");
                 if (task.type === TaskType.crawling) {
                     this._asyncCrawling(task)
                         .then(() => {
-                        this._STATUS._currentMultiTask--;
-                        this._performATask();
+                        this.emit("done_a_task");
                     })
                         .catch((error) => {
                         console.log(error);
-                        this._STATUS._currentMultiTask--;
-                        this._performATask();
+                        this.emit("done_a_task");
                         // TODO: 错误处理
                     });
                 }
-            }
-            else {
-                break;
             }
         }
     }
@@ -261,7 +259,8 @@ class NodeSpider extends EventEmitter {
             }
             currentTask.response = response;
             currentTask.error = error;
-            currentTask.callback(error, currentTask, $);
+            // currentTask.callback(error, currentTask, $);
+            currentTask.callback(error, response, $);
         });
     }
     _asyncDownload(url, opts, path) {

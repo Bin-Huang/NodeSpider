@@ -1,20 +1,20 @@
 const NodeSpider = require('./build/spider');
 
 let s = new NodeSpider({
-    // multiTasking: 4
+    multiTasking: 10
 });
 
 let i = 0;
 s.start('http://www.baidu.com', function(err, currentTask, $) {
     if (err) {
-        s.retry(currentTask);
+        // s.retry(currentTask);
         return ;
     }
     // console.log($('title').text());
     $('a').todo();
 
     let l = s._TODOLIST._QUEUE.getLength();
-    // console.log(l);
+    console.log(l);
     // console.log("curr: " + s._STATUS._currentMultiTask)
     // console.log(l)
     // console.log(i ++);

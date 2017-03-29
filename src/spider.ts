@@ -1,28 +1,16 @@
 // TODO: request 传入 opts，以及更多的 option，类似 proxy
 // TODO: 更好的报错机制: 报错建议？以及去除多余的 console.error
-// TODO: 更好的命名方式和注释，让外国人看懂
 // TODO: 解决 save 方法保存json格式不好用的问题： 没有[],直接也没有逗号隔开
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
-// BUG: 多任务记数有问题（递归栈溢出、计数问题）
-// TODO: 递归换成事件监听
 import * as charset from "charset";
 import * as cheerio from "cheerio";
-import * as EventEmitter from "events";
+import { EventEmitter } from "events";
 import * as fs from "fs";
 import * as iconv from "iconv-lite";
 import * as request from "request";
 import * as url from "url";
 import List from "./List";
 import { JsonTable, TxtTable } from "./Table";
-// import iconv = require("iconv-lite");
-// import request = require("request");
-// import cheerio = require("cheerio");
-// import fs = require("fs");
-// import url = require("url");
-// import List = require("./List");
-// import Table = require("./Table");
-// import charset = require("charset");
-// import loadJq = require("./loadJq");
 
 enum TaskType {
     crawling,
@@ -43,14 +31,11 @@ interface ITask {
     callback: (err, currentTask, $) => void;
     jq ?: boolean;
     preToUtf8 ?: boolean;
-}
 
-// for spider.prototype._TODOLIST item
-interface ITaskItem extends ITask {
-    info: {
+    info ?: {
         maxRetry: number;
         retried: number;
-        finalErrorCallback: (currentTask: ITaskItem) => void;
+        finalErrorCallback: (currentTask: ITask) => void;
     };
 }
 
@@ -70,7 +55,7 @@ const defaultOption: IOption = {
 
 class NodeSpider extends EventEmitter {
     protected _OPTION: IOption;
-    protected _TODOLIST: List <ITaskItem> ;
+    protected _TODOLIST: List <ITask> ;
     protected _STATUS: IStatus;
     protected _TABLE: object;
     constructor(userOption = {}) {
@@ -83,12 +68,15 @@ class NodeSpider extends EventEmitter {
             _working: false,
         };
 
-        this._TODOLIST = new List <ITaskItem> ();
+        this._TODOLIST = new List <ITask> ();
 
         this._TABLE = {};
 
-        this.on("start_a_crawling_task", () => this._STATUS._currentMultiTask ++);
-        this.on("done_a_crawling_task", () => this._STATUS._currentMultiTask --);
+        this.on("start_a_task", (type) => this._STATUS._currentMultiTask ++);
+        this.on("done_a_task", (type) => {
+            this._STATUS._currentMultiTask --;
+            this._fire();
+        });
     }
 
     /**
@@ -97,18 +85,12 @@ class NodeSpider extends EventEmitter {
      * @memberOf NodeSpider
      */
     public addTask(task: ITask) {
-        (task as ITaskItem).info = {
+        (task as ITask).info = {
             finalErrorCallback: null,
             maxRetry: null,
             retried: 0,
         };
-        this._TODOLIST.add(task.url, (task as ITaskItem));
-
-        // 为什么这么设计：
-        // 当没有任务，爬虫却没有关闭（待机），添加新任务将让爬虫再次执行新任务
-        if (this._STATUS._working) {
-            this._performATask();
-        }
+        this._TODOLIST.add(task.url, (task as ITask));
     }
 
     /**
@@ -133,12 +115,11 @@ class NodeSpider extends EventEmitter {
         }
 
         this._STATUS._working = true;
-        this._performATask();
+        this._fire();
     }
 
     // 重写
-    public retry(currentTask: ITaskItem, maxRetry: number, finalErrorCallback: (currentTask: ITaskItem) => void) {
-        maxRetry = maxRetry || this._OPTION.defaultRetry;
+    public retry(currentTask: ITask, maxRetry= this._OPTION.defaultRetry , finalErrorCallback: (currentTask: ITask) => void) {
 
         if (!finalErrorCallback) {
             finalErrorCallback = () => {
@@ -206,33 +187,30 @@ class NodeSpider extends EventEmitter {
         });
     }
 
-    protected _performATask() {
-        while (this._STATUS._currentMultiTask < this._OPTION.multiTasking) {
+    protected _fire() {
+        while(this._STATUS._currentMultiTask < this._OPTION.multiTasking) {
             let task = this._TODOLIST.next();
-            if (task) {
-                this._STATUS._currentMultiTask ++;
-
+            if(! task) {
+                break;
+            } else {
+                this.emit("start_a_task");
                 if (task.type === TaskType.crawling) {
                     this._asyncCrawling(task)
                         .then(() => {
-                            this._STATUS._currentMultiTask--;
-                            this._performATask();
+                            this.emit("done_a_task");
                         })
                         .catch((error) => {
                             console.log(error);
-                            this._STATUS._currentMultiTask--;
-                            this._performATask();
+                            this.emit("done_a_task");
                             // TODO: 错误处理
                         });
                 }
-            } else {
-                break;
+
             }
         }
-
     }
 
-    protected _loadJq(body: string, task: ITaskItem) {
+    protected _loadJq(body: string, task: ITask) {
         let $ = cheerio.load(body);
         // 扩展：添加 url 方法
         // 返回当前节点（们）链接的的绝对路径数组
@@ -282,7 +260,7 @@ class NodeSpider extends EventEmitter {
 
     }
 
-    protected async _asyncCrawling(currentTask: ITaskItem) {
+    protected async _asyncCrawling(currentTask: ITask) {
         let getOption = {};
         let {
             error,
@@ -318,7 +296,8 @@ class NodeSpider extends EventEmitter {
         (currentTask as any).response = response;
         (currentTask as any).error = error;
 
-        currentTask.callback(error, currentTask, $);
+        // currentTask.callback(error, currentTask, $);
+        currentTask.callback(error, response, $);
 
     }
 
