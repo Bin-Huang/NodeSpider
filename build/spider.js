@@ -9,11 +9,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 // TODO: request 传入 opts，以及更多的 option，类似 proxy
 // TODO: 更好的报错机制: 报错建议？以及去除多余的 console.error
-// TODO: 更好的命名方式和注释，让外国人看懂
 // TODO: 解决 save 方法保存json格式不好用的问题： 没有[],直接也没有逗号隔开
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
-// BUG: 多任务记数有问题（递归栈溢出、计数问题）
-// TODO: 递归换成事件监听
 const charset = require("charset");
 const cheerio = require("cheerio");
 const events_1 = require("events");
@@ -23,15 +20,6 @@ const request = require("request");
 const url = require("url");
 const List_1 = require("./List");
 const Table_1 = require("./Table");
-// import iconv = require("iconv-lite");
-// import request = require("request");
-// import cheerio = require("cheerio");
-// import fs = require("fs");
-// import url = require("url");
-// import List = require("./List");
-// import Table = require("./Table");
-// import charset = require("charset");
-// import loadJq = require("./loadJq");
 var TaskType;
 (function (TaskType) {
     TaskType[TaskType["crawling"] = 0] = "crawling";
@@ -43,7 +31,7 @@ const defaultOption = {
     defaultDownloadPath: "",
     defaultRetry: 3,
     jq: true,
-    multiTasking: 40,
+    multiTasking: 20,
     preToUtf8: true,
 };
 class NodeSpider extends events_1.EventEmitter {
@@ -60,7 +48,7 @@ class NodeSpider extends events_1.EventEmitter {
         this.on("start_a_task", (type) => this._STATUS._currentMultiTask++);
         this.on("done_a_task", (type) => {
             this._STATUS._currentMultiTask--;
-            // this._fire();
+            this._fire();
         });
     }
     /**
@@ -95,13 +83,10 @@ class NodeSpider extends events_1.EventEmitter {
             });
         }
         this._STATUS._working = true;
-        setInterval(() => {
-            this._fire();
-        }, 100);
+        this._fire();
     }
     // 重写
-    retry(currentTask, maxRetry, finalErrorCallback) {
-        maxRetry = maxRetry || this._OPTION.defaultRetry;
+    retry(currentTask, maxRetry = this._OPTION.defaultRetry, finalErrorCallback) {
         if (!finalErrorCallback) {
             finalErrorCallback = () => {
                 this.save("log", currentTask);
@@ -210,18 +195,25 @@ class NodeSpider extends events_1.EventEmitter {
         const thisSpider = this;
         // 扩展 jQ
         // 添加当前节点（们）链接到 todo-list，自动去重、补全路径
-        $.prototype.todo = function () {
+        $.prototype.todo = function (option) {
+            let callback = (typeof option === "function") ? option : task.callback;
             let newUrls = $(this).url();
             if (!newUrls) {
                 return false;
             }
-            newUrls.map((u) => {
-                if (u && !thisSpider.check(u)) {
-                    thisSpider.addTask({
-                        callback: task.callback,
-                        type: TaskType.crawling,
-                        url: u,
-                    });
+            newUrls.map((url) => {
+                if (url && !thisSpider.check(url)) {
+                    // console.log(url)
+                    let new_task = {
+                        url,
+                        callback,
+                        type: TaskType.crawling
+                    };
+                    if (typeof option === "object") {
+                        Object.assign(new_task, option);
+                    }
+                    console.log(new_task);
+                    thisSpider.addTask(new_task);
                 }
             });
         };

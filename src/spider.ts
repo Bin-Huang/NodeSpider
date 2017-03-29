@@ -24,7 +24,7 @@ interface IOption {
     defaultRetry: number;
     defaultDownloadPath: string;
 }
-// for spider.prototype.addTask
+
 interface ITask {
     type: TaskType;
     url: string;
@@ -49,7 +49,7 @@ const defaultOption: IOption = {
     defaultDownloadPath: "",
     defaultRetry: 3,
     jq: true,
-    multiTasking: 40,
+    multiTasking: 20,
     preToUtf8: true,
 };
 
@@ -239,19 +239,26 @@ class NodeSpider extends EventEmitter {
         const thisSpider = this;
         // 扩展 jQ
         // 添加当前节点（们）链接到 todo-list，自动去重、补全路径
-        $.prototype.todo = function () {
+        $.prototype.todo = function (option) {
+            let callback = (typeof option === "function") ? option : task.callback;
+
             let newUrls = $(this).url();
             if (! newUrls) {
                 return false;
             }
 
-            newUrls.map((u) => {
-                if (u && ! thisSpider.check(u)) {
-                    thisSpider.addTask({
-                        callback: task.callback,
-                        type: TaskType.crawling,
-                        url: u,
-                    });
+            newUrls.map((url) => {
+                if (url && ! thisSpider.check(url)) {
+                    // console.log(url)
+                    let new_task = {
+                        url,
+                        callback,
+                        type: TaskType.crawling
+                    }
+                    if (typeof option === "object") {
+                        Object.assign(new_task, option);
+                    }
+                    thisSpider.addTask(new_task);
                 }
             });
 
