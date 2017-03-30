@@ -15,6 +15,7 @@ import { JsonTable, TxtTable } from "./Table";
 
 interface IOption {
     multiTasking: number;
+    multiDownload: number;
     jq: boolean;
     preToUtf8: boolean;
     defaultRetry: number;
@@ -51,6 +52,7 @@ const defaultOption: IOption = {
     defaultDownloadPath: "",
     defaultRetry: 3,
     jq: true,
+    multiDownload: 2,
     multiTasking: 20,
     preToUtf8: true,
 };
@@ -209,8 +211,10 @@ class NodeSpider extends EventEmitter {
     }
 
     protected _fire() {
-        while(this._STATUS._currentMultiTask < this._OPTION.multiTasking) {
-            if (! this._DOWNLOAD_LIST.done()) {
+        while (this._STATUS._currentMultiDownload < this._OPTION.multiDownload) {
+            if (this._DOWNLOAD_LIST.done()) {
+                break;
+            } else {
                 const task = this._DOWNLOAD_LIST.next();
                 this.emit("start_a_download");
                 this._asyncDownload(task)
@@ -222,7 +226,12 @@ class NodeSpider extends EventEmitter {
                         this.emit("done_a_download");
                         // TODO: 错误处理
                     });
-            } else if (! this._TODOLIST.done()) {
+            }
+        }
+        while(this._STATUS._currentMultiTask < this._OPTION.multiTasking) {
+            if (this._TODOLIST.done()) {
+                break;
+            } else {
                 const task = this._TODOLIST.next();
                 this.emit("start_a_task");
                 this._asyncCrawling(task)
@@ -234,8 +243,6 @@ class NodeSpider extends EventEmitter {
                         this.emit("done_a_task");
                         // TODO: 错误处理
                     });
-            } else {
-                break;
             }
         }
     }
