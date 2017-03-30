@@ -39,6 +39,12 @@ interface IDownload {
     url: string;
     path: string;
     callback?: () => void;
+
+    info ?: {
+        maxRetry: number;
+        retried: number;
+        finalErrorCallback: (currentTask: ITask) => void;
+    };
 }
 
 interface IStatus {
@@ -106,6 +112,15 @@ class NodeSpider extends EventEmitter {
             retried: 0,
         };
         this._TODOLIST.add(task.url, task);
+    }
+
+    public download(task: IDownload) {
+        task.info = {
+            finalErrorCallback: null,
+            maxRetry: null,
+            retried: 0,
+        };
+        this._DOWNLOAD_LIST.add(task.url, task);
     }
 
     /**
@@ -344,33 +359,6 @@ class NodeSpider extends EventEmitter {
             });
         });
 
-    }
-
-
-
-    /**
-     *
-     */
-    download(url, opts, path = this._OPTION.download_path, errorCallback) {
-        // 让opts变成可选参数
-        if (typeof opts === 'string') {
-            let x = opts;
-            opts = path;
-            path = x;
-        }
-
-        // TODO: jq选择对象、url数组、相对路径
-
-        //如果是其他协议（比如FTP）
-
-        this._download_list.add({
-            url,
-            opts,
-            callback: null,
-            info: {
-                path
-            }
-        });
     }
 
 }
