@@ -205,7 +205,6 @@ class NodeSpider extends events_1.EventEmitter {
             }
             newUrls.map((url) => {
                 if (url && !thisSpider.check(url)) {
-                    // console.log(url)
                     let new_task = {
                         url,
                         callback,

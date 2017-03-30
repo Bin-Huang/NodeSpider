@@ -13,11 +13,6 @@ import * as url from "url";
 import List from "./List";
 import { JsonTable, TxtTable } from "./Table";
 
-enum TaskType {
-    crawling,
-    download,
-};
-
 interface IOption {
     multiTasking: number;
     jq: boolean;
@@ -27,7 +22,6 @@ interface IOption {
 }
 
 interface ITask {
-    type: TaskType;
     url: string;
     callback: (err, currentTask, $) => void;
     jq ?: boolean;
@@ -40,9 +34,16 @@ interface ITask {
     };
 }
 
+interface IDownload {
+    url: string;
+    path: string;
+    callback?: () => void;
+}
+
 interface IStatus {
     _working: boolean;
     _currentMultiTask: number;
+    _currentMultiDownload: number;
 }
 // 简单上手的回掉函数 + 自由定制的事件驱动
 
@@ -57,25 +58,36 @@ const defaultOption: IOption = {
 class NodeSpider extends EventEmitter {
     protected _OPTION: IOption;
     protected _TODOLIST: List <ITask> ;
+    protected _DOWNLOAD_LIST: List <IDownload>;
     protected _STATUS: IStatus;
     protected _TABLE: object;
-    constructor(userOption = {}) {
+    /**
+     * create an instance of NodeSpider
+     * @param opts
+     */
+    constructor(opts = {}) {
         super();
-        Object.assign(defaultOption, userOption);
+        Object.assign(defaultOption, opts);
         this._OPTION = defaultOption;
-
         this._STATUS = {
+            _currentMultiDownload: 0,   // 当前进行的下载的数量
             _currentMultiTask: 0, // 当前正在进行的任务数量
             _working: false,
         };
 
         this._TODOLIST = new List <ITask> ();
+        this._DOWNLOAD_LIST = new List <IDownload> ();
 
         this._TABLE = {};
 
-        this.on("start_a_task", (type) => this._STATUS._currentMultiTask ++);
-        this.on("done_a_task", (type) => {
+        this.on("start_a_task", () => this._STATUS._currentMultiTask ++);
+        this.on("done_a_task", () => {
             this._STATUS._currentMultiTask --;
+            this._fire();
+        });
+        this.on("start_a_download", () => this._STATUS._currentMultiDownload ++);
+        this.on("done_a_download", () => {
+            this._STATUS._currentMultiDownload --;
             this._fire();
         });
     }
@@ -92,7 +104,6 @@ class NodeSpider extends EventEmitter {
             retried: 0,
         };
         this._TODOLIST.add(task.url, task);
-        // this._fire();
     }
 
     /**
@@ -105,12 +116,16 @@ class NodeSpider extends EventEmitter {
         return this._TODOLIST.check(url);
     }
 
+    /**
+     * launch the spider with a url and callback
+     * @param url the first url to crawle
+     * @param callback 
+     */
     public start(url, callback) {
         // TODO: init check
 
         if (url && callback) {
             this.addTask({
-                type: TaskType.crawling,
                 url,
                 callback,
             });
@@ -120,7 +135,12 @@ class NodeSpider extends EventEmitter {
         this._fire();
     }
 
-    // 重写
+    /**
+     * retry a task
+     * @param currentTask the task which want to retry
+     * @param maxRetry max retry count of this task
+     * @param finalErrorCallback callback calling when retry count eval to max retry count
+     */
     public retry(currentTask: ITask, maxRetry= this._OPTION.defaultRetry , finalErrorCallback: (currentTask: ITask) => void) {
 
         if (!finalErrorCallback) {
@@ -173,41 +193,49 @@ class NodeSpider extends EventEmitter {
      * 发送网络请求
      */
     public get(url, opts) {
-        interface IResult {
-            error: Error;
-            response: any;
-        };
         // TODO: 根据opts，更先进的请求
-        return new Promise(function (resolve, reject) {
-            request({
-                encoding: null,
-                url,
-                method: "GET",
-            }, function (error, response) {
-                resolve({ error, response } as IResult);
-            });
+        return new Promise((resolve, reject) => {
+            request(
+                {
+                    encoding: null,
+                    url,
+                    method: "GET",
+                },
+                (error, response) => {
+                    resolve({ error, response });
+                }
+            );
         });
     }
 
     protected _fire() {
         while(this._STATUS._currentMultiTask < this._OPTION.multiTasking) {
-            let task = this._TODOLIST.next();
-            if(! task) {
-                break;
-            } else {
+            if (! this._DOWNLOAD_LIST.done()) {
+                const task = this._DOWNLOAD_LIST.next();
+                this.emit("start_a_download");
+                this._asyncDownload(task)
+                    .then(() => {
+                        this.emit("done_a_download");
+                    })
+                    .catch((error) => {
+                        console.log(error);
+                        this.emit("done_a_download");
+                        // TODO: 错误处理
+                    });
+            } else if (! this._TODOLIST.done()) {
+                const task = this._TODOLIST.next();
                 this.emit("start_a_task");
-                if (task.type === TaskType.crawling) {
-                    this._asyncCrawling(task)
-                        .then(() => {
-                            this.emit("done_a_task");
-                        })
-                        .catch((error) => {
-                            console.log(error);
-                            this.emit("done_a_task");
-                            // TODO: 错误处理
-                        });
-                }
-
+                this._asyncCrawling(task)
+                    .then(() => {
+                        this.emit("done_a_task");
+                    })
+                    .catch((error) => {
+                        console.log(error);
+                        this.emit("done_a_task");
+                        // TODO: 错误处理
+                    });
+            } else {
+                break;
             }
         }
     }
@@ -251,11 +279,9 @@ class NodeSpider extends EventEmitter {
 
             newUrls.map((url) => {
                 if (url && ! thisSpider.check(url)) {
-                    // console.log(url)
                     let new_task = {
                         url,
                         callback,
-                        type: TaskType.crawling
                     }
                     if (typeof option === "object") {
                         Object.assign(new_task, option);
@@ -309,22 +335,26 @@ class NodeSpider extends EventEmitter {
 
     }
 
-    protected async _asyncDownload(url, opts, path) {
+    // TODO: 文件名解析
+    protected async _asyncDownload(currentTask: IDownload) {
         return new Promise(function (resolve, reject) {
-            let download = request(url);
-            let write = fs.createWriteStream(path);
+            const download = request(currentTask.url);
+            // TODO: 路径是否存在？
+            // TODO: 文件名解析
+            const write = fs.createWriteStream(currentTask.path);
             // TODO: 本地空间是否足够 ?
-            download.on("error", function (error) {
+            download.on("error", (error) => {
                 reject(error);
             });
-            write.on('error', function (error) {
+            write.on("error", (error) => {
                 reject(error);
             });
             download.pipe(write);
-            write.on('finish', function () {
+            write.on("finish", () => {
                 resolve();
             });
         });
+
     }
 
 

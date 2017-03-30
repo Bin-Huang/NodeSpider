@@ -4,8 +4,7 @@
         "target": "es6",
         "noImplicitAny": false,
         "outDir": "build",
-        "sourceMap": false,
-        "allowJs": true
+        "sourceMap": false
 
     },
     "include": [
