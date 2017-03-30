@@ -191,25 +191,6 @@ class NodeSpider extends EventEmitter {
         }
     }
 
-    /**
-     * 发送网络请求
-     */
-    public get(url, opts) {
-        // TODO: 根据opts，更先进的请求
-        return new Promise((resolve, reject) => {
-            request(
-                {
-                    encoding: null,
-                    url,
-                    method: "GET",
-                },
-                (error, response) => {
-                    resolve({ error, response });
-                }
-            );
-        });
-    }
-
     protected _fire() {
         while (this._STATUS._currentMultiDownload < this._OPTION.multiDownload) {
             if (this._DOWNLOAD_LIST.done()) {
@@ -303,43 +284,44 @@ class NodeSpider extends EventEmitter {
     }
 
     protected async _asyncCrawling(currentTask: ITask) {
-        let getOption = {};
-        let {
-            error,
-            response
-        } = await this.get(currentTask.url, getOption);
-        let $;
-        if (! error) {
-            try {
-                // 根据任务设置和全局设置，确定如何编码正文
-                let preToUtf8 = this._OPTION.preToUtf8;
-                if (currentTask.preToUtf8 !== undefined) {
-                    preToUtf8 = currentTask.preToUtf8;
-                }
-                if (preToUtf8) {
-                    let encoding = charset(response.headers, response.body);
-                    if (encoding) {
-                        response.body = this.decode(response.body, encoding);
+        let $ = null;
+        request(
+            {
+                encoding: null,
+                method: "GET",
+                url: currentTask.url,
+            },
+            (error, response) => {
+                if (! error) {
+                    try {
+                        // 根据任务设置和全局设置，确定如何编码正文
+                        let preToUtf8 = this._OPTION.preToUtf8;
+                        if (currentTask.preToUtf8 !== undefined) {
+                            preToUtf8 = currentTask.preToUtf8;
+                        }
+                        if (preToUtf8) {
+                            let encoding = charset(response.headers, response.body);
+                            if (encoding) {
+                                response.body = this.decode(response.body, encoding);
+                            }
+                        }
+
+                        // 根据任务设置和全局设置，确定是否加载jQ
+                        if (currentTask.jq !== undefined) {
+                            $ = this._loadJq(response.body, currentTask);
+                        } else if (this._OPTION.jq) {
+                            $ = this._loadJq(response.body, currentTask);
+                        }
+                    } catch (err) {
+                        error = err;
                     }
                 }
+                (currentTask as any).response = response;
+                (currentTask as any).error = error;
 
-                // 根据任务设置和全局设置，确定是否加载jQ
-                if (currentTask.jq !== undefined) {
-                    $ = this._loadJq(response.body, currentTask);
-                } else if (this._OPTION.jq) {
-                    $ = this._loadJq(response.body, currentTask);
-                }
-            } catch (err) {
-                error = err;
+                currentTask.callback(error, currentTask, $);
             }
-
-        }
-
-        (currentTask as any).response = response;
-        (currentTask as any).error = error;
-
-        currentTask.callback(error, currentTask, $);
-
+        );
     }
 
     // TODO: 文件名解析
