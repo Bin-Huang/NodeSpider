@@ -130,7 +130,9 @@ class NodeSpider extends EventEmitter {
      * @memberOf NodeSpider
      */
     public check(url) {
-        return this._TODOLIST.check(url);
+        const inTodoList = this._TODOLIST.check(url);
+        const inDownloadList = this._DOWNLOAD_LIST.check(url);
+        return inTodoList || inDownloadList;
     }
 
     /**
