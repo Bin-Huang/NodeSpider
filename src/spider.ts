@@ -66,7 +66,6 @@ const defaultOption: IOption = {
 /**
  * class of NodeSpider
  * @class NodeSpider
- * @extends {EventEmitter}
  */
 class NodeSpider extends EventEmitter {
     protected _OPTION: IOption;
@@ -76,7 +75,7 @@ class NodeSpider extends EventEmitter {
     protected _TABLE: object;
     /**
      * create an instance of NodeSpider
-     * @param opts 
+     * @param opts
      */
     constructor(opts = {}) {
         super();
@@ -111,12 +110,20 @@ class NodeSpider extends EventEmitter {
      * @memberOf NodeSpider
      */
     public addTask(task: ITask) {
-        task.info = {
-            finalErrorCallback: null,
-            maxRetry: null,
-            retried: 0,
+        let newTask: ITask = {
+            callback: task.callback,
+            info: {
+                finalErrorCallback: null,
+                maxRetry: null,
+                retried: 0,
+            },
+            url: task.url,
         };
-        this._TODOLIST.add(task.url, task);
+        if (typeof task.jq !== "undefined") {
+            newTask.jq = task.jq
+        }
+
+        this._TODOLIST.add(newTask.url, newTask);
     }
 
     public download(task: IDownload) {
@@ -161,33 +168,33 @@ class NodeSpider extends EventEmitter {
 
     /**
      * retry a task
-     * @param currentTask the task which want to retry
+     * @param task the task which want to retry
      * @param maxRetry max retry count of this task
      * @param finalErrorCallback callback calling when retry count eval to max retry count
      */
 
     // TODO: retry download task error: add to todolist
-    public retry(currentTask: ITask, maxRetry= this._OPTION.defaultRetry , finalErrorCallback: (currentTask: ITask) => void) {
+    public retry(task: ITask, maxRetry= this._OPTION.defaultRetry , finalErrorCallback: (task: ITask) => void) {
 
         if (!finalErrorCallback) {
             finalErrorCallback = () => {
-                this.save("log", currentTask);
+                this.save("log", task);
             };
         }
 
-        if (currentTask.info.maxRetry === null) {
-            currentTask.info.maxRetry = maxRetry;
-            currentTask.info.finalErrorCallback = finalErrorCallback;
+        if (task.info.maxRetry === null) {
+            task.info.maxRetry = maxRetry;
+            task.info.finalErrorCallback = finalErrorCallback;
         }
 
-        if (currentTask.info.maxRetry > currentTask.info.retried) {
-            currentTask.info.retried += 1;
+        if (task.info.maxRetry > task.info.retried) {
+            task.info.retried += 1;
             // 将 error 和 response 信息删除，节省排队时的内存占用
-            (currentTask as any).response = null;
-            (currentTask as any).error = null;
-            this._TODOLIST.jump(currentTask.url, currentTask);
+            (task as any).response = null;
+            (task as any).error = null;
+            this._TODOLIST.jump(task.url, task);
         } else {
-            currentTask.info.finalErrorCallback(currentTask);
+            task.info.finalErrorCallback(task);
         }
 
     }
@@ -291,14 +298,14 @@ class NodeSpider extends EventEmitter {
 
             newUrls.map((url) => {
                 if (url && ! thisSpider.check(url)) {
-                    let new_task = {
+                    let newTask = {
                         url,
                         callback,
-                    }
+                    };
                     if (typeof option === "object") {
-                        Object.assign(new_task, option);
+                        Object.assign(newTask, option);
                     }
-                    thisSpider.addTask(new_task);
+                    thisSpider.addTask(newTask);
                 }
             });
 
@@ -344,13 +351,13 @@ class NodeSpider extends EventEmitter {
                 (currentTask as any).error = error;
 
                 currentTask.callback(error, currentTask, $);
-            }
+            },
         );
     }
 
     // TODO: 文件名解析
     protected async _asyncDownload(currentTask: IDownload) {
-        return new Promise(function (resolve, reject) {
+        return new Promise((resolve, reject) => {
             const download = request(currentTask.url);
             // TODO: 路径是否存在？
             // TODO: 文件名解析

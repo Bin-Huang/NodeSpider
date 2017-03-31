@@ -42,7 +42,7 @@ npm install nodespider
 ```
 
 ```javascript
-// in your js file
+// in your .js file
 const NodeSpider = require("NodeSpider");
 ```
 
@@ -54,6 +54,7 @@ create an instance of NodeSpider
 | param | required  | type  | description   |
 | :---:   | :---:   | :---:   | :---   |
 | option    | no  | object    | option  |
+
 **option:**
 
 - **jq**    (default: `true`) whether to load jQ
@@ -79,46 +80,23 @@ var anotherSpider = new NodeSpider({
 
 Start web crawling with startUrl(s)
 
-**start_url** type: {string | array}
-
-The url to start with. It can be a string or an array of string.
-
-**callback** type: {function}
-
-the function about what you want to do after received response. 
-
-There are three parameters: err, current and $
-
-`err`
-
-If there are not error in the task, it is `null`
-
-`current`
-
-In NodeSpider, all tasks will be executed Asynchronously. But you can get information about the current task through the 'current' parameter.
-
-- `current.url` current task's url
-- `current.callback` current task's callback
-- `current.response` current response from website
-- `current.body` current html body
-- `current.opts` the special option for current task
-
-`$` 
-
-You can use the `$` to operate element just like jQuery in browser. It can help you to extract urls and data more easily.
+| param | required  | type  | description   |
+| :---:   | :---:   | :---:   | :---   |
+| startUrl    | yes  | string    | the url to start with. It can be a string or an array of string. |
+| callback  | yes   | function  | the function about what you want to do after received response.   |
 
 ```javascript
-NodeSpider.start('http://www.google.com', function (err, current, $) {
+NodeSpider.start('http://www.google.com', function (error, currentTask, $) {
+    if (error) {
+        return console.log(error);
+    }
 
-    if (err) console.log(err);
-
-    // get information from current task
-    console.log(current.url);
-    console.log(current.response);
+    // get information from currentTask
+    console.log(currentTask.url);
+    console.log(currentTask.response);
 
     // Use the $ to operate/select Elements
     console.log($('title').text());
-
 });
 ```
 
@@ -196,7 +174,7 @@ s.save('student.json', {
 });
 ```
 
-## NodeSpider.prototype.retry(err[, max_retry_num[, final_callback]])
+## NodeSpider.prototype.retry(task [, max_retry_num [, final_err_callback]])
 
 Method `retry` can help you to retry failed task.
 
@@ -228,3 +206,48 @@ the error passed into the callback.
 There are only parameter `error`.
 
 Default: save error as data to log, equal to `function (err){s.save('log', err)}`.
+
+
+# callback
+
+the function about what you want to do after received response and body. 
+
+```javascript
+function myCallback(error, currentTask, $) {
+    // some code
+}
+
+mySpider.start("http://www.google.com", myCallback);
+mySpider.addTask({
+    url: "http://www.github.com",
+    callback: myCallback
+})
+```
+
+There are three parameters: `error`, `currentTask` and `$`.
+
+- **error** 
+
+    If there are not error in the task, it is `null`
+
+- **currentTask**
+
+    In NodeSpider, all tasks will be executed Asynchronously. But you can get information about the current task through the 'currentTask' parameter in callback.
+    - `currentTask.url` current task's url
+    - `currentTask.callback` current task's callback
+    - `currentTask.response` current response from website
+    - ....
+
+- **$**
+
+    You can use the `$` to select element just like jQuery in browser. It can help you to extract urls and data more easily.
+    ```javascript
+    $('a').text()
+    ```
+    And, there are some new method
+
+    - $.fn.url
+
+    - $.fn.todo
+
+    - $.fn.download
