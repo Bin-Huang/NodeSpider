@@ -36,7 +36,7 @@ class List {
     }
     /**
      * 从清单中读取一个项目. 每次调用都会按顺序返回不同的项目
-     * @returns {*} 当前的项目
+     * @returns {T} 当前的项目
      * @memberOf List
      */
     next() {
@@ -55,6 +55,14 @@ class List {
      */
     getSize() {
         return this._SET.size;
+    }
+    /**
+     * 判断是否已完成清单中所有任务
+     * @returns {boolean} 当没有更多任务时，返回 true
+     * @memberOf List
+     */
+    done() {
+        return this._QUEUE.empty();
     }
 }
 exports.default = List;

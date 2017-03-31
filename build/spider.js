@@ -21,34 +21,45 @@ const request = require("request");
 const url = require("url");
 const List_1 = require("./List");
 const Table_1 = require("./Table");
-var TaskType;
-(function (TaskType) {
-    TaskType[TaskType["crawling"] = 0] = "crawling";
-    TaskType[TaskType["download"] = 1] = "download";
-})(TaskType || (TaskType = {}));
-;
 // 简单上手的回掉函数 + 自由定制的事件驱动
 const defaultOption = {
     defaultDownloadPath: "",
     defaultRetry: 3,
     jq: true,
+    multiDownload: 2,
     multiTasking: 20,
     preToUtf8: true,
 };
+/**
+ * class of NodeSpider
+ * @class NodeSpider
+ * @extends {EventEmitter}
+ */
 class NodeSpider extends events_1.EventEmitter {
-    constructor(userOption = {}) {
+    /**
+     * create an instance of NodeSpider
+     * @param opts
+     */
+    constructor(opts = {}) {
         super();
-        Object.assign(defaultOption, userOption);
+        Object.assign(defaultOption, opts);
         this._OPTION = defaultOption;
         this._STATUS = {
+            _currentMultiDownload: 0,
             _currentMultiTask: 0,
             _working: false,
         };
         this._TODOLIST = new List_1.default();
+        this._DOWNLOAD_LIST = new List_1.default();
         this._TABLE = {};
-        this.on("start_a_task", (type) => this._STATUS._currentMultiTask++);
-        this.on("done_a_task", (type) => {
+        this.on("start_a_task", () => this._STATUS._currentMultiTask++);
+        this.on("done_a_task", () => {
             this._STATUS._currentMultiTask--;
+            this._fire();
+        });
+        this.on("start_a_download", () => this._STATUS._currentMultiDownload++);
+        this.on("done_a_download", () => {
+            this._STATUS._currentMultiDownload--;
             this._fire();
         });
     }
@@ -64,22 +75,35 @@ class NodeSpider extends events_1.EventEmitter {
             retried: 0,
         };
         this._TODOLIST.add(task.url, task);
-        // this._fire();
+    }
+    download(task) {
+        task.info = {
+            finalErrorCallback: null,
+            maxRetry: null,
+            retried: 0,
+        };
+        this._DOWNLOAD_LIST.add(task.url, task);
     }
     /**
      * 检测链接是否已添加过
-     * @param {any} url 待检查的链接
+     * @param {stirng} url 待检查的链接
      * @returns {boolean}
      * @memberOf NodeSpider
      */
     check(url) {
-        return this._TODOLIST.check(url);
+        const inTodoList = this._TODOLIST.check(url);
+        const inDownloadList = this._DOWNLOAD_LIST.check(url);
+        return inTodoList || inDownloadList;
     }
+    /**
+     * launch the spider with a url and callback
+     * @param url the first url to crawle
+     * @param callback
+     */
     start(url, callback) {
         // TODO: init check
         if (url && callback) {
             this.addTask({
-                type: TaskType.crawling,
                 url,
                 callback,
             });
@@ -87,7 +111,13 @@ class NodeSpider extends events_1.EventEmitter {
         this._STATUS._working = true;
         this._fire();
     }
-    // 重写
+    /**
+     * retry a task
+     * @param currentTask the task which want to retry
+     * @param maxRetry max retry count of this task
+     * @param finalErrorCallback callback calling when retry count eval to max retry count
+     */
+    // TODO: retry download task error: add to todolist
     retry(currentTask, maxRetry = this._OPTION.defaultRetry, finalErrorCallback) {
         if (!finalErrorCallback) {
             finalErrorCallback = () => {
@@ -131,41 +161,41 @@ class NodeSpider extends events_1.EventEmitter {
             this._TABLE[item].add(data);
         }
     }
-    /**
-     * 发送网络请求
-     */
-    get(url, opts) {
-        ;
-        // TODO: 根据opts，更先进的请求
-        return new Promise(function (resolve, reject) {
-            request({
-                encoding: null,
-                url,
-                method: "GET",
-            }, function (error, response) {
-                resolve({ error, response });
-            });
-        });
-    }
     _fire() {
-        while (this._STATUS._currentMultiTask < this._OPTION.multiTasking) {
-            let task = this._TODOLIST.next();
-            if (!task) {
+        while (this._STATUS._currentMultiDownload < this._OPTION.multiDownload) {
+            if (this._DOWNLOAD_LIST.done()) {
                 break;
             }
             else {
+                const task = this._DOWNLOAD_LIST.next();
+                this.emit("start_a_download");
+                this._asyncDownload(task)
+                    .then(() => {
+                    this.emit("done_a_download");
+                })
+                    .catch((error) => {
+                    console.log(error);
+                    this.emit("done_a_download");
+                    // TODO: 错误处理
+                });
+            }
+        }
+        while (this._STATUS._currentMultiTask < this._OPTION.multiTasking) {
+            if (this._TODOLIST.done()) {
+                break;
+            }
+            else {
+                const task = this._TODOLIST.next();
                 this.emit("start_a_task");
-                if (task.type === TaskType.crawling) {
-                    this._asyncCrawling(task)
-                        .then(() => {
-                        this.emit("done_a_task");
-                    })
-                        .catch((error) => {
-                        console.log(error);
-                        this.emit("done_a_task");
-                        // TODO: 错误处理
-                    });
-                }
+                this._asyncCrawling(task)
+                    .then(() => {
+                    this.emit("done_a_task");
+                })
+                    .catch((error) => {
+                    console.log(error);
+                    this.emit("done_a_task");
+                    // TODO: 错误处理
+                });
             }
         }
     }
@@ -208,7 +238,6 @@ class NodeSpider extends events_1.EventEmitter {
                     let new_task = {
                         url,
                         callback,
-                        type: TaskType.crawling
                     };
                     if (typeof option === "object") {
                         Object.assign(new_task, option);
@@ -221,77 +250,63 @@ class NodeSpider extends events_1.EventEmitter {
     }
     _asyncCrawling(currentTask) {
         return __awaiter(this, void 0, void 0, function* () {
-            let getOption = {};
-            let { error, response } = yield this.get(currentTask.url, getOption);
-            let $;
-            if (!error) {
-                try {
-                    // 根据任务设置和全局设置，确定如何编码正文
-                    let preToUtf8 = this._OPTION.preToUtf8;
-                    if (currentTask.preToUtf8 !== undefined) {
-                        preToUtf8 = currentTask.preToUtf8;
-                    }
-                    if (preToUtf8) {
-                        let encoding = charset(response.headers, response.body);
-                        if (encoding) {
-                            response.body = this.decode(response.body, encoding);
+            let $ = null;
+            request({
+                encoding: null,
+                method: "GET",
+                url: currentTask.url,
+            }, (error, response) => {
+                if (!error) {
+                    try {
+                        // 根据任务设置和全局设置，确定如何编码正文
+                        let preToUtf8 = this._OPTION.preToUtf8;
+                        if (currentTask.preToUtf8 !== undefined) {
+                            preToUtf8 = currentTask.preToUtf8;
+                        }
+                        if (preToUtf8) {
+                            let encoding = charset(response.headers, response.body);
+                            if (encoding) {
+                                response.body = this.decode(response.body, encoding);
+                            }
+                        }
+                        // 根据任务设置和全局设置，确定是否加载jQ
+                        if (currentTask.jq !== undefined) {
+                            $ = this._loadJq(response.body, currentTask);
+                        }
+                        else if (this._OPTION.jq) {
+                            $ = this._loadJq(response.body, currentTask);
                         }
                     }
-                    // 根据任务设置和全局设置，确定是否加载jQ
-                    if (currentTask.jq !== undefined) {
-                        $ = this._loadJq(response.body, currentTask);
-                    }
-                    else if (this._OPTION.jq) {
-                        $ = this._loadJq(response.body, currentTask);
+                    catch (err) {
+                        error = err;
                     }
                 }
-                catch (err) {
-                    error = err;
-                }
-            }
-            currentTask.response = response;
-            currentTask.error = error;
-            currentTask.callback(error, currentTask, $);
-        });
-    }
-    _asyncDownload(url, opts, path) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return new Promise(function (resolve, reject) {
-                let download = request(url);
-                let write = fs.createWriteStream(path);
-                // TODO: 本地空间是否足够 ?
-                download.on("error", function (error) {
-                    reject(error);
-                });
-                write.on('error', function (error) {
-                    reject(error);
-                });
-                download.pipe(write);
-                write.on('finish', function () {
-                    resolve();
-                });
+                currentTask.response = response;
+                currentTask.error = error;
+                currentTask.callback(error, currentTask, $);
             });
         });
     }
-    /**
-     *
-     */
-    download(url, opts, path = this._OPTION.download_path, errorCallback) {
-        // 让opts变成可选参数
-        if (typeof opts === 'string') {
-            let x = opts;
-            opts = path;
-            path = x;
-        }
-        // TODO: jq选择对象、url数组、相对路径
-        //如果是其他协议（比如FTP）
-        this._download_list.add({
-            url,
-            opts,
-            callback: null,
-            info: {
-                path
-            }
+    // TODO: 文件名解析
+    _asyncDownload(currentTask) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise(function (resolve, reject) {
+                const download = request(currentTask.url);
+                // TODO: 路径是否存在？
+                // TODO: 文件名解析
+                const write = fs.createWriteStream(currentTask.path);
+                // TODO: 本地空间是否足够 ?
+                download.on("error", (error) => {
+                    reject(error);
+                });
+                write.on("error", (error) => {
+                    reject(error);
+                });
+                download.pipe(write);
+                write.on("finish", () => {
+                    resolve();
+                });
+            });
         });
     }
 }

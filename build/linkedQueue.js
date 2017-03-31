@@ -76,6 +76,19 @@ class LinkedQueue {
     getLength() {
         return this._LENGTH;
     }
+    /**
+     * 判断队列是否为空
+     * @returns {boolean} 当没有节点时，返回 true
+     * @memberOf LinkedQueue
+     */
+    empty() {
+        if (this._HEAD) {
+            return false;
+        }
+        else {
+            return true;
+        }
+    }
 }
 exports.default = LinkedQueue;
 ;

@@ -1,17 +1,17 @@
 
-20 lines of code to develop a web crawler as a geek.
+20 lines of code to build a web crawler as a geek.
 
 Easier and more efficient to crawl a website and extract data, NodeSpider can save your time.
 
 ```javascript
 let s = new NodeSpider({
-    toUtf8: true,   // Convert body to UTF8 if necessary
+    preToUtf8: true,   // Convert body to UTF8
     // or more...
 });
 
-s.start('https://en.wikipedia.org/wiki/Main_Page', function (err, current, $) {
+s.start('https://en.wikipedia.org/wiki/Main_Page', function (err, currentTask, $) {
     if (err) {
-        return s.retry(err);   //retry when there are a error
+        return s.retry(currentTask);   //retry when there are a error
     }
 
     // Yes, you can use jQuery 
@@ -35,42 +35,49 @@ s.start('https://en.wikipedia.org/wiki/Main_Page', function (err, current, $) {
 });
 ```
 
-# Installation
+# Installation and import
 
 ```
 npm install nodespider
 ```
 
-# Initialization
-
-## new NodeSpider([option])
 ```javascript
-var NodeSpider = require('NodeSpider');
-
-var s = new NodeSpider();   //create an instance of NodeSpider
+// in your js file
+const NodeSpider = require("NodeSpider");
 ```
 
-You can config the instance when you create.
+# Initialization
+
+## new NodeSpider( [option] )
+create an instance of NodeSpider
+
+| param | required  | type  | description   |
+| :---:   | :---:   | :---:   | :---   |
+| option    | no  | object    | option  |
+**option:**
+
+- **jq**    (default: `true`) whether to load jQ
+- **preToUtf8** (default: `true`)   convert body to utf8
+- **multiTasking**  (default: `20`) max multitasking number
+- **multiDownload** (default: `2`)  max download multitasking number
+- **defaultDownloadPath**   (default: `""`) default path for download file
+- **defaultRetry**  (default: `3`)  default retry count
 
 ```javascript
-var s = new NodeSpider({
-    toUTF8: true,
-    max_process: 40
-    // and more...
+var mySpider = new NodeSpider();
+
+var anotherSpider = new NodeSpider({
+    preToUtf8: true,
+    jq: false
+    // or more...
 });
 ```
 
-**option:**
-
-- **toUTF8** (default: `true`) If true, convert html to UTF8 if necessary.
-- **jq** (default: `true`) Whether you need jQuery on the sever.
-- **max_process** (default: 40) Max number of crawling tasks executed asynchronously.
-
 # Method
 
-## NodeSpider.prototype.start(start_url, callback)
+## NodeSpider.prototype.start(startUrl, callback)
 
-Start web crawling with start_url(s)
+Start web crawling with startUrl(s)
 
 **start_url** type: {string | array}
 

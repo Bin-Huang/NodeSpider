@@ -63,6 +63,11 @@ const defaultOption: IOption = {
     preToUtf8: true,
 };
 
+/**
+ * class of NodeSpider
+ * @class NodeSpider
+ * @extends {EventEmitter}
+ */
 class NodeSpider extends EventEmitter {
     protected _OPTION: IOption;
     protected _TODOLIST: List <ITask> ;
@@ -71,7 +76,7 @@ class NodeSpider extends EventEmitter {
     protected _TABLE: object;
     /**
      * create an instance of NodeSpider
-     * @param opts
+     * @param opts 
      */
     constructor(opts = {}) {
         super();
@@ -125,11 +130,11 @@ class NodeSpider extends EventEmitter {
 
     /**
      * 检测链接是否已添加过
-     * @param {any} url 待检查的链接
+     * @param {stirng} url 待检查的链接
      * @returns {boolean}
      * @memberOf NodeSpider
      */
-    public check(url) {
+    public check(url: string) {
         const inTodoList = this._TODOLIST.check(url);
         const inDownloadList = this._DOWNLOAD_LIST.check(url);
         return inTodoList || inDownloadList;
@@ -138,7 +143,7 @@ class NodeSpider extends EventEmitter {
     /**
      * launch the spider with a url and callback
      * @param url the first url to crawle
-     * @param callback 
+     * @param callback
      */
     public start(url, callback) {
         // TODO: init check
@@ -160,6 +165,8 @@ class NodeSpider extends EventEmitter {
      * @param maxRetry max retry count of this task
      * @param finalErrorCallback callback calling when retry count eval to max retry count
      */
+
+    // TODO: retry download task error: add to todolist
     public retry(currentTask: ITask, maxRetry= this._OPTION.defaultRetry , finalErrorCallback: (currentTask: ITask) => void) {
 
         if (!finalErrorCallback) {
