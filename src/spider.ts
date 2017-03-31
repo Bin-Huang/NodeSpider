@@ -180,7 +180,6 @@ class NodeSpider extends EventEmitter {
      * @param finalErrorCallback callback calling when retry count eval to max retry count
      */
 
-    // TODO: retry download task error: add to todolist
     public retry(task: ITask, maxRetry= this._OPTION.defaultRetry , finalErrorCallback: (task: ITask) => void) {
 
         if (!finalErrorCallback) {
@@ -199,7 +198,11 @@ class NodeSpider extends EventEmitter {
             // 将 error 和 response 信息删除，节省排队时的内存占用
             (task as any).response = null;
             (task as any).error = null;
-            this._TODOLIST.jump(task.url, task);
+            if ((task as IDownload).path) {
+                this._DOWNLOAD_LIST.jump(task.url, (task as IDownload));
+            } else {
+                this._TODOLIST.jump(task.url, task);
+            }
         } else {
             task.info.finalErrorCallback(task);
         }
