@@ -282,14 +282,13 @@ class NodeSpider extends EventEmitter {
                 if (/^javascript/.test(newUrl)) {
                     return false;
                 }
-                // 如果是锚，等效与当前 url 路径
-                if (newUrl && newUrl[0] === "#") {
-                    return result.push(task.url);
-                }
                 // 如果是相对路径，补全路径为绝对路径
                 if (newUrl && !/^https?:\/\//.test(newUrl)) {
                     newUrl = url.resolve(task.url, newUrl);
                 }
+                // 去除连接中的查询和锚
+                let u = url.parse(newUrl);
+                newUrl = u.protocol + u.auth + u.host + u.pathname;
                 result.push(newUrl);
             });
             return result;
