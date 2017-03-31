@@ -106,6 +106,7 @@ class NodeSpider extends EventEmitter {
 
     /**
      * 向爬虫的 todo-list 添加新的任务(不检查是否重复链接)
+     * 只添加任务需要的成员所组成的任务到list，并不是直接将参数传入list
      * @param {ITask} task
      * @memberOf NodeSpider
      */
@@ -120,19 +121,25 @@ class NodeSpider extends EventEmitter {
             url: task.url,
         };
         if (typeof task.jq !== "undefined") {
-            newTask.jq = task.jq
+            newTask.jq = task.jq;
         }
-
+        if (typeof task.preToUtf8 !== "undefined") {
+            newTask.preToUtf8 = task.preToUtf8;
+        }
         this._TODOLIST.add(newTask.url, newTask);
     }
 
     public download(task: IDownload) {
-        task.info = {
-            finalErrorCallback: null,
-            maxRetry: null,
-            retried: 0,
-        };
-        this._DOWNLOAD_LIST.add(task.url, task);
+        let newTask: IDownload = {
+            info: {
+                finalErrorCallback: null,
+                maxRetry: null,
+                retried: 0,
+            },
+            path: task.path,
+            url: task.url,
+        }
+        this._DOWNLOAD_LIST.add(newTask.url, newTask);
     }
 
     /**
