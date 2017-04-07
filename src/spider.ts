@@ -3,6 +3,8 @@
 // TODO: 解决 save 方法保存json格式不好用的问题： 没有[],直接也没有逗号隔开
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
 // TODO: 当一个页面 url 指向已存在资源路径，但是添加了不同的查询语句，将跳过去重
+// TODO: 使用 node 自带 stringdecode 代替 iconv-lite
+// TODO: 使用 jsdom 是否可以模拟 js 点击与浏览器环境
 import * as charset from "charset";
 import * as cheerio from "cheerio";
 import { EventEmitter } from "events";
@@ -155,19 +157,28 @@ class NodeSpider extends EventEmitter {
     }
 
     /**
-     * launch the spider with a url and callback
-     * @param url the first url to crawle
+     * launch the spider with url(s) and callback
+     * @param {string|array} url the first url to crawle
      * @param callback
      */
     public start(url, callback) {
-        // TODO: init check
-
-        if (url && callback) {
-            this.addTask({
-                url,
-                callback,
-            });
+        if (! url || ! callback) {
+            throw new Error("params url and callback is required in method start");
         }
+        if (! Array.isArray(url)) {
+            url = [url];
+        }
+        url.map((u) => {
+            if (typeof u !== "string") {
+                throw new Error("param url mush be a string or array of string");
+            }
+            if (! this.check(u)) {
+                this.addTask({
+                    url: u,
+                    callback,
+                });
+            }
+        });
 
         this._STATUS._working = true;
         this._fire();
