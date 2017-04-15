@@ -37,6 +37,10 @@ interface ITask {
         retried: number;
         finalErrorCallback: (currentTask: ITask) => void;
     };
+
+    response?: any;
+    error?: Error;
+    body?: string;
 }
 
 interface IDownload {
@@ -201,9 +205,11 @@ class NodeSpider extends EventEmitter {
 
         if (task.info.maxRetry > task.info.retried) {
             task.info.retried += 1;
-            // 将 error 和 response 信息删除，节省排队时的内存占用
-            (task as any).response = null;
-            (task as any).error = null;
+            // TODO: 信息删除，节省排队时的内存占用
+            task.body = null;
+            task.response = null;
+            task.error = null;
+
             if ((task as IDownload).path) {
                 this._DOWNLOAD_LIST.jump(task.url, (task as IDownload));
             } else {
@@ -351,24 +357,25 @@ class NodeSpider extends EventEmitter {
                         if (preToUtf8) {
                             let encoding = charset(response.headers, response.body);
                             if (encoding) {
-                                response.body = this.decode(response.body, encoding);
+                                currentTask.body = this.decode(response.body, encoding);
                             }
                         }
 
                         // 根据任务设置和全局设置，确定是否加载jQ
                         if (currentTask.jq !== undefined) {
-                            $ = this._loadJq(response.body, currentTask);
+                            $ = this._loadJq(currentTask.body, currentTask);
                         } else if (this._OPTION.jq) {
-                            $ = this._loadJq(response.body, currentTask);
+                            $ = this._loadJq(currentTask.body, currentTask);
                         }
                     } catch (err) {
                         error = err;
                     }
                 }
-                (currentTask as any).response = response;
-                (currentTask as any).error = error;
+                currentTask.response = response;
+                currentTask.error = error;
 
                 currentTask.callback(error, currentTask, $);
+                currentTask = null;
             },
         );
     }

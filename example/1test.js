@@ -1,4 +1,4 @@
-const NodeSpider = require('./build/spider');
+const NodeSpider = require("../build/spider");
 
 let s = new NodeSpider({
     // multiTasking: 10
@@ -7,17 +7,17 @@ let s = new NodeSpider({
 let i = 0;
 
 s.addTask({
-    url: '123',
+    url: "123",
     callback: () => {},
-    type: 0
-})
-console.log(s.check('123'));
-console.log(s.check('3'));
+    type: 0,
+});
+console.log(s.check("123"));
+console.log(s.check("3"));
 s.addTask({
-    url: '123',
+    url: "123",
     callback: () => {},
-    type: 0
-})
+    type: 0,
+});
 
 // s.start('http://www.baidu.com', function(err, currentTask, $) {
 //     if (err) {
