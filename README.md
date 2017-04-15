@@ -1,5 +1,5 @@
 
-20 lines of code to build a web crawler as a geek.
+20 lines of code to create a web crawler as a geek.
 
 Easier and more efficient to crawl a website and extract data, NodeSpider can save your time.
 
@@ -232,7 +232,7 @@ There are three parameters: `error`, `currentTask` and `$`.
 
 - **currentTask**
 
-    In NodeSpider, all tasks will be executed Asynchronously. But you can get information about the current task through the 'currentTask' parameter in callback.
+    In NodeSpider, all tasks will be executed Asynchronously. But you can get information about the current task through the 'currentTask' parameter in callback function.
     - `currentTask.url` current task's url
     - `currentTask.callback` current task's callback
     - `currentTask.response` current response from website

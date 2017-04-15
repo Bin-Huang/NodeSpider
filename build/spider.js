@@ -12,6 +12,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 // TODO: 解决 save 方法保存json格式不好用的问题： 没有[],直接也没有逗号隔开
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
 // TODO: 当一个页面 url 指向已存在资源路径，但是添加了不同的查询语句，将跳过去重
+// TODO: 使用 node 自带 stringdecode 代替 iconv-lite
+// TODO: 使用 jsdom 是否可以模拟 js 点击与浏览器环境
 const charset = require("charset");
 const cheerio = require("cheerio");
 const events_1 = require("events");
@@ -33,7 +35,6 @@ const defaultOption = {
 /**
  * class of NodeSpider
  * @class NodeSpider
- * @extends {EventEmitter}
  */
 class NodeSpider extends events_1.EventEmitter {
     /**
@@ -65,24 +66,39 @@ class NodeSpider extends events_1.EventEmitter {
     }
     /**
      * 向爬虫的 todo-list 添加新的任务(不检查是否重复链接)
+     * 只添加任务需要的成员所组成的任务到list，并不是直接将参数传入list
      * @param {ITask} task
      * @memberOf NodeSpider
      */
     addTask(task) {
-        task.info = {
-            finalErrorCallback: null,
-            maxRetry: null,
-            retried: 0,
+        let newTask = {
+            callback: task.callback,
+            info: {
+                finalErrorCallback: null,
+                maxRetry: null,
+                retried: 0,
+            },
+            url: task.url,
         };
-        this._TODOLIST.add(task.url, task);
+        if (typeof task.jq !== "undefined") {
+            newTask.jq = task.jq;
+        }
+        if (typeof task.preToUtf8 !== "undefined") {
+            newTask.preToUtf8 = task.preToUtf8;
+        }
+        this._TODOLIST.add(newTask.url, newTask);
     }
     download(task) {
-        task.info = {
-            finalErrorCallback: null,
-            maxRetry: null,
-            retried: 0,
+        let newTask = {
+            info: {
+                finalErrorCallback: null,
+                maxRetry: null,
+                retried: 0,
+            },
+            path: task.path,
+            url: task.url,
         };
-        this._DOWNLOAD_LIST.add(task.url, task);
+        this._DOWNLOAD_LIST.add(newTask.url, newTask);
     }
     /**
      * 检测链接是否已添加过
@@ -96,47 +112,64 @@ class NodeSpider extends events_1.EventEmitter {
         return inTodoList || inDownloadList;
     }
     /**
-     * launch the spider with a url and callback
-     * @param url the first url to crawle
+     * launch the spider with url(s) and callback
+     * @param {string|array} url the first url to crawle
      * @param callback
      */
     start(url, callback) {
-        // TODO: init check
-        if (url && callback) {
-            this.addTask({
-                url,
-                callback,
-            });
+        if (!url || !callback) {
+            throw new Error("params url and callback is required in method start");
         }
+        if (!Array.isArray(url)) {
+            url = [url];
+        }
+        url.map((u) => {
+            if (typeof u !== "string") {
+                throw new Error("param url mush be a string or array of string");
+            }
+            if (!this.check(u)) {
+                this.addTask({
+                    url: u,
+                    callback,
+                });
+            }
+        });
         this._STATUS._working = true;
         this._fire();
     }
     /**
-     * retry a task
-     * @param currentTask the task which want to retry
-     * @param maxRetry max retry count of this task
-     * @param finalErrorCallback callback calling when retry count eval to max retry count
+     * retry the task
+     * @param task the task which want to retry
+     * @param maxRetry max retry count of this task. default: this._OPTION.defaultRetry
+     * @param finalErrorCallback callback calling when retry count eval to max retry count. default: save log
      */
-    // TODO: retry download task error: add to todolist
-    retry(currentTask, maxRetry = this._OPTION.defaultRetry, finalErrorCallback) {
+    retry(task, maxRetry, finalErrorCallback) {
+        if (!maxRetry) {
+            maxRetry = this._OPTION.defaultRetry;
+        }
         if (!finalErrorCallback) {
             finalErrorCallback = () => {
-                this.save("log", currentTask);
+                this.save("log.json", task);
             };
         }
-        if (currentTask.info.maxRetry === null) {
-            currentTask.info.maxRetry = maxRetry;
-            currentTask.info.finalErrorCallback = finalErrorCallback;
+        if (task.info.maxRetry === null) {
+            task.info.maxRetry = maxRetry;
+            task.info.finalErrorCallback = finalErrorCallback;
         }
-        if (currentTask.info.maxRetry > currentTask.info.retried) {
-            currentTask.info.retried += 1;
+        if (task.info.maxRetry > task.info.retried) {
+            task.info.retried += 1;
             // 将 error 和 response 信息删除，节省排队时的内存占用
-            currentTask.response = null;
-            currentTask.error = null;
-            this._TODOLIST.jump(currentTask.url, currentTask);
+            task.response = null;
+            task.error = null;
+            if (task.path) {
+                this._DOWNLOAD_LIST.jump(task.url, task);
+            }
+            else {
+                this._TODOLIST.jump(task.url, task);
+            }
         }
         else {
-            currentTask.info.finalErrorCallback(currentTask);
+            task.info.finalErrorCallback(task);
         }
     }
     decode(st, encoding) {
@@ -161,6 +194,9 @@ class NodeSpider extends events_1.EventEmitter {
             this._TABLE[item].add(data);
         }
     }
+    /**
+     * 火力全开，尝试不断启动新任务，让当前任务数达到最大限制数
+     */
     _fire() {
         while (this._STATUS._currentMultiDownload < this._OPTION.multiDownload) {
             if (this._DOWNLOAD_LIST.done()) {
@@ -212,14 +248,13 @@ class NodeSpider extends events_1.EventEmitter {
                 if (/^javascript/.test(newUrl)) {
                     return false;
                 }
-                // 如果是锚，等效与当前 url 路径
-                if (newUrl && newUrl[0] === "#") {
-                    return result.push(task.url);
-                }
                 // 如果是相对路径，补全路径为绝对路径
                 if (newUrl && !/^https?:\/\//.test(newUrl)) {
                     newUrl = url.resolve(task.url, newUrl);
                 }
+                // 去除连接中的查询和锚
+                let u = url.parse(newUrl);
+                newUrl = u.protocol + u.auth + u.host + u.pathname;
                 result.push(newUrl);
             });
             return result;
@@ -235,14 +270,14 @@ class NodeSpider extends events_1.EventEmitter {
             }
             newUrls.map((url) => {
                 if (url && !thisSpider.check(url)) {
-                    let new_task = {
+                    let newTask = {
                         url,
                         callback,
                     };
                     if (typeof option === "object") {
-                        Object.assign(new_task, option);
+                        Object.assign(newTask, option);
                     }
-                    thisSpider.addTask(new_task);
+                    thisSpider.addTask(newTask);
                 }
             });
         };
@@ -290,7 +325,7 @@ class NodeSpider extends events_1.EventEmitter {
     // TODO: 文件名解析
     _asyncDownload(currentTask) {
         return __awaiter(this, void 0, void 0, function* () {
-            return new Promise(function (resolve, reject) {
+            return new Promise((resolve, reject) => {
                 const download = request(currentTask.url);
                 // TODO: 路径是否存在？
                 // TODO: 文件名解析

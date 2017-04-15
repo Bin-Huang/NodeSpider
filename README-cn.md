@@ -1,118 +1,115 @@
-# NodeSpider
 
-20 lines of code to develop a web crawler as a geek.
+20 lines of code to create a web crawler as a geek.
 
-nodespider 是一个 容易上手、开发迅速、易于扩展的轻量级爬虫框架。通过各种简单好用的api方法，帮助开发者用较少的代码开发出满足工作的爬虫。
+Easier and more efficient to crawl a website and extract data, NodeSpider can save your time.
 
 ```javascript
 let s = new NodeSpider({
-    toUtf8: true,   // 自动转码页面为 utf-8
-    // ...
+    preToUtf8: true,   // Convert body to UTF8
+    // or more...
 });
-s.start('https://en.wikipedia.org/wiki/Main_Page', function (err, current, $) {
+
+s.start('https://en.wikipedia.org/wiki/Main_Page', function (err, currentTask, $) {
     if (err) {
-        s.retry(err);   // 自动对错误进行重试
-        return ;
+        return s.retry(currentTask);   //retry when there are a error
     }
 
-    // 直接使用 jQuery 操作、选择内容
+    // 你可以使用 jQuery 来提取网页内容
     console.log($('title').text()); 
 
-    // 添加新链接至待爬取列表，自动补全相对路径，自动去重
-    s.todo($('a'), current.callback);
+    // 轻松获得超链接的绝对路径
+    console.log($('a#id').url());
 
-    // 轻松将内容保存到本地
-    s.save('./mydata.json', {
+    // 轻松添加新的链接到待抓取列表，并自动排除重复链接
+    $('a').todo();
+
+    // 保存内容到本地
+    s.save('mydata.json', {
         title: $('title').text(),
         sumary: $('p').text(),
+        picture_url: $('img').attr('href')
     });
+
+    // And more interesting thing...
 });
 ```
 
-# Features
-- server-side DOM & jQuery you can use to parse page
-- 
-
-# 初始化
-
-## 通过 `new NodeSpider()` 新建爬虫实例
-```javascript
-var NodeSpider = require('NodeSpider');
-
-var s = new NodeSpider();   //新建实例
+# Installation and import
 
 ```
-
-## option
-
-新建爬虫实例的同时，你还可以对实例进行设置
+npm install nodespider
+```
 
 ```javascript
-var s = new NodeSpider({
-    toUTF8: true,
-    max_process: 30
-    // 或者更多 ...
+// in your .js file
+const NodeSpider = require("NodeSpider");
+```
+
+# Initialization
+
+## new NodeSpider( [option] )
+create an instance of NodeSpider
+
+| param | required  | type  | description   |
+| :---:   | :---:   | :---:   | :---   |
+| option    | no  | object    | option  |
+
+**option:**
+
+- **jq**    (default: `true`) whether to load jQ
+- **preToUtf8** (default: `true`)   convert body to utf8
+- **multiTasking**  (default: `20`) max multitasking number
+- **multiDownload** (default: `2`)  max download multitasking number
+- **defaultDownloadPath**   (default: `""`) default path for download file
+- **defaultRetry**  (default: `3`)  default retry count
+
+```javascript
+var mySpider = new NodeSpider();
+
+var anotherSpider = new NodeSpider({
+    preToUtf8: true,
+    jq: false
+    // or more...
 });
 ```
 
-下面是你可以自由设置的设置项
+# Method
+
+## NodeSpider.prototype.start(startUrl, callback)
+
+Start web crawling with startUrl(s)
+
+| param | required  | type  | description   |
+| :---:   | :---:   | :---:   | :---   |
+| startUrl    | yes  | string    | the url to start with. It can be a string or an array of string. |
+| callback  | yes   | function  | the function about what you want to do after received response.   |
 
 ```javascript
-var option = {
-    max_process: 40,    //最大同时抓取任务的数目，默认： 40
-    toUTF8: true,  //是否自动将返回正文转码为 utf-8。默认： True
-    jq: true   //是否加载 jQuery 并传入 callback 爬取函数。默认： true
-};
-```
+NodeSpider.start('http://www.google.com', function (error, currentTask, $) {
+    if (error) {
+        return console.log(error);
+    }
 
-# 方法
+    // get information from currentTask
+    console.log(currentTask.url);
+    console.log(currentTask.response);
 
-## NodeSpider.prototype.start(url, callback)
-
-传入开始链接，并为该链接（们）指定 callback 爬取函数
-
-**url** type: {string | array}
-
-需要被爬取的链接，可以是 url 字符串，也可以是 url 组成的数组，甚至是一个jQuery选择对象。
-
-**callback** type: {function}
-
-为该链接设置 callback 爬取函数。
-
-```javascript
-NodeSpider.start('http://www.google.com', function(err, current, $){
-    if (err) console.log(err);  //请求过程中遇到的错误，正常情况下为 null
-
-    // NodeSpider 通过异步的方式请求网络并抓取。
-    // 你可通过 current 获得当前爬取任务的信息
-    console.log(current.url);   // 当前链接
-    console.log(current.callback);  // 当前爬取函数
-    console.log(current.response);  // 服务器回应
-    console.log(current.body);  // 返回正文
-    console.log(current.opts);  // 当前该任务的设置
-
-    // 你可以使用 jQuery 来操作、选择你需要的内容
-    // （如果你在初始化时设置 {jq: false}, 则 $ 无法使用）
+    // Use the $ to operate/select Elements
     console.log($('title').text());
-    $('a').each(function () {
-        console.log($(this).attr('href'));
-    })
 });
 ```
 
 ## NodeSpider.prototype.todo(item, [opts,] callback)
 
-方法 todo 用来添加新的链接到待爬取列表，并为其指定 callback 抓取函数。
-重复的链接将自动取消添加并返回`false`，所以你不用担心重复抓取的问题。
-同时，你可以选择性的为其指定爬取设置（爬取该链接时，该设置将覆盖全局设置）
+Add new web-crawl task to spider's todo-list. The task will be executed automatically.
 
 **item**    type: string, array or jQuery
 
-你可以传入一个 url 字符串，或者是 url 组成的数组，甚至是一个jQuery选择对象。
-当传入的是一个jQuery选择对象时，nodespider 将自动获取其中每一元素节点的 href 属性，并根据当前任务自动补全相对路径为绝对路径。
-所以当在callback抓取函数中调用 todo 时，建议你传入jquery对象，这会减轻你工作负担
+The url(s) you want to crawl. It can be a url `string`, array of urls, and jQuery element object that possess `href` attribute.
 
-```
+If it is jQuery element object, nodespider will convert relative url into absolute url automatically, never wrong about the relative url in page.
+
+```javascript
 s.todo('http://www.google.com', yourCallback);
 s.todo(['http://www.wiki.com', 'http://www.amazon.con'], yourCallback);
 
@@ -121,61 +118,58 @@ function yourCallback(err, current, $) {
 }
 ```
 
-**opts** 可选 type: object
-
-本次爬取工作的专门设置
+**opts** type: object
+*optional* Special option for this task
 ```
 var opts = {
-
+    jq: true
+    //...
 }
 ```
 
 **callback** type: function
 
-指定本次爬取工作的callback 爬取函数, 当爬虫获得网页内容后调用
-```
-function (err, current, $) {
+the callback function for the task, about how to scrape the web
 
+```javascript
+function (err, current, $) {
+    // your code
 }
 ```
 
 ## NodeSpider.prototype.save(path, data)
-方法 save 可以帮助你将对象格式的数据以各种格式保存到本地，这在抓取数据时非常有用
+Method save help you to save/collect data from website to local easier.
 
-- path type: string
+**path** type: string
 
-指定保存路径。不用担心路径及文件是否存在，NodeSpider将自动帮你创建。
-文件的不同扩展名将决定数据在文件中的表现形式。
+The path to save data. 
+If path or file does not exist, nodespider will create it automatically.
+
+
+Different file extension lead to defferent mode to save data.
 ```javascript
 var s = new NodeSpider();
 var data = {type: 'cat', color: 'white'};
 
-//data数据将以json形式保存
+// save as json
 s.save('./myFolder/myData.json', data); 
 
-//data中的数据将以表格形式保存。以属性名为表头，以'\t'、'\n'为分隔。
-//当你复制所有内容到 Excel，你会喜欢它的
+// save as txt, using '\t','\n' as separator.
+// if you copy all to Excel, you will like that :)
 s.save('./myFolder/myData.txt', data); 
 
-//如果没有指定扩展名，则以json形式保存
+// if there are no file extension, save as json by default
 s.save('./myFolder/myData', data);
 ```
 
-- data type: object
+**data** type: object
 
-需要保存的数据对象。
-需要注意的是：当你首次向一个文件保存数据时，这个文件将与数据中各属性名相绑定。此后保存数据到文件，只会保存对应数据名的内容。
+Data you want to save/collect.
+
 ```javascript
-// mydata.json 与 data属性名 ['name', 'age'] 相绑定
 s.save('student.json', {
     name: 'ben',
-    age: 20
-});
-
-
-s.save('student.json', {
-    name: 'ben',
-    score: 'A'  // score 不在 header, 所以 'A' 不会被保存
+    age: 'A'  // score 不在 header, 所以 'A' 不会被保存
 });
 ```
 

@@ -18,15 +18,17 @@ import { JsonTable, TxtTable } from "./Table";
 interface IOption {
     multiTasking: number;
     multiDownload: number;
-    jq: boolean;
-    preToUtf8: boolean;
     defaultRetry: number;
     defaultDownloadPath: string;
+
+    jq: boolean;
+    preToUtf8: boolean;
 }
 
 interface ITask {
     url: string;
     callback: (err, currentTask, $) => void;
+
     jq ?: boolean;
     preToUtf8 ?: boolean;
 
@@ -140,7 +142,7 @@ class NodeSpider extends EventEmitter {
             },
             path: task.path,
             url: task.url,
-        }
+        };
         this._DOWNLOAD_LIST.add(newTask.url, newTask);
     }
 
@@ -185,17 +187,18 @@ class NodeSpider extends EventEmitter {
     }
 
     /**
-     * retry a task
+     * retry the task
      * @param task the task which want to retry
-     * @param maxRetry max retry count of this task
-     * @param finalErrorCallback callback calling when retry count eval to max retry count
+     * @param maxRetry max retry count of this task. default: this._OPTION.defaultRetry
+     * @param finalErrorCallback callback calling when retry count eval to max retry count. default: save log
      */
-
-    public retry(task: ITask, maxRetry= this._OPTION.defaultRetry , finalErrorCallback: (task: ITask) => void) {
-
+    public retry(task: ITask, maxRetry ?: number, finalErrorCallback ?: (task: ITask) => void) {
+        if (! maxRetry) {
+            maxRetry = this._OPTION.defaultRetry;
+        }
         if (!finalErrorCallback) {
             finalErrorCallback = () => {
-                this.save("log", task);
+                this.save("log.json", task);
             };
         }
 
@@ -243,6 +246,9 @@ class NodeSpider extends EventEmitter {
         }
     }
 
+    /**
+     * 火力全开，尝试不断启动新任务，让当前任务数达到最大限制数
+     */
     protected _fire() {
         while (this._STATUS._currentMultiDownload < this._OPTION.multiDownload) {
             if (this._DOWNLOAD_LIST.done()) {
@@ -261,7 +267,7 @@ class NodeSpider extends EventEmitter {
                     });
             }
         }
-        while(this._STATUS._currentMultiTask < this._OPTION.multiTasking) {
+        while (this._STATUS._currentMultiTask < this._OPTION.multiTasking) {
             if (this._TODOLIST.done()) {
                 break;
             } else {
