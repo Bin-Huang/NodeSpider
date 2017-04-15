@@ -192,15 +192,7 @@ class NodeSpider extends EventEmitter {
      * @param maxRetry max retry count of this task. default: this._OPTION.defaultRetry
      * @param finalErrorCallback callback calling when retry count eval to max retry count. default: save log
      */
-    public retry(task: ITask, maxRetry ?: number, finalErrorCallback ?: (task: ITask) => void) {
-        if (! maxRetry) {
-            maxRetry = this._OPTION.defaultRetry;
-        }
-        if (!finalErrorCallback) {
-            finalErrorCallback = () => {
-                this.save("log.json", task);
-            };
-        }
+    public retry(task: ITask, maxRetry = this._OPTION.defaultRetry, finalErrorCallback = (task) => this.save("log.json", task)) {
 
         if (task.info.maxRetry === null) {
             task.info.maxRetry = maxRetry;

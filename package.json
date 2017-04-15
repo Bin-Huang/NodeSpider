@@ -1,7 +1,7 @@
 {
   "name": "nodespider",
   "version": "0.1.2",
-  "description": "20 lines of code to develop a web crawler as a geek",
+  "description": "20 lines of code to bulid a web crawler as a geek",
   "main": "index.js",
   "dependencies": {
     "charset": "^1.0.0",
@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "@types/node": "^7.0.8",
-    "jest": "^19.0.2",
+    "jest": "^19.0.2"
   },
   "scripts": {
     "test": "jest"
