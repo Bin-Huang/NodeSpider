@@ -45,7 +45,7 @@ interface ITask {
 
 interface IDownload {
     url: string;
-    path: string;
+    path?: string;
     callback?: () => void;
 
     info ?: {
@@ -128,6 +128,13 @@ class NodeSpider extends EventEmitter {
             task.body = null;
         }
 
+        if (! task.info) {
+            task.info = {
+                maxRetry: null,
+                finalErrorCallback: null,
+                retried: null,
+            }
+        }
         this._TODOLIST.add(task.url, task);
     }
 
@@ -137,6 +144,17 @@ class NodeSpider extends EventEmitter {
      */
     public addDownload(task: IDownload) {
         // TODO: 清理空间
+        if (! task.path) {
+            task.path = this._OPTION.defaultDownloadPath;
+        }
+
+        if (! task.info) {
+            task.info = {
+                maxRetry: null,
+                retried: null,
+                finalErrorCallback: null,
+            }
+        }
         this._DOWNLOAD_LIST.add(task.url, task);
     }
 
@@ -300,6 +318,29 @@ class NodeSpider extends EventEmitter {
                 return result;
             }
         };
+
+        /**
+         * 获得选中节点（们）的 src 路径（自动补全）
+         * @returns {null|string|array} 
+         */
+        $.prototype.src = function() {
+            let result = [];
+            $(this).each(function () {
+                let newUrl = $(this).attr("src");
+                // 如果是相对路径，补全路径为绝对路径
+                if (newUrl && !/^https?:\/\//.test(newUrl)) {
+                    newUrl = url.resolve(task.url, newUrl);
+                }
+                result.push(newUrl);
+            });
+            if (result.length === 0) {
+                return null;
+            } else if (result.length === 1) {
+                return result[0];
+            } else {
+                return result;
+            }
+        }
 
         const thisSpider = this;
 
