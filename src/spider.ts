@@ -221,10 +221,6 @@ class NodeSpider extends EventEmitter {
 
     }
 
-    public decode(st, encoding) {
-        return iconv.decode(st, encoding);
-    }
-
     public save(item, data) {
         // TODO: 如果item为对象，则为数据库。通过用户在 item 中自定义的标识符来判断是否已存在
         // 暂时只完成保存到文本的功能，所以默认 item 为文件路径字符串
@@ -357,7 +353,7 @@ class NodeSpider extends EventEmitter {
                         if (preToUtf8) {
                             let encoding = charset(response.headers, response.body);
                             if (encoding) {
-                                currentTask.body = this.decode(response.body, encoding);
+                                currentTask.body = iconv.decode(response.body, encoding);
                             }
                         }
 

@@ -150,7 +150,8 @@ class NodeSpider extends events_1.EventEmitter {
         }
         if (task.info.maxRetry > task.info.retried) {
             task.info.retried += 1;
-            // 将 error 和 response 信息删除，节省排队时的内存占用
+            // TODO: 信息删除，节省排队时的内存占用
+            task.body = null;
             task.response = null;
             task.error = null;
             if (task.path) {
@@ -163,9 +164,6 @@ class NodeSpider extends events_1.EventEmitter {
         else {
             task.info.finalErrorCallback(task);
         }
-    }
-    decode(st, encoding) {
-        return iconv.decode(st, encoding);
     }
     save(item, data) {
         // TODO: 如果item为对象，则为数据库。通过用户在 item 中自定义的标识符来判断是否已存在
@@ -293,15 +291,15 @@ class NodeSpider extends events_1.EventEmitter {
                         if (preToUtf8) {
                             let encoding = charset(response.headers, response.body);
                             if (encoding) {
-                                response.body = this.decode(response.body, encoding);
+                                currentTask.body = iconv.decode(response.body, encoding);
                             }
                         }
                         // 根据任务设置和全局设置，确定是否加载jQ
                         if (currentTask.jq !== undefined) {
-                            $ = this._loadJq(response.body, currentTask);
+                            $ = this._loadJq(currentTask.body, currentTask);
                         }
                         else if (this._OPTION.jq) {
-                            $ = this._loadJq(response.body, currentTask);
+                            $ = this._loadJq(currentTask.body, currentTask);
                         }
                     }
                     catch (err) {
@@ -311,6 +309,7 @@ class NodeSpider extends events_1.EventEmitter {
                 currentTask.response = response;
                 currentTask.error = error;
                 currentTask.callback(error, currentTask, $);
+                currentTask = null;
             });
         });
     }
