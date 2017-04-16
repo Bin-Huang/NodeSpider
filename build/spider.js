@@ -65,55 +65,43 @@ class NodeSpider extends events_1.EventEmitter {
         });
     }
     /**
-     * 向爬虫的 todo-list 添加新的任务(不检查是否重复链接)
-     * 只添加任务需要的成员所组成的任务到list，并不是直接将参数传入list
+     * Add new crawling-task to spider's todo-list (regardless of whether the link has been added)
      * @param {ITask} task
-     * @memberOf NodeSpider
      */
     addTask(task) {
-        let newTask = {
-            callback: task.callback,
-            info: {
-                finalErrorCallback: null,
-                maxRetry: null,
-                retried: 0,
-            },
-            url: task.url,
-        };
-        if (typeof task.jq !== "undefined") {
-            newTask.jq = task.jq;
+        // 清理，节省空间
+        if (task.response) {
+            task.response = null;
         }
-        if (typeof task.preToUtf8 !== "undefined") {
-            newTask.preToUtf8 = task.preToUtf8;
+        if (task.error) {
+            task.error = null;
         }
-        this._TODOLIST.add(newTask.url, newTask);
-    }
-    download(task) {
-        let newTask = {
-            info: {
-                finalErrorCallback: null,
-                maxRetry: null,
-                retried: 0,
-            },
-            path: task.path,
-            url: task.url,
-        };
-        this._DOWNLOAD_LIST.add(newTask.url, newTask);
+        if (task.body) {
+            task.body = null;
+        }
+        this._TODOLIST.add(task.url, task);
     }
     /**
-     * 检测链接是否已添加过
-     * @param {stirng} url 待检查的链接
-     * @returns {boolean}
-     * @memberOf NodeSpider
+     * add new download-task to spider's download-list.
+     * @param task
+     */
+    addDownload(task) {
+        // TODO: 清理空间
+        this._DOWNLOAD_LIST.add(task.url, task);
+    }
+    /**
+     * Check whether the link has been added
+     * @param url the url
      */
     check(url) {
+        // TODO: 如果参数url 是数组，返回数组中未添加的url 组成的数组
         const inTodoList = this._TODOLIST.check(url);
         const inDownloadList = this._DOWNLOAD_LIST.check(url);
         return inTodoList || inDownloadList;
     }
     /**
      * launch the spider with url(s) and callback
-     * @param {string|array} url the first url to crawle
+     * @param {string|array} url the first url(s) to crawle
      * @param callback
      */
     start(url, callback) {
@@ -138,10 +126,10 @@ class NodeSpider extends events_1.EventEmitter {
         this._fire();
     }
     /**
-     * retry the task
-     * @param task the task which want to retry
-     * @param maxRetry max retry count of this task. default: this._OPTION.defaultRetry
-     * @param finalErrorCallback callback calling when retry count eval to max retry count. default: save log
+     * Retry the task within the maximum number of retries
+     * @param {ITask} task The task which want to retry
+     * @param {number} maxRetry Maximum number of retries for this task
+     * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
     retry(task, maxRetry = this._OPTION.defaultRetry, finalErrorCallback = (task) => this.save("log.json", task)) {
         if (task.info.maxRetry === null) {
@@ -155,10 +143,10 @@ class NodeSpider extends events_1.EventEmitter {
             task.response = null;
             task.error = null;
             if (task.path) {
-                this._DOWNLOAD_LIST.jump(task.url, task);
+                this.addDownload(task);
             }
             else {
-                this._TODOLIST.jump(task.url, task);
+                this.addTask(task);
             }
         }
         else {
@@ -228,7 +216,7 @@ class NodeSpider extends events_1.EventEmitter {
     _loadJq(body, task) {
         let $ = cheerio.load(body);
         // 扩展：添加 url 方法
-        // 返回当前节点（们）链接的的绝对路径数组
+        // 返回当前节点（们）链接的的绝对路径(null, string, array)
         // 自动处理了锚和 javascript: void(0)
         $.prototype.url = function () {
             let result = [];
@@ -247,31 +235,110 @@ class NodeSpider extends events_1.EventEmitter {
                 newUrl = u.protocol + u.auth + u.host + u.pathname;
                 result.push(newUrl);
             });
-            return result;
+            if (result.length === 0) {
+                return null;
+            }
+            else if (result.length === 1) {
+                return result[0];
+            }
+            else {
+                return result;
+            }
         };
         const thisSpider = this;
-        // 扩展 jQ
-        // 添加当前节点（们）链接到 todo-list，自动去重、补全路径
+        /**
+         * 添加选定节点（们）中的链接到 todo-list, 并自动补全路径、跳过重复链接
+         * @param {null|function|object}  option 回掉函数或设置对象
+         * option 为可选参数，空缺时新建任务的回调函数
+         * 可以传入函数作为任务的回掉函数
+         * 也可以是一个包括设置的对象，如果对象中不存在callback成员，则默认当前任务的callback
+         */
         $.prototype.todo = function (option) {
-            let callback = (typeof option === "function") ? option : task.callback;
             let newUrls = $(this).url();
-            if (!newUrls) {
+            if (newUrls === null) {
                 return false;
             }
-            newUrls.map((url) => {
-                if (url && !thisSpider.check(url)) {
-                    let newTask = {
-                        url,
-                        callback,
-                    };
-                    if (typeof option === "object") {
-                        Object.assign(newTask, option);
+            else if (typeof newUrls === "string") {
+                newUrls = [newUrls];
+            }
+            if (typeof option === "undefined") {
+                newUrls.map((u) => {
+                    if (!thisSpider.check(u)) {
+                        thisSpider.addTask({
+                            callback: task.callback,
+                            url: u,
+                        });
                     }
-                    thisSpider.addTask(newTask);
-                }
-            });
+                });
+            }
+            else if (typeof option === "function") {
+                newUrls.map((u) => {
+                    if (!thisSpider.check(u)) {
+                        thisSpider.addTask({
+                            callback: option,
+                            url: u,
+                        });
+                    }
+                });
+            }
+            else if (typeof option === "object") {
+                option.callback = option.callback ? option.callback : task.callback;
+                newUrls.map((u) => {
+                    if (!thisSpider.check(u)) {
+                        let newTask = Object.assign({}, option);
+                        newTask.url = u;
+                        thisSpider.addTask(newTask);
+                    }
+                });
+            }
         };
-        return $;
+        /**
+         * 添加选定节点（们）中的链接到 download-list, 并自动补全路径、跳过重复链接
+         * @param {null|string|object}  option 路径或设置对象
+         * option 为可选参数，空缺时新建任务的 path 默认为默认保存路径
+         * 可以传入字符串作为下载内容的保存路径
+         * 也可以是一个包括设置的对象，如果对象中不存在path成员，则为默认保存路径
+         */
+        $.prototype.download = function (option) {
+            let newUrls = $(this).url();
+            if (newUrls === null) {
+                return false;
+            }
+            else if (typeof newUrls === "string") {
+                newUrls = [newUrls];
+            }
+            if (typeof option === "undefined") {
+                newUrls.map((u) => {
+                    if (!thisSpider.check(u)) {
+                        thisSpider.addDownload({
+                            url: u,
+                            path: thisSpider._OPTION.defaultDownloadPath,
+                        });
+                    }
+                });
+            }
+            else if (typeof option === "string") {
+                newUrls.map((u) => {
+                    if (!thisSpider.check(u)) {
+                        thisSpider.addDownload({
+                            path: option,
+                            url: u,
+                        });
+                    }
+                });
+            }
+            else if (typeof option === "object") {
+                option.path = option.path ? option.path : thisSpider._OPTION.defaultDownloadPath;
+                newUrls.map((u) => {
+                    if (!thisSpider.check(u)) {
+                        let newTask = Object.assign({}, option);
+                        newTask.url = u;
+                        thisSpider.addDownload(newTask);
+                    }
+                });
+            }
+            return $;
+        };
     }
     _asyncCrawling(currentTask) {
         return __awaiter(this, void 0, void 0, function* () {
