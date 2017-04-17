@@ -31,7 +31,7 @@ interface ITask {
     jq ?: boolean;
     preToUtf8 ?: boolean;
 
-    info ?: {
+    _INFO ?: {
         maxRetry: number;
         retried: number;
         finalErrorCallback: (currentTask: ITask) => void;
@@ -47,7 +47,7 @@ interface IDownload {
     path?: string;
     callback?: () => void;
 
-    info ?: {
+    _INFO ?: {
         maxRetry: number;
         retried: number;
         finalErrorCallback: (currentTask: ITask) => void;
@@ -114,27 +114,20 @@ class NodeSpider extends EventEmitter {
     /**
      * Add new crawling-task to spider's todo-list (regardless of whether the link has been added)
      * @param {ITask} task
+     * @returns {number} the number of urls has been added.
      */
     public addTask(task: ITask) {
-        // 清理，节省空间
-        if (task.response) {
-            task.response = null;
+        // TODO:  addTask 会习惯在 task 中直接声明 callback匿名函数，这种大量重复的匿名函数会消耗内存。
+        if (typeof task.url !== "string" || typeof task.callback !== "function") {
+            throw new Error("method addTask params : {url: string, callback: function");
         }
-        if (task.error) {
-            task.error = null;
-        }
-        if (task.body) {
-            task.body = null;
-        }
-
-        if (! task.info) {
-            task.info = {
-                maxRetry: null,
-                finalErrorCallback: null,
-                retried: null,
-            };
-        }
+        task._INFO = {
+            maxRetry: null,
+            finalErrorCallback: null,
+            retried: null,
+        };
         this._TODOLIST.add(task.url, task);
+        return this._TODOLIST.getSize();
     }
 
     /**
@@ -147,8 +140,8 @@ class NodeSpider extends EventEmitter {
             task.path = this._OPTION.defaultDownloadPath;
         }
 
-        if (! task.info) {
-            task.info = {
+        if (! task._INFO) {
+            task._INFO = {
                 maxRetry: null,
                 retried: null,
                 finalErrorCallback: null,
@@ -227,21 +220,26 @@ class NodeSpider extends EventEmitter {
      */
     public retry(task: ITask, maxRetry = this._OPTION.defaultRetry, finalErrorCallback = (task) => this.save("log.json", task)) {
 
-        if (task.info.maxRetry === null) {
-            task.info.maxRetry = maxRetry;
-            task.info.finalErrorCallback = finalErrorCallback;
+        if (task._INFO.maxRetry === null) {
+            task._INFO.maxRetry = maxRetry;
+            task._INFO.finalErrorCallback = finalErrorCallback;
         }
 
-        if (task.info.maxRetry > task.info.retried) {
-            task.info.retried += 1;
+        if (task._INFO.maxRetry > task._INFO.retried) {
+            task._INFO.retried += 1;
 
             if ((task as IDownload).path) {
-                this.addDownload((task as IDownload));
+                // 清理
+                this._DOWNLOAD_LIST.jump(task.url, (task as IDownload));
             } else {
-                this.addTask(task);
+                // 清理
+                task.body = null;
+                task.response = null;
+                task.error = null;
+                this._TODOLIST.jump(task.url, task);
             }
         } else {
-            task.info.finalErrorCallback(task);
+            task._INFO.finalErrorCallback(task);
         }
 
     }
