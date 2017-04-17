@@ -2,7 +2,6 @@
 // TODO: 更好的报错机制: 报错建议？以及去除多余的 console.error
 // TODO: 解决 save 方法保存json格式不好用的问题： 没有[],直接也没有逗号隔开
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
-// TODO: 当一个页面 url 指向已存在资源路径，但是添加了不同的查询语句，将跳过去重
 // TODO: 使用 node 自带 stringdecode 代替 iconv-lite
 // TODO: 使用 jsdom 是否可以模拟 js 点击与浏览器环境
 import * as charset from "charset";
@@ -133,7 +132,7 @@ class NodeSpider extends EventEmitter {
                 maxRetry: null,
                 finalErrorCallback: null,
                 retried: null,
-            }
+            };
         }
         this._TODOLIST.add(task.url, task);
     }
@@ -153,20 +152,43 @@ class NodeSpider extends EventEmitter {
                 maxRetry: null,
                 retried: null,
                 finalErrorCallback: null,
-            }
+            };
         }
         this._DOWNLOAD_LIST.add(task.url, task);
     }
 
     /**
-     * Check whether the link has been added
-     * @param url the url
+     * Check whether the url has been added
+     * @param {string} url
+     * @returns {boolean}
      */
     public check(url: string) {
-        // TODO: 如果参数url 是数组，返回数组中未添加的url 组成的数组
+        if (typeof url !== "string") {
+            throw new Error("method check need a string-typed param");
+        }
         const inTodoList = this._TODOLIST.check(url);
         const inDownloadList = this._DOWNLOAD_LIST.check(url);
         return inTodoList || inDownloadList;
+    }
+
+    /**
+     * 过滤掉一个数组中所有已被添加的链接，返回一个新数组
+     * @param urlArray
+     * @returns {array}
+     */
+    public filter(urlArray: string[]) {
+        if (! Array.isArray(urlArray)) {
+            throw new Error("method filter need a array-typed param");
+        } else {
+            let result = [];
+            // TODO: 使用专门过滤的数组方法
+            urlArray.map((u) => {
+                if (! this.check(u)) {
+                    result.push(u);
+                }
+            });
+            return result;
+        }
     }
 
     /**
@@ -212,11 +234,6 @@ class NodeSpider extends EventEmitter {
 
         if (task.info.maxRetry > task.info.retried) {
             task.info.retried += 1;
-
-            // TODO: 信息删除，节省排队时的内存占用
-            task.body = null;
-            task.response = null;
-            task.error = null;
 
             if ((task as IDownload).path) {
                 this.addDownload((task as IDownload));
@@ -291,7 +308,7 @@ class NodeSpider extends EventEmitter {
     protected _loadJq(body: string, task: ITask) {
         let $ = cheerio.load(body);
         // 扩展：添加 url 方法
-        // 返回当前节点（们）链接的的绝对路径(null, string, array)
+        // 返回当前节点（们）链接的的绝对路径(array)
         // 自动处理了锚和 javascript: void(0)
         $.prototype.url = function () {
             let result = [];
@@ -310,18 +327,12 @@ class NodeSpider extends EventEmitter {
                 newUrl = u.protocol + u.auth + u.host + u.pathname;
                 result.push(newUrl);
             });
-            if (result.length === 0) {
-                return null;
-            } else if (result.length === 1) {
-                return result[0];
-            } else {
-                return result;
-            }
+            return result;
         };
 
         /**
          * 获得选中节点（们）的 src 路径（自动补全）
-         * @returns {null|string|array} 
+         * @returns {array}
          */
         $.prototype.src = function() {
             let result = [];
@@ -333,14 +344,8 @@ class NodeSpider extends EventEmitter {
                 }
                 result.push(newUrl);
             });
-            if (result.length === 0) {
-                return null;
-            } else if (result.length === 1) {
-                return result[0];
-            } else {
-                return result;
-            }
-        }
+            return result;
+        };
 
         const thisSpider = this;
 
@@ -353,39 +358,28 @@ class NodeSpider extends EventEmitter {
          */
         $.prototype.todo = function (option) {
             let newUrls = $(this).url();
-
-            if (newUrls === null) {
-                return false;
-            } else if (typeof newUrls === "string") {
-                newUrls = [newUrls];
-            }
+            newUrls = thisSpider.filter(newUrls);
 
             if (typeof option === "undefined") {
                 newUrls.map((u) => {
-                    if (! thisSpider.check(u)) {
-                        thisSpider.addTask({
-                            callback: task.callback,
-                            url: u,
-                        });
-                    }
+                    thisSpider.addTask({
+                        callback: task.callback,
+                        url: u,
+                    });
                 });
             } else if (typeof option === "function") {
                 newUrls.map((u) => {
-                    if (! thisSpider.check(u)) {
-                        thisSpider.addTask({
-                            callback: option,
-                            url: u,
-                        });
-                    }
+                    thisSpider.addTask({
+                        callback: option,
+                        url: u,
+                    });
                 });
             } else if (typeof option === "object") {
                 option.callback = option.callback ? option.callback : task.callback;
                 newUrls.map((u) => {
-                    if (! thisSpider.check(u)) {
-                        let newTask = Object.assign({}, option);
-                        newTask.url = u;
-                        thisSpider.addTask(newTask);
-                    }
+                    let newTask = Object.assign({}, option);
+                    newTask.url = u;
+                    thisSpider.addTask(newTask);
                 });
             }
 
@@ -400,39 +394,28 @@ class NodeSpider extends EventEmitter {
          */
         $.prototype.download = function (option) {
             let newUrls = $(this).url();
-
-            if (newUrls === null) {
-                return false;
-            } else if (typeof newUrls === "string") {
-                newUrls = [newUrls];
-            }
+            newUrls = thisSpider.filter(newUrls);
 
             if (typeof option === "undefined") {
                 newUrls.map((u) => {
-                    if (! thisSpider.check(u)) {
-                        thisSpider.addDownload({
-                            url: u,
-                            path: thisSpider._OPTION.defaultDownloadPath,
-                        });
-                    }
+                    thisSpider.addDownload({
+                        path: thisSpider._OPTION.defaultDownloadPath,
+                        url: u,
+                    });
                 });
             } else if (typeof option === "string") {
                 newUrls.map((u) => {
-                    if (! thisSpider.check(u)) {
-                        thisSpider.addDownload({
-                            path: option,
-                            url: u,
-                        });
-                    }
+                    thisSpider.addDownload({
+                        path: option,
+                        url: u,
+                    });
                 });
             } else if (typeof option === "object") {
                 option.path = option.path ? option.path : thisSpider._OPTION.defaultDownloadPath;
                 newUrls.map((u) => {
-                    if (! thisSpider.check(u)) {
-                        let newTask = Object.assign({}, option);
-                        newTask.url = u;
-                        thisSpider.addDownload(newTask);
-                    }
+                    let newTask = Object.assign({}, option);
+                    newTask.url = u;
+                    thisSpider.addDownload(newTask);
                 });
             }
 
