@@ -1,27 +1,12 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-// TODO: request 传入 opts，以及更多的 option，类似 proxy
-// TODO: 更好的报错机制: 报错建议？以及去除多余的 console.error
-// TODO: 解决 save 方法保存json格式不好用的问题： 没有[],直接也没有逗号隔开
-// BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
-// TODO: 使用 node 自带 stringdecode 代替 iconv-lite
-// TODO: 使用 jsdom 是否可以模拟 js 点击与浏览器环境
-const charset = require("charset");
-const cheerio = require("cheerio");
-const events_1 = require("events");
-const fs = require("fs");
-const iconv = require("iconv-lite");
-const request = require("request");
-const url = require("url");
-const List_1 = require("./List");
-const Table_1 = require("./Table");
+import * as charset from "charset";
+import * as cheerio from "cheerio";
+import { EventEmitter } from "events";
+import * as fs from "fs";
+import * as iconv from "iconv-lite";
+import * as request from "request";
+import * as url from "url";
+import List from "./List";
+import { JsonTable, TxtTable } from "./Table";
 // 简单上手的回掉函数 + 自由定制的事件驱动
 const defaultOption = {
     defaultDownloadPath: "",
@@ -35,13 +20,14 @@ const defaultOption = {
  * class of NodeSpider
  * @class NodeSpider
  */
-class NodeSpider extends events_1.EventEmitter {
+class NodeSpider extends EventEmitter {
     /**
      * create an instance of NodeSpider
      * @param opts
      */
     constructor(opts = {}) {
         super();
+        this.async = _asyncCrawling(currentTask, ITask);
         Object.assign(defaultOption, opts);
         this._OPTION = defaultOption;
         this._STATUS = {
@@ -49,8 +35,8 @@ class NodeSpider extends events_1.EventEmitter {
             _currentMultiTask: 0,
             _working: false,
         };
-        this._TODOLIST = new List_1.default();
-        this._DOWNLOAD_LIST = new List_1.default();
+        this._TODOLIST = new List();
+        this._DOWNLOAD_LIST = new List();
         this._TABLES = [];
         this.on("start_a_task", () => this._STATUS._currentMultiTask++);
         this.on("done_a_task", () => {
@@ -175,11 +161,16 @@ class NodeSpider extends events_1.EventEmitter {
         }
         if (task._INFO.maxRetry > task._INFO.retried) {
             task._INFO.retried += 1;
-            if (task.path) {
+            if ((task))
+                as;
+            IDownload;
+            path;
+            {
                 // 清理
-                this._DOWNLOAD_LIST.jump(task.url, task);
+                this._DOWNLOAD_LIST.jump(task.url, (task), as, IDownload);
+                ;
             }
-            else {
+            {
                 // 清理
                 task.body = null;
                 task.response = null;
@@ -200,36 +191,36 @@ class NodeSpider extends events_1.EventEmitter {
         if (typeof item === "string") {
             if (!this._TABLES[item]) {
                 // 如果不存在，则新建一个table实例
-                let header = Object.keys(data);
                 // 根据路径中的文件后缀名，决定新建哪种table
                 if (/.txt$/.test(item)) {
-                    this._TABLES[item] = new Table_1.TxtTable(item, header);
-                    return this._TABLES[item].add(data);
+                    this._TABLES[item] = new TxtTable(item);
                 }
                 else {
-                    this._TABLES[item] = new Table_1.JsonTable(item, header);
-                    return this._TABLES[item].add(data);
+                    this._TABLES[item] = new JsonTable(item);
                 }
             }
-            else {
-                item = this._TABLES[item];
-            }
+            item = this._TABLES[item];
         }
-        let thisHeader = Object.keys(data);
-        // 保证 data 与 table 的header 完全一致，不能多也不能少
-        // 如果不匹配，则报错
-        item.header.map((u) => {
-            if (thisHeader.indexOf(u) === -1) {
-                return new Error("header do not match");
-            }
-        });
-        thisHeader.map((u) => {
-            if (item.header.indexOf(u) === -1) {
-                return new Error("header do not match");
-            }
-        });
-        // 一切正常，则传给 item
-        item.add(data);
+        if (item.header === null) {
+            return item.add(data);
+        }
+        else {
+            let thisHeader = Object.keys(data);
+            // 保证 data 与 table 的header 完全一致，不能多也不能少
+            // 如果不匹配，则报错
+            item.header.map((u) => {
+                if (thisHeader.indexOf(u) === -1) {
+                    return new Error("header do not match");
+                }
+            });
+            thisHeader.map((u) => {
+                if (item.header.indexOf(u) === -1) {
+                    return new Error("header do not match");
+                }
+            });
+            // 一切正常，则传给 item
+            return item.add(data);
+        }
     }
     /**
      * 火力全开，尝试不断启动新任务，让当前任务数达到最大限制数
@@ -385,67 +376,63 @@ class NodeSpider extends events_1.EventEmitter {
             return $;
         };
     }
-    _asyncCrawling(currentTask) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let $ = null;
-            request({
-                encoding: null,
-                method: "GET",
-                url: currentTask.url,
-            }, (error, response) => {
-                if (!error) {
-                    try {
-                        // 根据任务设置和全局设置，确定如何编码正文
-                        let preToUtf8 = this._OPTION.preToUtf8;
-                        if (currentTask.preToUtf8 !== undefined) {
-                            preToUtf8 = currentTask.preToUtf8;
-                        }
-                        if (preToUtf8) {
-                            let encoding = charset(response.headers, response.body);
-                            if (encoding) {
-                                currentTask.body = iconv.decode(response.body, encoding);
-                            }
-                        }
-                        // 根据任务设置和全局设置，确定是否加载jQ
-                        if (currentTask.jq !== undefined) {
-                            $ = this._loadJq(currentTask.body, currentTask);
-                        }
-                        else if (this._OPTION.jq) {
-                            $ = this._loadJq(currentTask.body, currentTask);
-                        }
-                    }
-                    catch (err) {
-                        error = err;
+}
+{
+    let $ = null;
+    request({
+        encoding: null,
+        method: "GET",
+        url: currentTask.url,
+    }, (error, response) => {
+        if (!error) {
+            try {
+                // 根据任务设置和全局设置，确定如何编码正文
+                let preToUtf8 = this._OPTION.preToUtf8;
+                if (currentTask.preToUtf8 !== undefined) {
+                    preToUtf8 = currentTask.preToUtf8;
+                }
+                if (preToUtf8) {
+                    let encoding = charset(response.headers, response.body);
+                    if (encoding) {
+                        currentTask.body = iconv.decode(response.body, encoding);
                     }
                 }
-                currentTask.response = response;
-                currentTask.error = error;
-                currentTask.callback(error, currentTask, $);
-                currentTask = null;
-            });
-        });
-    }
-    // TODO: 文件名解析
-    _asyncDownload(currentTask) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return new Promise((resolve, reject) => {
-                const download = request(currentTask.url);
-                // TODO: 路径是否存在？
-                // TODO: 文件名解析
-                const write = fs.createWriteStream(currentTask.path);
-                // TODO: 本地空间是否足够 ?
-                download.on("error", (error) => {
-                    reject(error);
-                });
-                write.on("error", (error) => {
-                    reject(error);
-                });
-                download.pipe(write);
-                write.on("finish", () => {
-                    resolve();
-                });
-            });
-        });
-    }
+                // 根据任务设置和全局设置，确定是否加载jQ
+                if (currentTask.jq !== undefined) {
+                    $ = this._loadJq(currentTask.body, currentTask);
+                }
+                else if (this._OPTION.jq) {
+                    $ = this._loadJq(currentTask.body, currentTask);
+                }
+            }
+            catch (err) {
+                error = err;
+            }
+        }
+        currentTask.response = response;
+        currentTask.error = error;
+        currentTask.callback(error, currentTask, $);
+        currentTask = null;
+    });
 }
-module.exports = NodeSpider;
+async;
+_asyncDownload(currentTask, IDownload);
+{
+    return new Promise((resolve, reject) => {
+        const download = request(currentTask.url);
+        // TODO: 路径是否存在？
+        // TODO: 文件名解析
+        const write = fs.createWriteStream(currentTask.path);
+        // TODO: 本地空间是否足够 ?
+        download.on("error", (error) => {
+            reject(error);
+        });
+        write.on("error", (error) => {
+            reject(error);
+        });
+        download.pipe(write);
+        write.on("finish", () => {
+            resolve();
+        });
+    });
+}

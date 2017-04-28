@@ -1,14 +1,5 @@
 import * as fs from "fs-extra";
-
-export class TxtTable{
-    /**
-     * Creates an instance of TxtTable.
-     * @param {string} path 写入文件路径
-     * @memberOf TxtTable
-     */
-    public header: string[];
-    private stream: any;
-    private hasHeader: boolean;
+export class TxtTable {
     constructor(path) {
         if (typeof path !== "string") {
             throw new Error('the string-typed parameter "path" is required');
@@ -26,10 +17,9 @@ export class TxtTable{
      * 根据表头写入新数据
      * @param {Object} data
      */
-    public add(data) {
+    add(data) {
         // TODO: 参数检测
-
-        if (! this.hasHeader && this.header) {
+        if (!this.hasHeader && this.header) {
             this.hasHeader = true;
             this.header = Object.keys(data);
             let headerString = this.header.join("\t");
@@ -44,22 +34,16 @@ export class TxtTable{
         this.stream.write(chunk);
     }
 }
-
 // tslint:disable-next-line:max-classes-per-file
 export class JsonTable {
-    /**
-     * Creates an instance of JsonTable.
-     * @param {string} path 写入文件路径
-     */
-    public header: string[];
-    private path: string;
-    constructor(path: string) {
+    constructor(path) {
         if (typeof path !== "string") {
             throw new Error('the string-typed parameter "path" is required');
         }
         // tslint:disable-next-line:curly
         fs.ensureFileSync(path, (err) => {
-            if (err) throw err;
+            if (err)
+                throw err;
         });
         this.path = path;
         this.header = null;
@@ -69,10 +53,10 @@ export class JsonTable {
      * @param {Object} data
      * @memberOf TxtTable
      */
-    public add(data) {
+    add(data) {
         if (this.header === null) {
             this.header = Object.keys(data);
         }
-        fs.writeJsonSync(this.path, data, {flag: "a"});
+        fs.writeJsonSync(this.path, data, { flag: "a" });
     }
 }

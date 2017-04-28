@@ -79,7 +79,7 @@ class NodeSpider extends EventEmitter {
     protected _TODOLIST: List <ITask> ;
     protected _DOWNLOAD_LIST: List <IDownload>;
     protected _STATUS: IStatus;
-    protected _TABLE: object;
+    protected _TABLES: object;
     /**
      * create an instance of NodeSpider
      * @param opts
@@ -97,7 +97,7 @@ class NodeSpider extends EventEmitter {
         this._TODOLIST = new List <ITask> ();
         this._DOWNLOAD_LIST = new List <IDownload> ();
 
-        this._TABLE = {};
+        this._TABLES = [];
 
         this.on("start_a_task", () => this._STATUS._currentMultiTask ++);
         this.on("done_a_task", () => {
@@ -135,8 +135,13 @@ class NodeSpider extends EventEmitter {
      * @param task
      */
     public addDownload(task: IDownload) {
+        if (typeof task.url !== "string") {
+            throw new Error("method addDownload param must be: {url: string, ...}");
+        }
+
         // TODO: 清理空间
-        if (! task.path) {
+
+        if (typeof task.path === "undefined") {
             task.path = this._OPTION.defaultDownloadPath;
         }
 
@@ -148,6 +153,7 @@ class NodeSpider extends EventEmitter {
             };
         }
         this._DOWNLOAD_LIST.add(task.url, task);
+        return this._DOWNLOAD_LIST.getSize();
     }
 
     /**
@@ -244,23 +250,45 @@ class NodeSpider extends EventEmitter {
 
     }
 
+    // item可以是字符串路径，也可以是对象。若字符串则保存为 txt 或json
+    // 如果是对象，则获得对象的 header 属性并对要保存路径进行检测。通过则调用对象 add 方法。
+    // 每一个人都可以开发 table 对象的生成器。只需要提供 header 和 add 接口。其他由开发者考虑如何完成。
     public save(item, data) {
         // TODO: 如果item为对象，则为数据库。通过用户在 item 中自定义的标识符来判断是否已存在
         // 暂时只完成保存到文本的功能，所以默认 item 为文件路径字符串
-        if (this._TABLE[item]) {
-            this._TABLE[item].add(data);
-            return true;
+        if (typeof item === "string") {
+            if (! this._TABLES[item]) {
+                // 如果不存在，则新建一个table实例
+                // 根据路径中的文件后缀名，决定新建哪种table
+                if (/.txt$/.test(item)) {
+                    this._TABLES[item] = new TxtTable(item);
+                } else {
+                    this._TABLES[item] = new JsonTable(item);
+                }
+            }
+            item = this._TABLES[item];
         }
-        // 如果不存在，则新建一个table实例
-        let header = Object.keys(data);
-        // 根据路径中的文件后缀名，决定新建哪种table
-        if (/.txt$/.test(item)) {
-            this._TABLE[item] = new TxtTable(item, header);
-            this._TABLE[item].add(data);
+
+        if (item.header === null) {
+            return item.add(data);
         } else {
-            this._TABLE[item] = new JsonTable(item, header);
-            this._TABLE[item].add(data);
+            let thisHeader = Object.keys(data);
+            // 保证 data 与 table 的header 完全一致，不能多也不能少
+            // 如果不匹配，则报错
+            item.header.map((u) => {
+                if (thisHeader.indexOf(u) === -1) {
+                    return new Error("header do not match");
+                }
+            });
+            thisHeader.map((u) => {
+                if (item.header.indexOf(u) === -1) {
+                    return new Error("header do not match");
+                }
+            });
+            // 一切正常，则传给 item
+            return item.add(data);
         }
+
     }
 
     /**
