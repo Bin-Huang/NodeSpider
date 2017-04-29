@@ -2,13 +2,10 @@
     "compilerOptions": {
         "module": "commonjs",
         "target": "es6",
-        "noImplicitAny": false,
-        "outDir": "build",
+        "outDir": "build",  // 输出到 "build" 文件夹
         "sourceMap": false
-
     },
     "include": [
-        "src"
-    ],
-    "types": ["node"]
+        "src"   // 输入 src 文件夹
+    ]
 }

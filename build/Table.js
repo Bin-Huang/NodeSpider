@@ -1,79 +1,66 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs-extra");
-class Table {
-    constructor(header) {
-        if (!Array.isArray(header)) {
-            throw new Error('To create a Table must need an array-typed parameter');
+class TxtTable {
+    constructor(path) {
+        if (typeof path !== "string") {
+            throw new Error('the string-typed parameter "path" is required');
         }
-        this.header = header;
-    }
-}
-class TxtTable extends Table {
-    /**
-     * Creates an instance of TxtTable.
-     * @param {string} path 写入文件路径
-     * @param {array} header 表头
-     * @memberOf TxtTable
-     */
-    constructor(path, header) {
-        if (typeof path !== 'string' || !Array.isArray(header))
-            throw new Error('the string-typed parameter "path" and array-typed "header" is required');
-        super(header);
         fs.ensureFileSync(path, (err) => {
-            if (err)
+            if (err) {
                 throw err;
+            }
         });
+        this.header = null;
+        this.hasHeader = false;
         this.stream = fs.createWriteStream(path);
-        let header_string = header.join('\t');
-        header_string += '\n';
-        this.stream.write(header_string);
     }
     /**
      * 根据表头写入新数据
-     *
      * @param {Object} data
-     *
-     * @memberOf TxtTable
      */
     add(data) {
-        let chunk = '';
-        for (let item of this.header) {
-            chunk += data[item] + '\t';
+        // TODO: 参数检测
+        if (!this.hasHeader && this.header) {
+            this.hasHeader = true;
+            this.header = Object.keys(data);
+            let headerString = this.header.join("\t");
+            headerString += "\n";
+            this.stream.write(headerString);
         }
-        chunk += '\n';
+        let chunk = "";
+        for (let item of this.header) {
+            chunk += data[item] + "\t";
+        }
+        chunk += "\n";
         this.stream.write(chunk);
     }
 }
 exports.TxtTable = TxtTable;
-class JsonTable extends Table {
-    /**
-     * Creates an instance of TxtTable.
-     * @param {string} path 写入文件路径
-     * @param {array} header 表头
-     *
-     * @memberOf TxtTable
-     */
-    constructor(path, header) {
-        if (typeof path !== 'string' || !Array.isArray(header)) {
-            throw new Error('the string-typed parameter "path" and array-typed "header" is required');
+// tslint:disable-next-line:max-classes-per-file
+class JsonTable {
+    constructor(path) {
+        if (typeof path !== "string") {
+            throw new Error('the string-typed parameter "path" is required');
         }
-        super(header);
+        // tslint:disable-next-line:curly
         fs.ensureFileSync(path, (err) => {
             if (err)
                 throw err;
         });
         this.path = path;
+        this.header = null;
     }
     /**
      * 根据表头写入新数据
-     *
      * @param {Object} data
-     *
      * @memberOf TxtTable
      */
     add(data) {
-        fs.writeJsonSync(this.path, data, { flag: 'a' });
+        if (this.header === null) {
+            this.header = Object.keys(data);
+        }
+        fs.writeJsonSync(this.path, data, { flag: "a" });
     }
 }
 exports.JsonTable = JsonTable;

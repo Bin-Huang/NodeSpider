@@ -4,6 +4,7 @@
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
 // TODO: 使用 node 自带 stringdecode 代替 iconv-lite
 // TODO: 使用 jsdom 是否可以模拟 js 点击与浏览器环境
+
 import * as charset from "charset";
 import * as cheerio from "cheerio";
 import { EventEmitter } from "events";
@@ -11,8 +12,8 @@ import * as fs from "fs";
 import * as iconv from "iconv-lite";
 import * as request from "request";
 import * as url from "url";
-import List from "./List";
 import { JsonTable, TxtTable } from "./Table";
+import TaskQueue from "./TaskQueue";
 
 interface IOption {
     multiTasking: number;
@@ -20,13 +21,16 @@ interface IOption {
     defaultRetry: number;
     defaultDownloadPath: string;
 
+    crawlQueue: TaskQueue<ICrawlTask>;
+    downloadQueue: TaskQueue<IDownloadTask>;
+
     jq: boolean;
     preToUtf8: boolean;
 }
 
-interface ITask {
+interface ICrawlTask{
     url: string;
-    callback: (err: Error, currentTask: ITask, $) => void;
+    callback: (err: Error, currentTask: ICrawlTask, $) => void;
 
     jq ?: boolean;
     preToUtf8 ?: boolean;
@@ -34,7 +38,7 @@ interface ITask {
     _INFO ?: {
         maxRetry: number;
         retried: number;
-        finalErrorCallback: (currentTask: ITask) => void;
+        finalErrorCallback: (currentTask: ICrawlTask) => void;
     };
 
     response?: any;
@@ -42,7 +46,7 @@ interface ITask {
     body?: string;
 }
 
-interface IDownload {
+interface IDownloadTask {
     url: string;
     path?: string;
     callback?: () => void;
@@ -50,7 +54,7 @@ interface IDownload {
     _INFO ?: {
         maxRetry: number;
         retried: number;
-        finalErrorCallback: (currentTask: ITask) => void;
+        finalErrorCallback: (currentTask: ICrawlTask) => void;
     };
 }
 
@@ -64,9 +68,11 @@ interface IStatus {
 const defaultOption: IOption = {
     defaultDownloadPath: "",
     defaultRetry: 3,
-    jq: true,
     multiDownload: 2,
     multiTasking: 20,
+    crawlQueue: new TaskQueue<ICrawlTask>("url"),
+    downloadQueue: new TaskQueue<IDownloadTask>("url"),
+    jq: true,
     preToUtf8: true,
 };
 
@@ -76,8 +82,8 @@ const defaultOption: IOption = {
  */
 class NodeSpider extends EventEmitter {
     protected _OPTION: IOption;
-    protected _TODOLIST: List <ITask> ;
-    protected _DOWNLOAD_LIST: List <IDownload>;
+    protected _CRAWL_QUEUE: TaskQueue <ICrawlTask> ;
+    protected _DOWNLOAD_QUEUE: TaskQueue <IDownloadTask>;
     protected _STATUS: IStatus;
     protected _TABLES: object;
     /**
@@ -86,16 +92,16 @@ class NodeSpider extends EventEmitter {
      */
     constructor(opts = {}) {
         super();
-        Object.assign(defaultOption, opts);
-        this._OPTION = defaultOption;
+        this._OPTION =  Object.assign({}, defaultOption, opts);
+
         this._STATUS = {
             _currentMultiDownload: 0,   // 当前进行的下载的数量
             _currentMultiTask: 0, // 当前正在进行的任务数量
             _working: false,
         };
 
-        this._TODOLIST = new List <ITask> ();
-        this._DOWNLOAD_LIST = new List <IDownload> ();
+        this._CRAWL_QUEUE = this._OPTION.crawlQueue;
+        this._DOWNLOAD_QUEUE = this._OPTION.downloadQueue;
 
         this._TABLES = [];
 
@@ -116,7 +122,7 @@ class NodeSpider extends EventEmitter {
      * @param {ITask} task
      * @returns {number} the number of urls has been added.
      */
-    public addTask(task: ITask) {
+    public addTask(task: ICrawlTask) {
         // TODO:  addTask 会习惯在 task 中直接声明 callback匿名函数，这种大量重复的匿名函数会消耗内存。
         if (typeof task.url !== "string" || typeof task.callback !== "function") {
             throw new Error("method addTask params : {url: string, callback: function");
@@ -126,15 +132,15 @@ class NodeSpider extends EventEmitter {
             finalErrorCallback: null,
             retried: null,
         };
-        this._TODOLIST.add(task.url, task);
-        return this._TODOLIST.getSize();
+        this._CRAWL_QUEUE.add(task);
+        return this._CRAWL_QUEUE.getSize();
     }
 
     /**
      * add new download-task to spider's download-list.
      * @param task
      */
-    public addDownload(task: IDownload) {
+    public addDownload(task: IDownloadTask) {
         if (typeof task.url !== "string") {
             throw new Error("method addDownload param must be: {url: string, ...}");
         }
@@ -152,8 +158,8 @@ class NodeSpider extends EventEmitter {
                 finalErrorCallback: null,
             };
         }
-        this._DOWNLOAD_LIST.add(task.url, task);
-        return this._DOWNLOAD_LIST.getSize();
+        this._DOWNLOAD_QUEUE.add(task);
+        return this._DOWNLOAD_QUEUE.getSize();
     }
 
     /**
@@ -165,8 +171,8 @@ class NodeSpider extends EventEmitter {
         if (typeof url !== "string") {
             throw new Error("method check need a string-typed param");
         }
-        const inTodoList = this._TODOLIST.check(url);
-        const inDownloadList = this._DOWNLOAD_LIST.check(url);
+        const inTodoList = this._CRAWL_QUEUE.check(url);
+        const inDownloadList = this._DOWNLOAD_QUEUE.check(url);
         return inTodoList || inDownloadList;
     }
 
@@ -179,12 +185,8 @@ class NodeSpider extends EventEmitter {
         if (! Array.isArray(urlArray)) {
             throw new Error("method filter need a array-typed param");
         } else {
-            let result = [];
-            // TODO: 使用专门过滤的数组方法
-            urlArray.map((u) => {
-                if (! this.check(u)) {
-                    result.push(u);
-                }
+            let result = urlArray.filter((u) => {
+                return this.check(u);
             });
             return result;
         }
@@ -224,7 +226,7 @@ class NodeSpider extends EventEmitter {
      * @param {number} maxRetry Maximum number of retries for this task
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
-    public retry(task: ITask, maxRetry = this._OPTION.defaultRetry, finalErrorCallback = (task) => this.save("log.json", task)) {
+    public retry(task: ICrawlTask, maxRetry = this._OPTION.defaultRetry, finalErrorCallback = (task) => this.save("log.json", task)) {
 
         if (task._INFO.maxRetry === null) {
             task._INFO.maxRetry = maxRetry;
@@ -234,15 +236,15 @@ class NodeSpider extends EventEmitter {
         if (task._INFO.maxRetry > task._INFO.retried) {
             task._INFO.retried += 1;
 
-            if ((task as IDownload).path) {
+            if ((task as IDownloadTask).path) {
                 // 清理
-                this._DOWNLOAD_LIST.jump(task.url, (task as IDownload));
+                this._DOWNLOAD_QUEUE.jump((task as IDownloadTask));
             } else {
                 // 清理
                 task.body = null;
                 task.response = null;
                 task.error = null;
-                this._TODOLIST.jump(task.url, task);
+                this._CRAWL_QUEUE.jump(task);
             }
         } else {
             task._INFO.finalErrorCallback(task);
@@ -296,10 +298,10 @@ class NodeSpider extends EventEmitter {
      */
     protected _fire() {
         while (this._STATUS._currentMultiDownload < this._OPTION.multiDownload) {
-            if (this._DOWNLOAD_LIST.done()) {
+            if (this._DOWNLOAD_QUEUE.isDone()) {
                 break;
             } else {
-                const task = this._DOWNLOAD_LIST.next();
+                const task = this._DOWNLOAD_QUEUE.next();
                 this.emit("start_a_download");
                 this._asyncDownload(task)
                     .then(() => {
@@ -313,10 +315,10 @@ class NodeSpider extends EventEmitter {
             }
         }
         while (this._STATUS._currentMultiTask < this._OPTION.multiTasking) {
-            if (this._TODOLIST.done()) {
+            if (this._CRAWL_QUEUE.isDone()) {
                 break;
             } else {
-                const task = this._TODOLIST.next();
+                const task = this._CRAWL_QUEUE.next();
                 this.emit("start_a_task");
                 this._asyncCrawling(task)
                     .then(() => {
@@ -331,7 +333,7 @@ class NodeSpider extends EventEmitter {
         }
     }
 
-    protected _loadJq(body: string, task: ITask) {
+    protected _loadJq(body: string, task: ICrawlTask) {
         let $ = cheerio.load(body);
         // 扩展：添加 url 方法
         // 返回当前节点（们）链接的的绝对路径(array)
@@ -449,7 +451,7 @@ class NodeSpider extends EventEmitter {
         };
     }
 
-    protected async _asyncCrawling(currentTask: ITask) {
+    protected async _asyncCrawling(currentTask: ICrawlTask) {
         let $ = null;
         request(
             {
@@ -491,20 +493,26 @@ class NodeSpider extends EventEmitter {
         );
     }
 
-    // TODO: 文件名解析
-    protected async _asyncDownload(currentTask: IDownload) {
+    protected async _asyncDownload(currentTask: IDownloadTask) {
         return new Promise((resolve, reject) => {
+            let nameIndex = currentTask.url.lastIndexOf("/");
+            let fileName = currentTask.url.slice(nameIndex);
+            let savePath;
+            if (currentTask.path[currentTask.path.length - 1] === "/") {
+                savePath = currentTask.path.slice(0, currentTask.path.length - 1) + fileName;
+            } else {
+                savePath = currentTask.path + fileName;
+            }
+
             const download = request(currentTask.url);
-            // TODO: 路径是否存在？
-            // TODO: 文件名解析
-            const write = fs.createWriteStream(currentTask.path);
-            // TODO: 本地空间是否足够 ?
+            const write = fs.createWriteStream(savePath);
             download.on("error", (error) => {
                 reject(error);
             });
             write.on("error", (error) => {
                 reject(error);
             });
+
             download.pipe(write);
             write.on("finish", () => {
                 resolve();
