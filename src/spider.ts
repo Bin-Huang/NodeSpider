@@ -145,6 +145,9 @@ class NodeSpider extends EventEmitter {
             };
             this._CRAWL_QUEUE.add(task);
         });
+
+        this._STATUS._working = true;
+        this._fire();
         return this._CRAWL_QUEUE.getSize();
     }
 
@@ -179,7 +182,7 @@ class NodeSpider extends EventEmitter {
      * @param {string} url
      * @returns {boolean}
      */
-    public check(url: string) {
+    public isExist(url: string) {
         if (typeof url !== "string") {
             throw new Error("method check need a string-typed param");
         }
@@ -198,38 +201,10 @@ class NodeSpider extends EventEmitter {
             throw new Error("method filter need a array-typed param");
         } else {
             let result = urlArray.filter((u) => {
-                return this.check(u);
+                return this.isExist(u);
             });
             return result;
         }
-    }
-
-    /**
-     * launch the spider with url(s) and callback
-     * @param {string|array} url the first url(s) to crawle
-     * @param callback
-     */
-    public start(url, callback) {
-        if (! url || ! callback) {
-            throw new Error("params url and callback is required in method start");
-        }
-        if (! Array.isArray(url)) {
-            url = [url];
-        }
-        url.map((u) => {
-            if (typeof u !== "string") {
-                throw new Error("param url mush be a string or array of string");
-            }
-            if (! this.check(u)) {
-                this.addTask({
-                    strategy: callback,
-                    url: u,
-                });
-            }
-        });
-
-        this._STATUS._working = true;
-        this._fire();
     }
 
     /**
