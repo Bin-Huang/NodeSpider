@@ -4,7 +4,6 @@
 // TODO: 解决 save 方法保存json格式不好用的问题： 没有[],直接也没有逗号隔开
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
 // TODO: 使用 node 自带 stringdecode 代替 iconv-lite
-// TODO: 使用 jsdom 是否可以模拟 js 点击与浏览器环境
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -71,15 +70,29 @@ class NodeSpider extends events_1.EventEmitter {
      */
     addTask(task) {
         // TODO:  addTask 会习惯在 task 中直接声明 callback匿名函数，这种大量重复的匿名函数会消耗内存。
-        if (typeof task.url !== "string" || typeof task.callback !== "function") {
-            throw new Error("method addTask params : {url: string, callback: function");
+        if (typeof task.strategy !== "function") {
+            return console.log("need function");
         }
-        task._INFO = {
-            maxRetry: null,
-            finalErrorCallback: null,
-            retried: null,
-        };
-        this._CRAWL_QUEUE.add(task);
+        let urls;
+        if (Array.isArray(task.url)) {
+            urls = task.url;
+        }
+        else {
+            urls = [task.url];
+        }
+        urls.map((u) => {
+            if (typeof u !== "string") {
+                return console.log("must be string");
+            }
+            let newTask = Object.assign({}, task);
+            newTask.url = u;
+            newTask._INFO = {
+                finalErrorCallback: null,
+                maxRetry: null,
+                retried: null,
+            };
+            this._CRAWL_QUEUE.add(task);
+        });
         return this._CRAWL_QUEUE.getSize();
     }
     /**
@@ -87,21 +100,25 @@ class NodeSpider extends events_1.EventEmitter {
      * @param task
      */
     addDownload(task) {
-        if (typeof task.url !== "string") {
-            throw new Error("method addDownload param must be: {url: string, ...}");
+        let urls;
+        if (Array.isArray(task.url)) {
+            urls = task.url;
         }
-        // TODO: 清理空间
-        if (typeof task.path === "undefined") {
-            task.path = this._OPTION.defaultDownloadPath;
+        else {
+            urls = [task.url];
         }
-        if (!task._INFO) {
+        urls.map((u) => {
+            if (typeof u !== "string") {
+                return console.log("must need string");
+            }
+            let newTask = Object.assign({}, task);
             task._INFO = {
                 maxRetry: null,
                 retried: null,
                 finalErrorCallback: null,
             };
-        }
-        this._DOWNLOAD_QUEUE.add(task);
+            this._DOWNLOAD_QUEUE.add(task);
+        });
         return this._DOWNLOAD_QUEUE.getSize();
     }
     /**
@@ -151,8 +168,8 @@ class NodeSpider extends events_1.EventEmitter {
             }
             if (!this.check(u)) {
                 this.addTask({
+                    strategy: callback,
                     url: u,
-                    callback,
                 });
             }
         });
@@ -323,7 +340,7 @@ class NodeSpider extends events_1.EventEmitter {
             if (typeof option === "undefined") {
                 newUrls.map((u) => {
                     thisSpider.addTask({
-                        callback: task.callback,
+                        strategy: task.strategy,
                         url: u,
                     });
                 });
@@ -331,13 +348,13 @@ class NodeSpider extends events_1.EventEmitter {
             else if (typeof option === "function") {
                 newUrls.map((u) => {
                     thisSpider.addTask({
-                        callback: option,
+                        strategy: option,
                         url: u,
                     });
                 });
             }
             else if (typeof option === "object") {
-                option.callback = option.callback ? option.callback : task.callback;
+                option.callback = option.callback ? option.callback : task.strategy;
                 newUrls.map((u) => {
                     let newTask = Object.assign({}, option);
                     newTask.url = u;
@@ -384,41 +401,44 @@ class NodeSpider extends events_1.EventEmitter {
     }
     _asyncCrawling(currentTask) {
         return __awaiter(this, void 0, void 0, function* () {
-            let $ = null;
-            request({
-                encoding: null,
-                method: "GET",
-                url: currentTask.url,
-            }, (error, response) => {
-                if (!error) {
-                    try {
-                        // 根据任务设置和全局设置，确定如何编码正文
-                        let preToUtf8 = this._OPTION.preToUtf8;
-                        if (currentTask.preToUtf8 !== undefined) {
-                            preToUtf8 = currentTask.preToUtf8;
-                        }
-                        if (preToUtf8) {
-                            let encoding = charset(response.headers, response.body);
-                            if (encoding) {
-                                currentTask.body = iconv.decode(response.body, encoding);
+            return new Promise((resolve, reject) => {
+                let $ = null;
+                request({
+                    encoding: null,
+                    method: "GET",
+                    url: currentTask.url,
+                }, (error, response) => {
+                    if (!error) {
+                        try {
+                            // 根据任务设置和全局设置，确定如何编码正文
+                            let preToUtf8 = this._OPTION.preToUtf8;
+                            if (currentTask.preToUtf8 !== undefined) {
+                                preToUtf8 = currentTask.preToUtf8;
+                            }
+                            if (preToUtf8) {
+                                let encoding = charset(response.headers, response.body);
+                                if (encoding) {
+                                    currentTask.body = iconv.decode(response.body, encoding);
+                                }
+                            }
+                            // 根据任务设置和全局设置，确定是否加载jQ
+                            if (currentTask.jq !== undefined) {
+                                $ = this._loadJq(currentTask.body, currentTask);
+                            }
+                            else if (this._OPTION.jq) {
+                                $ = this._loadJq(currentTask.body, currentTask);
                             }
                         }
-                        // 根据任务设置和全局设置，确定是否加载jQ
-                        if (currentTask.jq !== undefined) {
-                            $ = this._loadJq(currentTask.body, currentTask);
-                        }
-                        else if (this._OPTION.jq) {
-                            $ = this._loadJq(currentTask.body, currentTask);
+                        catch (err) {
+                            error = err;
                         }
                     }
-                    catch (err) {
-                        error = err;
-                    }
-                }
-                currentTask.response = response;
-                currentTask.error = error;
-                currentTask.callback(error, currentTask, $);
-                currentTask = null;
+                    currentTask.response = response;
+                    currentTask.error = error;
+                    currentTask.strategy(error, currentTask, $);
+                    currentTask = null;
+                    resolve();
+                });
             });
         });
     }
@@ -427,6 +447,9 @@ class NodeSpider extends events_1.EventEmitter {
             return new Promise((resolve, reject) => {
                 let nameIndex = currentTask.url.lastIndexOf("/");
                 let fileName = currentTask.url.slice(nameIndex);
+                if (!currentTask.path) {
+                    currentTask.path = this._OPTION.defaultDownloadPath;
+                }
                 let savePath;
                 if (currentTask.path[currentTask.path.length - 1] === "/") {
                     savePath = currentTask.path.slice(0, currentTask.path.length - 1) + fileName;
