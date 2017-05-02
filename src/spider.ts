@@ -3,6 +3,7 @@
 // TODO: 解决 save 方法保存json格式不好用的问题： 没有[],直接也没有逗号隔开
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
 // TODO: 使用 node 自带 stringdecode 代替 iconv-lite
+// 简单上手的回掉函数 + 自由定制的事件驱动
 
 import * as charset from "charset";
 import * as cheerio from "cheerio";
@@ -13,64 +14,24 @@ import * as request from "request";
 import * as url from "url";
 import { JsonTable, TxtTable } from "./Table";
 import TaskQueue from "./TaskQueue";
+import {
+    ICrawlCurrentTask,
+    ICrawlQueueItem,
+    ICrawlTaskInput,
+    IDownloadCurrentTask,
+    IDownloadQueueItem,
+    IDownloadTaskInput,
+    IGlobalOption,
+    IStatus,
+} from "./types";
 
-interface IOption {
-    multiTasking: number;
-    multiDownload: number;
-    defaultRetry: number;
-    defaultDownloadPath: string;
-
-    crawlQueue: TaskQueue<ICrawlTask>;
-    downloadQueue: TaskQueue<IDownloadTask>;
-
-    jq: boolean;
-    preToUtf8: boolean;
-}
-
-interface ICrawlTask{
-    url: string;
-    strategy: (err: Error, currentTask: ICrawlTask, $) => void;
-
-    jq ?: boolean;
-    preToUtf8 ?: boolean;
-
-    _INFO ?: {
-        maxRetry: number;
-        retried: number;
-        finalErrorCallback: (currentTask: ICrawlTask) => void;
-    };
-
-    response?: any;
-    error?: Error;
-    body?: string;
-}
-
-interface IDownloadTask {
-    url: string;
-    path?: string;
-    callback?: (err: Error, currentTask: IDownloadTask) => void;
-
-    _INFO ?: {
-        maxRetry: number;
-        retried: number;
-        finalErrorCallback: (currentTask: ICrawlTask) => void;
-    };
-}
-
-interface IStatus {
-    _working: boolean;
-    _currentMultiTask: number;
-    _currentMultiDownload: number;
-}
-// 简单上手的回掉函数 + 自由定制的事件驱动
-
-const defaultOption: IOption = {
+const defaultOption: IGlobalOption = {
     defaultDownloadPath: "",
     defaultRetry: 3,
     multiDownload: 2,
     multiTasking: 20,
-    crawlQueue: new TaskQueue<ICrawlTask>("url"),
-    downloadQueue: new TaskQueue<IDownloadTask>("url"),
+    crawlQueue: new TaskQueue<ICrawlQueueItem>("url"),
+    downloadQueue: new TaskQueue<IDownloadQueueItem>("url"),
     jq: true,
     preToUtf8: true,
 };
@@ -80,9 +41,9 @@ const defaultOption: IOption = {
  * @class NodeSpider
  */
 class NodeSpider extends EventEmitter {
-    protected _OPTION: IOption;
-    protected _CRAWL_QUEUE: TaskQueue <ICrawlTask> ;
-    protected _DOWNLOAD_QUEUE: TaskQueue <IDownloadTask>;
+    protected _OPTION: IGlobalOption;
+    protected _CRAWL_QUEUE: TaskQueue <ICrawlQueueItem> ;
+    protected _DOWNLOAD_QUEUE: TaskQueue <IDownloadQueueItem>;
     protected _STATUS: IStatus;
     protected _TABLES: object;
     /**
@@ -121,7 +82,7 @@ class NodeSpider extends EventEmitter {
      * @param {ITask} task
      * @returns {number} the number of urls has been added.
      */
-    public addTask(task: ICrawlTask) {
+    public addTask(task: ICrawlTaskInput) {
         // TODO:  addTask 会习惯在 task 中直接声明 callback匿名函数，这种大量重复的匿名函数会消耗内存。
         if (typeof task.strategy !== "function") {
             return console.log("need function");
@@ -132,18 +93,21 @@ class NodeSpider extends EventEmitter {
         } else {
             urls = [ task.url ];
         }
-        urls.map((u) => {
+        urls.map((u)  => {
             if (typeof u !== "string") {
                 return console.log("must be string");
             }
-            let newTask = Object.assign({}, task);
-            newTask.url = u;
-            newTask._INFO = {
-                finalErrorCallback: null,
-                maxRetry: null,
-                retried: null,
+            let newTask = {
+                ... task,
+                url: u,
             };
-            this._CRAWL_QUEUE.add(task);
+            newTask.url = u;
+            // newTask._INFO = {
+            //     finalErrorCallback: null,
+            //     maxRetry: null,
+            //     retried: null,
+            // };
+            this._CRAWL_QUEUE.add(newTask);
         });
 
         this._STATUS._working = true;
@@ -155,7 +119,7 @@ class NodeSpider extends EventEmitter {
      * add new download-task to spider's download-list.
      * @param task
      */
-    public addDownload(task: IDownloadTask) {
+    public addDownload(task: IDownloadTaskInput) {
         let urls;
         if (Array.isArray(task.url)) {
             urls = task.url;
@@ -166,13 +130,16 @@ class NodeSpider extends EventEmitter {
             if (typeof u !== "string") {
                 return console.log("must need string");
             }
-            let newTask = Object.assign({}, task);
-            task._INFO = {
-                maxRetry: null,
-                retried: null,
-                finalErrorCallback: null,
+            let newTask = {
+                ...task,
+                url: u,
             };
-            this._DOWNLOAD_QUEUE.add(task);
+            // task._INFO = {
+            //     maxRetry: null,
+            //     retried: null,
+            //     finalErrorCallback: null,
+            // };
+            this._DOWNLOAD_QUEUE.add(newTask);
         });
         return this._DOWNLOAD_QUEUE.getSize();
     }
@@ -213,19 +180,21 @@ class NodeSpider extends EventEmitter {
      * @param {number} maxRetry Maximum number of retries for this task
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
-    public retry(task: ICrawlTask, maxRetry = this._OPTION.defaultRetry, finalErrorCallback = (task) => this.save("log.json", task)) {
-
-        if (task._INFO.maxRetry === null) {
-            task._INFO.maxRetry = maxRetry;
-            task._INFO.finalErrorCallback = finalErrorCallback;
+    public retry(task: ICrawlCurrentTask, maxRetry = this._OPTION.defaultRetry, finalErrorCallback = (task) => this.save("log.json", task)) {
+        if (task._INFO === undefined) {
+            task._INFO = {
+                retried: 0,
+                maxRetry,
+                finalErrorCallback,
+            };
         }
 
         if (task._INFO.maxRetry > task._INFO.retried) {
             task._INFO.retried += 1;
 
-            if ((task as IDownloadTask).path) {
+            if ((task as IDownloadCurrentTask).path) {
                 // 清理
-                this._DOWNLOAD_QUEUE.jump((task as IDownloadTask));
+                this._DOWNLOAD_QUEUE.jump((task as IDownloadQueueItem));
             } else {
                 // 清理
                 task.body = null;
@@ -320,7 +289,7 @@ class NodeSpider extends EventEmitter {
         }
     }
 
-    protected _loadJq(body: string, task: ICrawlTask) {
+    protected _loadJq(body: string, task: ICrawlCurrentTask) {
         let $ = cheerio.load(body);
         // 扩展：添加 url 方法
         // 返回当前节点（们）链接的的绝对路径(array)
@@ -438,19 +407,26 @@ class NodeSpider extends EventEmitter {
         };
     }
 
-    protected async _asyncCrawling(currentTask: ICrawlTask) {
+    protected async _asyncCrawling(task: ICrawlQueueItem) {
         return new Promise((resolve, reject) => {
             let $ = null;
             request(
                 {
                     encoding: null,
                     method: "GET",
-                    url: currentTask.url,
+                    url: task.url,
                 },
                 (error, response) => {
+                    let currentTask: ICrawlCurrentTask = {
+                        body: null,
+                        error: null,
+                        response: null,
+                        ... task,
+                    };
                     if (! error) {
                         try {
                             // 根据任务设置和全局设置，确定如何编码正文
+
                             let preToUtf8 = this._OPTION.preToUtf8;
                             if (currentTask.preToUtf8 !== undefined) {
                                 preToUtf8 = currentTask.preToUtf8;
@@ -475,15 +451,24 @@ class NodeSpider extends EventEmitter {
                     currentTask.response = response;
                     currentTask.error = error;
 
-                    currentTask.strategy(error, currentTask, $);
-                    currentTask = null;
-                    resolve();
+                    // run user's crawling strategy. If strategy is a async function, wait to resolve.
+                    let result = currentTask.strategy(error, currentTask, $);
+                    if (result instanceof Promise) {
+                        result.then(() => {
+                            currentTask = null;
+                            resolve();
+                        });
+                    } else {
+                        currentTask = null;
+                        resolve();
+                    }
+
                 },
             );
         });
     }
 
-    protected async _asyncDownload(currentTask: IDownloadTask) {
+    protected async _asyncDownload(currentTask: IDownloadQueueItem) {
         return new Promise((resolve, reject) => {
             let nameIndex = currentTask.url.lastIndexOf("/");
             let fileName = currentTask.url.slice(nameIndex);

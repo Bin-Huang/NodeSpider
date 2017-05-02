@@ -4,6 +4,7 @@
 // TODO: 解决 save 方法保存json格式不好用的问题： 没有[],直接也没有逗号隔开
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
 // TODO: 使用 node 自带 stringdecode 代替 iconv-lite
+// 简单上手的回掉函数 + 自由定制的事件驱动
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -21,7 +22,6 @@ const request = require("request");
 const url = require("url");
 const Table_1 = require("./Table");
 const TaskQueue_1 = require("./TaskQueue");
-// 简单上手的回掉函数 + 自由定制的事件驱动
 const defaultOption = {
     defaultDownloadPath: "",
     defaultRetry: 3,
@@ -84,14 +84,14 @@ class NodeSpider extends events_1.EventEmitter {
             if (typeof u !== "string") {
                 return console.log("must be string");
             }
-            let newTask = Object.assign({}, task);
+            let newTask = Object.assign({}, task, { url: u });
             newTask.url = u;
-            newTask._INFO = {
-                finalErrorCallback: null,
-                maxRetry: null,
-                retried: null,
-            };
-            this._CRAWL_QUEUE.add(task);
+            // newTask._INFO = {
+            //     finalErrorCallback: null,
+            //     maxRetry: null,
+            //     retried: null,
+            // };
+            this._CRAWL_QUEUE.add(newTask);
         });
         this._STATUS._working = true;
         this._fire();
@@ -113,13 +113,13 @@ class NodeSpider extends events_1.EventEmitter {
             if (typeof u !== "string") {
                 return console.log("must need string");
             }
-            let newTask = Object.assign({}, task);
-            task._INFO = {
-                maxRetry: null,
-                retried: null,
-                finalErrorCallback: null,
-            };
-            this._DOWNLOAD_QUEUE.add(task);
+            let newTask = Object.assign({}, task, { url: u });
+            // task._INFO = {
+            //     maxRetry: null,
+            //     retried: null,
+            //     finalErrorCallback: null,
+            // };
+            this._DOWNLOAD_QUEUE.add(newTask);
         });
         return this._DOWNLOAD_QUEUE.getSize();
     }
@@ -159,9 +159,12 @@ class NodeSpider extends events_1.EventEmitter {
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
     retry(task, maxRetry = this._OPTION.defaultRetry, finalErrorCallback = (task) => this.save("log.json", task)) {
-        if (task._INFO.maxRetry === null) {
-            task._INFO.maxRetry = maxRetry;
-            task._INFO.finalErrorCallback = finalErrorCallback;
+        if (task._INFO === undefined) {
+            task._INFO = {
+                retried: 0,
+                maxRetry,
+                finalErrorCallback,
+            };
         }
         if (task._INFO.maxRetry > task._INFO.retried) {
             task._INFO.retried += 1;
@@ -375,15 +378,16 @@ class NodeSpider extends events_1.EventEmitter {
             return $;
         };
     }
-    _asyncCrawling(currentTask) {
+    _asyncCrawling(task) {
         return __awaiter(this, void 0, void 0, function* () {
             return new Promise((resolve, reject) => {
                 let $ = null;
                 request({
                     encoding: null,
                     method: "GET",
-                    url: currentTask.url,
+                    url: task.url,
                 }, (error, response) => {
+                    let currentTask = Object.assign({ body: null, error: null, response: null }, task);
                     if (!error) {
                         try {
                             // 根据任务设置和全局设置，确定如何编码正文
@@ -411,9 +415,18 @@ class NodeSpider extends events_1.EventEmitter {
                     }
                     currentTask.response = response;
                     currentTask.error = error;
-                    currentTask.strategy(error, currentTask, $);
-                    currentTask = null;
-                    resolve();
+                    // run user's crawling strategy. If strategy is a async function, wait to resolve.
+                    let result = currentTask.strategy(error, currentTask, $);
+                    if (result instanceof Promise) {
+                        result.then(() => {
+                            currentTask = null;
+                            resolve();
+                        });
+                    }
+                    else {
+                        currentTask = null;
+                        resolve();
+                    }
                 });
             });
         });
