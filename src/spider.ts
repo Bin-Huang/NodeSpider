@@ -159,17 +159,21 @@ class NodeSpider extends EventEmitter {
     }
 
     /**
-     * 过滤掉一个数组中所有已被添加的链接，返回一个新数组
-     * @param urlArray
+     * 过滤掉一个数组中的重复链接，以及所有已被添加的链接，返回一个新数组
+     * @param urlArray {array}
      * @returns {array}
      */
     public filter(urlArray: string[]) {
         if (! Array.isArray(urlArray)) {
             throw new Error("method filter need a array-typed param");
         } else {
-            let result = urlArray.filter((u) => {
-                return this.isExist(u);
-            });
+            let s = new Set(urlArray);
+            let result = [];
+            for (let url of s) {
+                if (! this.isExist) {
+                    result.push(url);
+                }
+            }
             return result;
         }
     }
@@ -397,8 +401,10 @@ class NodeSpider extends EventEmitter {
             } else if (typeof option === "object") {
                 option.path = option.path ? option.path : thisSpider._OPTION.defaultDownloadPath;
                 newUrls.map((u) => {
-                    let newTask = Object.assign({}, option);
-                    newTask.url = u;
+                    let newTask = {
+                        ...option,
+                        url: u,
+                    };
                     thisSpider.addDownload(newTask);
                 });
             }
