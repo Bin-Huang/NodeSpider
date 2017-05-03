@@ -8,7 +8,7 @@ interface IPublicOption {
 // crawlTask special opts
 export interface ICrawlOption extends IPublicOption {
     jq?: boolean;
-    preToUtf8?: boolean;
+    toUtf8?: boolean;
 }
 
 // when new crawlTask is added by method addTask and $.fn.todo

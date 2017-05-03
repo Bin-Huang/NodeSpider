@@ -26,14 +26,14 @@ import {
 } from "./types";
 
 const defaultOption: IGlobalOption = {
+    crawlQueue: new TaskQueue<ICrawlQueueItem>("url"),
+    downloadQueue: new TaskQueue<IDownloadQueueItem>("url"),
     defaultDownloadPath: "",
     defaultRetry: 3,
     multiDownload: 2,
     multiTasking: 20,
-    crawlQueue: new TaskQueue<ICrawlQueueItem>("url"),
-    downloadQueue: new TaskQueue<IDownloadQueueItem>("url"),
     jq: true,
-    preToUtf8: true,
+    toUtf8: true,
 };
 
 /**
@@ -45,7 +45,7 @@ class NodeSpider extends EventEmitter {
     protected _CRAWL_QUEUE: TaskQueue <ICrawlQueueItem> ;
     protected _DOWNLOAD_QUEUE: TaskQueue <IDownloadQueueItem>;
     protected _STATUS: IStatus;
-    protected _TABLES: object;
+    protected _TABLES: Map<string, any>;
     /**
      * create an instance of NodeSpider
      * @param opts
@@ -63,7 +63,7 @@ class NodeSpider extends EventEmitter {
         this._CRAWL_QUEUE = this._OPTION.crawlQueue;
         this._DOWNLOAD_QUEUE = this._OPTION.downloadQueue;
 
-        this._TABLES = [];
+        this._TABLES = new Map();
 
         this.on("start_a_task", () => this._STATUS._currentMultiTask ++);
         this.on("done_a_task", () => {
@@ -74,6 +74,15 @@ class NodeSpider extends EventEmitter {
         this.on("done_a_download", () => {
             this._STATUS._currentMultiDownload --;
             this._fire();
+        });
+
+        // 在爬虫的生命周期末尾，需要进行一些收尾工作，比如关闭table
+        // TODO: 目前仅限 txttable 和 jsontable，更多插件形式的要怎么接入
+        this.on("end", () => {
+            let values = this._TABLES.values();
+            for (let item of values) {
+                item.close();
+            }
         });
     }
 
@@ -102,11 +111,6 @@ class NodeSpider extends EventEmitter {
                 url: u,
             };
             newTask.url = u;
-            // newTask._INFO = {
-            //     finalErrorCallback: null,
-            //     maxRetry: null,
-            //     retried: null,
-            // };
             this._CRAWL_QUEUE.add(newTask);
         });
 
@@ -134,11 +138,7 @@ class NodeSpider extends EventEmitter {
                 ...task,
                 url: u,
             };
-            // task._INFO = {
-            //     maxRetry: null,
-            //     retried: null,
-            //     finalErrorCallback: null,
-            // };
+
             this._DOWNLOAD_QUEUE.add(newTask);
         });
         return this._DOWNLOAD_QUEUE.getSize();
@@ -338,7 +338,7 @@ class NodeSpider extends EventEmitter {
         const thisSpider = this;
 
         /**
-         * 添加选定节点（们）中的链接到 todo-list, 并自动补全路径、跳过重复链接
+         * 添加选定节点（们）中的链接到 CrawlQueue 并自动补全路径、跳过重复链接
          * @param {null|function|object}  option 回掉函数或设置对象
          * option 为可选参数，空缺时新建任务的回调函数
          * 可以传入函数作为任务的回掉函数
@@ -432,10 +432,9 @@ class NodeSpider extends EventEmitter {
                     if (! error) {
                         try {
                             // 根据任务设置和全局设置，确定如何编码正文
-
-                            let preToUtf8 = this._OPTION.preToUtf8;
-                            if (currentTask.preToUtf8 !== undefined) {
-                                preToUtf8 = currentTask.preToUtf8;
+                            let preToUtf8 = this._OPTION.toUtf8;
+                            if (currentTask.toUtf8 !== undefined) {
+                                preToUtf8 = currentTask.toUtf8;
                             }
                             if (preToUtf8) {
                                 let encoding = charset(response.headers, response.body);
