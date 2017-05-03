@@ -52,15 +52,36 @@ class NodeSpider extends events_1.EventEmitter {
         this._CRAWL_QUEUE = this._OPTION.crawlQueue;
         this._DOWNLOAD_QUEUE = this._OPTION.downloadQueue;
         this._TABLES = new Map();
-        this.on("start_a_task", () => this._STATUS._currentMultiTask++);
-        this.on("done_a_task", () => {
-            this._STATUS._currentMultiTask--;
-            this._fire();
+        // 每开始一个任务，状态中对应当前异步任务数的记录值加1
+        this.on("start_a_task", (type) => {
+            if (type === "crawl") {
+                this._STATUS._currentMultiTask++;
+            }
+            else if (type === "download") {
+                this._STATUS._currentMultiDownload--;
+            }
         });
-        this.on("start_a_download", () => this._STATUS._currentMultiDownload++);
-        this.on("done_a_download", () => {
-            this._STATUS._currentMultiDownload--;
-            this._fire();
+        // 每完成一个任务，状态中对应当前异步任务数的记录值减1
+        this.on("done_a_task", (type) => {
+            if (type === "crawl") {
+                this._STATUS._currentMultiTask--;
+            }
+            else if (type === "download") {
+                this._STATUS._currentMultiDownload--;
+            }
+        });
+        // 完成一个任务后，判断是否存在未进行任务、进行中未完成任务，如果都不存在则触发“end”事件，否则“火力全开”
+        this.on("done_a_task", (type) => {
+            let crawlTaskAllDone = (this._CRAWL_QUEUE.getLength() === 0);
+            let downloadTaskAllDone = (this._DOWNLOAD_QUEUE.getLength() === 0);
+            let multiTaskingIsEmtpy = (this._STATUS._currentMultiTask === 0);
+            let multiDownloadIsEmtpy = (this._STATUS._currentMultiDownload === 0);
+            if (crawlTaskAllDone && downloadTaskAllDone && multiDownloadIsEmtpy && multiTaskingIsEmtpy) {
+                this.emit("end");
+            }
+            else {
+                this._fire();
+            }
         });
         // 在爬虫的生命周期末尾，需要进行一些收尾工作，比如关闭table
         // TODO: 目前仅限 txttable 和 jsontable，更多插件形式的要怎么接入
@@ -236,14 +257,14 @@ class NodeSpider extends events_1.EventEmitter {
             }
             else {
                 const task = this._DOWNLOAD_QUEUE.next();
-                this.emit("start_a_download");
+                this.emit("start_a_task", "download");
                 this._asyncDownload(task)
                     .then(() => {
-                    this.emit("done_a_download");
+                    this.emit("done_a_task", "download");
                 })
                     .catch((error) => {
                     console.log(error);
-                    this.emit("done_a_download");
+                    this.emit("done_a_task", "download");
                     // TODO: 错误处理
                 });
             }
@@ -254,14 +275,14 @@ class NodeSpider extends events_1.EventEmitter {
             }
             else {
                 const task = this._CRAWL_QUEUE.next();
-                this.emit("start_a_task");
+                this.emit("start_a_task", "crawl");
                 this._asyncCrawling(task)
                     .then(() => {
-                    this.emit("done_a_task");
+                    this.emit("done_a_task", "crawl");
                 })
                     .catch((error) => {
                     console.log(error);
-                    this.emit("done_a_task");
+                    this.emit("done_a_task", "crawl");
                     // TODO: 错误处理
                 });
             }
