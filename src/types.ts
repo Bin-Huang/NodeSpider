@@ -9,7 +9,7 @@ interface IPublicOption {
 export interface ICrawlOption extends IPublicOption {
     // jq?: boolean;
     // toUtf8?: boolean;
-    preliminary?: any[];
+    preprocessing?: any[];
 }
 
 // when new crawlTask is added by method addTask and $.fn.todo
@@ -78,5 +78,5 @@ export interface IGlobalOption extends ICrawlOption, IDownloadOption {
     crawlQueue: TaskQueue<ICrawlQueueItem>;
     downloadQueue: TaskQueue<IDownloadQueueItem>;
 
-    preliminary: any[];
+    preprocessing: any[];
 }
