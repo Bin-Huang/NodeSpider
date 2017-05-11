@@ -7,8 +7,9 @@ interface IPublicOption {
 
 // crawlTask special opts
 export interface ICrawlOption extends IPublicOption {
-    jq?: boolean;
-    toUtf8?: boolean;
+    // jq?: boolean;
+    // toUtf8?: boolean;
+    preliminary?: any[];
 }
 
 // when new crawlTask is added by method addTask and $.fn.todo
@@ -33,6 +34,7 @@ export interface ICrawlCurrentTask extends ICrawlQueueItem {
     response: any;
     error: Error;
     body: string;
+    $: any;
 }
 
 // special options for downloadTask
@@ -67,7 +69,7 @@ export interface IStatus {
 }
 
 // for parameter option, when initialize an instance  of NodeSpider.
-export interface IGlobalOption extends ICrawlOption {
+export interface IGlobalOption extends ICrawlOption, IDownloadOption {
     multiTasking: number;
     multiDownload: number;
     defaultRetry: number;
@@ -76,5 +78,5 @@ export interface IGlobalOption extends ICrawlOption {
     crawlQueue: TaskQueue<ICrawlQueueItem>;
     downloadQueue: TaskQueue<IDownloadQueueItem>;
 
-    jq: boolean;
+    preliminary: any[];
 }

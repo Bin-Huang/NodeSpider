@@ -1,9 +1,11 @@
 // TODO: request 传入 opts，以及更多的 option，类似 proxy
 // TODO: 更好的报错机制: 报错建议？以及去除多余的 console.error
-// TODO: 解决 save 方法保存json格式不好用的问题： 没有[],直接也没有逗号隔开
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
 // TODO: 使用 node 自带 stringdecode 代替 iconv-lite
 // 简单上手的回掉函数 + 自由定制的事件驱动
+// preliminary
+// mysql 插件
+// redis queue
 
 import * as charset from "charset";
 import * as cheerio from "cheerio";
@@ -12,6 +14,8 @@ import * as fs from "fs";
 import * as iconv from "iconv-lite";
 import * as request from "request";
 import * as url from "url";
+import decode from "./decode";
+import loadJQ from "./loadJQ";
 import { JsonTable, TxtTable } from "./Table";
 import TaskQueue from "./TaskQueue";
 import {
@@ -32,15 +36,14 @@ const defaultOption: IGlobalOption = {
     defaultRetry: 3,
     multiDownload: 2,
     multiTasking: 20,
-    jq: true,
-    toUtf8: true,
+    preliminary: [decode, loadJQ],
 };
 
 /**
  * class of NodeSpider
  * @class NodeSpider
  */
-class NodeSpider extends EventEmitter {
+ class NodeSpider extends EventEmitter {
     protected _OPTION: IGlobalOption;
     protected _CRAWL_QUEUE: TaskQueue <ICrawlQueueItem> ;
     protected _DOWNLOAD_QUEUE: TaskQueue <IDownloadQueueItem>;
@@ -310,203 +313,68 @@ class NodeSpider extends EventEmitter {
         }
     }
 
-    protected _loadJq(body: string, task: ICrawlCurrentTask) {
-        let $ = cheerio.load(body);
-        // 扩展：添加 url 方法
-        // 返回当前节点（们）链接的的绝对路径(array)
-        // 自动处理了锚和 javascript: void(0)
-        $.prototype.url = function () {
-            let result = [];
-            $(this).each(function () {
-                let newUrl = $(this).attr("href");
-                // 如果是类似 'javascirpt: void(0)' 的 js 代码，直接跳过
-                if (/^javascript/.test(newUrl)) {
-                    return false;
-                }
-                // 如果是相对路径，补全路径为绝对路径
-                if (newUrl && !/^https?:\/\//.test(newUrl)) {
-                    newUrl = url.resolve(task.url, newUrl);
-                }
-                // 去除连接中的查询和锚
-                let u = url.parse(newUrl);
-                newUrl = u.protocol + u.auth + u.host + u.pathname;
-                result.push(newUrl);
-            });
-            return result;
-        };
-
-        /**
-         * 获得选中节点（们）的 src 路径（自动补全）
-         * @returns {array}
-         */
-        $.prototype.src = function() {
-            let result = [];
-            $(this).each(function () {
-                let newUrl = $(this).attr("src");
-                // 如果是相对路径，补全路径为绝对路径
-                if (newUrl && !/^https?:\/\//.test(newUrl)) {
-                    newUrl = url.resolve(task.url, newUrl);
-                }
-                result.push(newUrl);
-            });
-            return result;
-        };
-
-        const thisSpider = this;
-
-        /**
-         * 添加选定节点（们）中的链接到 CrawlQueue 并自动补全路径、跳过重复链接
-         * @param {null|function|object}  option 回掉函数或设置对象
-         * option 为可选参数，空缺时新建任务的回调函数
-         * 可以传入函数作为任务的回掉函数
-         * 也可以是一个包括设置的对象，如果对象中不存在callback成员，则默认当前任务的callback
-         */
-        $.prototype.todo = function (option) {
-            let newUrls = $(this).url();
-            newUrls = thisSpider.filter(newUrls);
-
-            if (typeof option === "undefined") {
-                newUrls.map((u) => {
-                    thisSpider.addTask({
-                        strategy: task.strategy,
-                        url: u,
-                    });
-                });
-            } else if (typeof option === "function") {
-                newUrls.map((u) => {
-                    thisSpider.addTask({
-                        strategy: option,
-                        url: u,
-                    });
-                });
-            } else if (typeof option === "object") {
-                option.callback = option.callback ? option.callback : task.strategy;
-                newUrls.map((u) => {
-                    let newTask = Object.assign({}, option);
-                    newTask.url = u;
-                    thisSpider.addTask(newTask);
-                });
-            }
-
-        };
-
-        /**
-         * 添加选定节点（们）中的链接到 download-list, 并自动补全路径、跳过重复链接
-         * @param {null|string|object}  option 路径或设置对象
-         * option 为可选参数，空缺时新建任务的 path 默认为默认保存路径
-         * 可以传入字符串作为下载内容的保存路径
-         * 也可以是一个包括设置的对象，如果对象中不存在path成员，则为默认保存路径
-         */
-        $.prototype.download = function (option) {
-            let newUrls = $(this).url();
-            newUrls = thisSpider.filter(newUrls);
-
-            if (typeof option === "undefined") {
-                newUrls.map((u) => {
-                    thisSpider.addDownload({
-                        path: thisSpider._OPTION.defaultDownloadPath,
-                        url: u,
-                    });
-                });
-            } else if (typeof option === "string") {
-                newUrls.map((u) => {
-                    thisSpider.addDownload({
-                        path: option,
-                        url: u,
-                    });
-                });
-            } else if (typeof option === "object") {
-                option.path = option.path ? option.path : thisSpider._OPTION.defaultDownloadPath;
-                newUrls.map((u) => {
-                    let newTask = {
-                        ...option,
-                        url: u,
-                    };
-                    thisSpider.addDownload(newTask);
-                });
-            }
-
-            return $;
-        };
-    }
-
-    protected async _asyncCrawling(task: ICrawlQueueItem) {
+    /**
+     * request promise. resolve({error, response})
+     * @param opts {url, method, encoding}
+     */
+    protected _asyncRequest(opts) {
         return new Promise((resolve, reject) => {
-            let $ = null;
-            request(
-                {
-                    encoding: null,
-                    method: "GET",
-                    url: task.url,
-                },
-                (error, response) => {
-                    let currentTask: ICrawlCurrentTask = {
-                        body: null,
-                        error: null,
-                        response: null,
-                        ... task,
-                    };
-                    if (! error) {
-                        try {
-                            // 根据任务设置和全局设置，确定如何编码正文
-                            let preToUtf8 = this._OPTION.toUtf8;
-                            if (currentTask.toUtf8 !== undefined) {
-                                preToUtf8 = currentTask.toUtf8;
-                            }
-                            if (preToUtf8) {
-                                let encoding = charset(response.headers, response.body);
-                                if (encoding) {
-                                    currentTask.body = iconv.decode(response.body, encoding);
-                                }
-                            }
-
-                            // 根据任务设置和全局设置，确定是否加载jQ
-                            if (currentTask.jq !== undefined) {
-                                $ = this._loadJq(currentTask.body, currentTask);
-                            } else if (this._OPTION.jq) {
-                                $ = this._loadJq(currentTask.body, currentTask);
-                            }
-                        } catch (err) {
-                            error = err;
-                        }
-                    }
-                    currentTask.response = response;
-                    currentTask.error = error;
-
-                    // run user's crawling strategy. If strategy is a async function, wait to resolve.
-                    let result = currentTask.strategy(error, currentTask, $);
-                    if (result instanceof Promise) {
-                        result.then(() => {
-                            currentTask = null;
-                            resolve();
-                        });
-                    } else {
-                        currentTask = null;
-                        resolve();
-                    }
-
-                },
-            );
+            request(opts, (error, response) => {
+                resolve({ error, response });
+            });
         });
     }
 
-    protected async _asyncDownload(currentTask: IDownloadQueueItem) {
-        return new Promise((resolve, reject) => {
-            let nameIndex = currentTask.url.lastIndexOf("/");
-            let fileName = currentTask.url.slice(nameIndex);
+    protected async _asyncCrawling(task: ICrawlQueueItem) {
+        // first, request
+        let {error, response}: any = await this._asyncRequest({
+            encoding: null,
+            method: "GET",
+            url: task.url,
+        });
+        let currentTask: ICrawlCurrentTask = {
+            body: response.body,
+            error,
+            response,
+            $: null,
+            ... task,
+        };
+        // then, clear
+        error = null;
+        response = null;
+        // operate preliminary
+        if (! currentTask.error) {
+            try {
+                for (let pre of this._OPTION.preliminary) {
+                    currentTask = await pre(this, currentTask.error, currentTask, currentTask.$);
+                }
+            } catch (err) {
+                currentTask.error = err;
+            }
+        }
+        // operate strategy, then clear
+        // TODO: if there are a bug, is it can be throwed?
+        await currentTask.strategy(currentTask.error, currentTask, currentTask.$);
+        currentTask = null;
+    }
 
-            if (! currentTask.path) {
-                currentTask.path = this._OPTION.defaultDownloadPath;
+    protected async _asyncDownload(task: IDownloadQueueItem) {
+        return new Promise((resolve, reject) => {
+            let nameIndex = task.url.lastIndexOf("/");
+            let fileName = task.url.slice(nameIndex);
+
+            if (! task.path) {
+                task.path = this._OPTION.defaultDownloadPath;
             }
 
             let savePath;
-            if (currentTask.path[currentTask.path.length - 1] === "/") {
-                savePath = currentTask.path.slice(0, currentTask.path.length - 1) + fileName;
+            if (task.path[task.path.length - 1] === "/") {
+                savePath = task.path.slice(0, task.path.length - 1) + fileName;
             } else {
-                savePath = currentTask.path + fileName;
+                savePath = task.path + fileName;
             }
 
-            const download = request(currentTask.url);
+            const download = request(task.url);
             const write = fs.createWriteStream(savePath);
             download.on("error", (error) => {
                 reject(error);
@@ -522,7 +390,14 @@ class NodeSpider extends EventEmitter {
         });
 
     }
-
 }
 
-export = NodeSpider;
+/**
+ * create an instance of NodeSpider
+ * @param option
+ */
+function create (option: IGlobalOption) {
+    return new NodeSpider(option);
+}
+
+export {decode, loadJQ, create, NodeSpider };
