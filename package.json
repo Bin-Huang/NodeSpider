@@ -1,8 +1,8 @@
 {
   "name": "nodespider",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "description": "20 lines of code to bulid a web crawler as a geek",
-  "main": "index.js",
+  "main": "./build/spider.js",
   "dependencies": {
     "charset": "^1.0.0",
     "cheerio": "^0.22.0",
