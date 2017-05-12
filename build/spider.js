@@ -373,4 +373,3 @@ function create(option) {
     return new NodeSpider(option);
 }
 exports.create = create;
-//# sourceMappingURL=spider.js.map

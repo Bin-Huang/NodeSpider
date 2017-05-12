@@ -3,6 +3,7 @@
   "version": "0.3.2",
   "description": "20 lines of code to bulid a web crawler as a geek",
   "main": "./build/spider.js",
+  "typings": "./build/spider.d.ts",
   "dependencies": {
     "charset": "^1.0.0",
     "cheerio": "^0.22.0",

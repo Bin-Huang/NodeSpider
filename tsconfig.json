@@ -3,7 +3,7 @@
         "module": "commonjs",
         "target": "es6",
         "outDir": "build",  // 输出到 "build" 文件夹
-        "sourceMap": true
+        "sourceMap": false
     },
     "include": [
         "src"   // 输入 src 文件夹
