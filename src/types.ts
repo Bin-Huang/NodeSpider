@@ -7,8 +7,6 @@ interface IPublicOption {
 
 // crawlTask special opts
 export interface ICrawlOption extends IPublicOption {
-    // jq?: boolean;
-    // toUtf8?: boolean;
     preprocessing?: any[];
 }
 

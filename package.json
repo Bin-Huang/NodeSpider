@@ -23,7 +23,7 @@
     "url": "git+ssh://git@github.com/Ben-Hwang/NodeSpider.git"
   },
   "author": "Ben Huang",
-  "license": "ISC",
+  "license": "LGPL",
   "bugs": {
     "url": "https://github.com/Ben-Hwang/NodeSpider/issues"
   },
