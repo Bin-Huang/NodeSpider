@@ -18,3 +18,4 @@ function decode(thisSpider, currentTask) {
     return currentTask;
 }
 exports.default = decode;
+//# sourceMappingURL=decode.js.map

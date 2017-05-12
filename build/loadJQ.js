@@ -121,3 +121,4 @@ function loadJQ(thisSpider, currentTask) {
     return currentTask;
 }
 exports.default = loadJQ;
+//# sourceMappingURL=loadJQ.js.map
