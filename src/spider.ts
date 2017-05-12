@@ -331,11 +331,14 @@ const defaultOption: IGlobalOption = {
             method: "GET",
             url: task.url,
         });
+        // 为什么 currentTask.response.body 已经存在, 还要一个 currentTask.body?
+        // currentTask.response.body 为请求返回的原始body（二进制），供开发者查询
+        // currentTask.body 则是正文字符串，供开发者使用
         let currentTask: ICrawlCurrentTask = {
-            body: response.body,
+            $: null,
+            body: response.body.toString(),
             error,
             response,
-            $: null,
             ... task,
         };
         // then, clear
@@ -345,7 +348,7 @@ const defaultOption: IGlobalOption = {
         if (! currentTask.error) {
             try {
                 for (let pre of this._OPTION.preprocessing) {
-                    currentTask = await pre(this, currentTask.error, currentTask, currentTask.$);
+                    currentTask = await pre(this, currentTask);
                 }
             } catch (err) {
                 currentTask.error = err;

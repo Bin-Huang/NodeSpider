@@ -4,7 +4,6 @@
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
 // TODO: 使用 node 自带 stringdecode 代替 iconv-lite
 // 简单上手的回掉函数 + 自由定制的事件驱动
-// preliminary
 // mysql 插件
 // redis queue
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -32,7 +31,7 @@ const defaultOption = {
     defaultRetry: 3,
     multiDownload: 2,
     multiTasking: 20,
-    preliminary: [decode_1.default, loadJQ_1.default],
+    preprocessing: [decode_1.default, loadJQ_1.default],
 };
 /**
  * class of NodeSpider
@@ -309,16 +308,19 @@ class NodeSpider extends events_1.EventEmitter {
                 method: "GET",
                 url: task.url,
             });
-            let currentTask = Object.assign({ body: response.body, error,
-                response, $: null }, task);
+            // 为什么 currentTask.response.body 已经存在, 还要一个 currentTask.body?
+            // currentTask.response.body 为请求返回的原始body（二进制），供开发者查询
+            // currentTask.body 则是正文字符串，供开发者使用
+            let currentTask = Object.assign({ $: null, body: response.body.toString(), error,
+                response }, task);
             // then, clear
             error = null;
             response = null;
-            // operate preliminary
+            // operate preprocessing
             if (!currentTask.error) {
                 try {
-                    for (let pre of this._OPTION.preliminary) {
-                        currentTask = yield pre(this, currentTask.error, currentTask, currentTask.$);
+                    for (let pre of this._OPTION.preprocessing) {
+                        currentTask = yield pre(this, currentTask);
                     }
                 }
                 catch (err) {
