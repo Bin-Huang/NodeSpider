@@ -19,16 +19,14 @@ const events_1 = require("events");
 const fs = require("fs");
 const request = require("request");
 const decode_1 = require("./decode");
-exports.decode = decode_1.default;
 const loadJQ_1 = require("./loadJQ");
-exports.loadJQ = loadJQ_1.default;
 const Table_1 = require("./Table");
 const TaskQueue_1 = require("./TaskQueue");
 const defaultOption = {
     crawlQueue: new TaskQueue_1.default("url"),
-    downloadQueue: new TaskQueue_1.default("url"),
     defaultDownloadPath: "",
     defaultRetry: 3,
+    downloadQueue: new TaskQueue_1.default("url"),
     multiDownload: 2,
     multiTasking: 20,
     preprocessing: [decode_1.default, loadJQ_1.default],
@@ -73,10 +71,10 @@ class NodeSpider extends events_1.EventEmitter {
         });
         // 完成一个任务后，判断是否存在未进行任务、进行中未完成任务，如果都不存在则触发“end”事件，否则“火力全开”
         this.on("done_a_task", (type) => {
-            let crawlTaskAllDone = (this._CRAWL_QUEUE.getLength() === 0);
-            let downloadTaskAllDone = (this._DOWNLOAD_QUEUE.getLength() === 0);
-            let multiTaskingIsEmtpy = (this._STATUS._currentMultiTask === 0);
-            let multiDownloadIsEmtpy = (this._STATUS._currentMultiDownload === 0);
+            const crawlTaskAllDone = (this._CRAWL_QUEUE.getLength() === 0);
+            const downloadTaskAllDone = (this._DOWNLOAD_QUEUE.getLength() === 0);
+            const multiTaskingIsEmtpy = (this._STATUS._currentMultiTask === 0);
+            const multiDownloadIsEmtpy = (this._STATUS._currentMultiDownload === 0);
             if (crawlTaskAllDone && downloadTaskAllDone && multiDownloadIsEmtpy && multiTaskingIsEmtpy) {
                 this.emit("end");
             }
@@ -87,8 +85,8 @@ class NodeSpider extends events_1.EventEmitter {
         // 在爬虫的生命周期末尾，需要进行一些收尾工作，比如关闭table
         // TODO: 目前仅限 txttable 和 jsontable，更多插件形式的要怎么接入
         this.on("end", () => {
-            let values = this._TABLES.values();
-            for (let item of values) {
+            const values = this._TABLES.values();
+            for (const item of values) {
                 item.close();
             }
         });
@@ -114,7 +112,7 @@ class NodeSpider extends events_1.EventEmitter {
             if (typeof u !== "string") {
                 return console.log("must be string");
             }
-            let newTask = Object.assign({}, task, { url: u });
+            const newTask = Object.assign({}, task, { url: u });
             newTask.url = u;
             this._CRAWL_QUEUE.add(newTask);
         });
@@ -138,7 +136,7 @@ class NodeSpider extends events_1.EventEmitter {
             if (typeof u !== "string") {
                 return console.log("must need string");
             }
-            let newTask = Object.assign({}, task, { url: u });
+            const newTask = Object.assign({}, task, { url: u });
             this._DOWNLOAD_QUEUE.add(newTask);
         });
         return this._DOWNLOAD_QUEUE.getSize();
@@ -166,9 +164,9 @@ class NodeSpider extends events_1.EventEmitter {
             throw new Error("method filter need a array-typed param");
         }
         else {
-            let s = new Set(urlArray);
-            let result = [];
-            for (let url of s) {
+            const s = new Set(urlArray);
+            const result = [];
+            for (const url of s) {
                 if (!this.isExist) {
                     result.push(url);
                 }
@@ -231,7 +229,7 @@ class NodeSpider extends events_1.EventEmitter {
             return item.add(data);
         }
         else {
-            let thisHeader = Object.keys(data);
+            const thisHeader = Object.keys(data);
             // 保证 data 与 table 的header 完全一致，不能多也不能少
             // 如果不匹配，则报错
             item.header.map((u) => {
@@ -319,7 +317,7 @@ class NodeSpider extends events_1.EventEmitter {
             // operate preprocessing
             if (!currentTask.error) {
                 try {
-                    for (let pre of this._OPTION.preprocessing) {
+                    for (const pre of this._OPTION.preprocessing) {
                         currentTask = yield pre(this, currentTask);
                     }
                 }
@@ -336,8 +334,8 @@ class NodeSpider extends events_1.EventEmitter {
     _asyncDownload(task) {
         return __awaiter(this, void 0, void 0, function* () {
             return new Promise((resolve, reject) => {
-                let nameIndex = task.url.lastIndexOf("/");
-                let fileName = task.url.slice(nameIndex);
+                const nameIndex = task.url.lastIndexOf("/");
+                const fileName = task.url.slice(nameIndex);
                 if (!task.path) {
                     task.path = this._OPTION.defaultDownloadPath;
                 }
@@ -364,12 +362,6 @@ class NodeSpider extends events_1.EventEmitter {
         });
     }
 }
-exports.NodeSpider = NodeSpider;
-/**
- * create an instance of NodeSpider
- * @param option
- */
-function create(option) {
-    return new NodeSpider(option);
-}
-exports.create = create;
+NodeSpider.decode = decode_1.default;
+NodeSpider.loadJQ = loadJQ_1.default;
+exports.default = NodeSpider;

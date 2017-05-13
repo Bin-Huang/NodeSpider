@@ -15,7 +15,7 @@ class LinkedQueue {
      * @memberOf LinkedQueue
      */
     add(value) {
-        let newLinkNode = {
+        const newLinkNode = {
             value,
             next: null,
         };
@@ -35,7 +35,7 @@ class LinkedQueue {
      * @memberOf LinkedQueue
      */
     next() {
-        let current = this._HEAD;
+        const current = this._HEAD;
         if (!current) {
             return null;
         }
@@ -55,7 +55,7 @@ class LinkedQueue {
      * @memberOf LinkedQueue
      */
     jump(value) {
-        let newLinkNode = {
+        const newLinkNode = {
             value,
             next: null,
         };
@@ -90,7 +90,6 @@ class LinkedQueue {
         }
     }
 }
-;
 // tslint:disable-next-line:max-classes-per-file
 class TaskQueue {
     /**
@@ -107,7 +106,7 @@ class TaskQueue {
      * @param item {*} 待添加的元素。必须包含队列需要的标识符成员，否则报错
      */
     add(item) {
-        let id = item[this.key];
+        const id = item[this.key];
         if (typeof id === "undefined") {
             throw new Error("class TaskQueue method add: item have not key");
         }
@@ -119,7 +118,7 @@ class TaskQueue {
      * @param item {*} 待添加的元素。必须包含标识符成员，否则报错
      */
     jump(item) {
-        let id = item[this.key];
+        const id = item[this.key];
         if (typeof id === "undefined") {
             throw new Error("class TaskQueue method jump: item have not key");
         }

@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import * as url from "url";
-import { NodeSpider } from "./spider";
+import NodeSpider from "./spider";
 import {ICrawlCurrentTask} from "./types";
 
 /**

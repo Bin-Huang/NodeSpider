@@ -30,9 +30,9 @@ import {
 
 const defaultOption: IGlobalOption = {
     crawlQueue: new TaskQueue<ICrawlQueueItem>("url"),
-    downloadQueue: new TaskQueue<IDownloadQueueItem>("url"),
     defaultDownloadPath: "",
     defaultRetry: 3,
+    downloadQueue: new TaskQueue<IDownloadQueueItem>("url"),
     multiDownload: 2,
     multiTasking: 20,
     preprocessing: [decode, loadJQ],
@@ -42,7 +42,10 @@ const defaultOption: IGlobalOption = {
  * class of NodeSpider
  * @class NodeSpider
  */
- class NodeSpider extends EventEmitter {
+export default class NodeSpider extends EventEmitter {
+    public static decode = decode;
+    public static loadJQ = loadJQ;
+
     protected _OPTION: IGlobalOption;
     protected _CRAWL_QUEUE: TaskQueue <ICrawlQueueItem> ;
     protected _DOWNLOAD_QUEUE: TaskQueue <IDownloadQueueItem>;
@@ -85,10 +88,10 @@ const defaultOption: IGlobalOption = {
         });
         // 完成一个任务后，判断是否存在未进行任务、进行中未完成任务，如果都不存在则触发“end”事件，否则“火力全开”
         this.on("done_a_task", (type: "crawl" | "download") => {
-            let crawlTaskAllDone: boolean = (this._CRAWL_QUEUE.getLength() === 0);
-            let downloadTaskAllDone: boolean = (this._DOWNLOAD_QUEUE.getLength() === 0);
-            let multiTaskingIsEmtpy: boolean = (this._STATUS._currentMultiTask === 0);
-            let multiDownloadIsEmtpy: boolean = (this._STATUS._currentMultiDownload === 0);
+            const crawlTaskAllDone: boolean = (this._CRAWL_QUEUE.getLength() === 0);
+            const downloadTaskAllDone: boolean = (this._DOWNLOAD_QUEUE.getLength() === 0);
+            const multiTaskingIsEmtpy: boolean = (this._STATUS._currentMultiTask === 0);
+            const multiDownloadIsEmtpy: boolean = (this._STATUS._currentMultiDownload === 0);
             if (crawlTaskAllDone && downloadTaskAllDone && multiDownloadIsEmtpy && multiTaskingIsEmtpy) {
                 this.emit("end");
             } else {
@@ -98,8 +101,8 @@ const defaultOption: IGlobalOption = {
         // 在爬虫的生命周期末尾，需要进行一些收尾工作，比如关闭table
         // TODO: 目前仅限 txttable 和 jsontable，更多插件形式的要怎么接入
         this.on("end", () => {
-            let values = this._TABLES.values();
-            for (let item of values) {
+            const values = this._TABLES.values();
+            for (const item of values) {
                 item.close();
             }
         });
@@ -125,7 +128,7 @@ const defaultOption: IGlobalOption = {
             if (typeof u !== "string") {
                 return console.log("must be string");
             }
-            let newTask = {
+            const newTask = {
                 ... task,
                 url: u,
             };
@@ -153,7 +156,7 @@ const defaultOption: IGlobalOption = {
             if (typeof u !== "string") {
                 return console.log("must need string");
             }
-            let newTask = {
+            const newTask = {
                 ...task,
                 url: u,
             };
@@ -186,9 +189,9 @@ const defaultOption: IGlobalOption = {
         if (! Array.isArray(urlArray)) {
             throw new Error("method filter need a array-typed param");
         } else {
-            let s = new Set(urlArray);
-            let result = [];
-            for (let url of s) {
+            const s = new Set(urlArray);
+            const result = [];
+            for (const url of s) {
                 if (! this.isExist) {
                     result.push(url);
                 }
@@ -253,7 +256,7 @@ const defaultOption: IGlobalOption = {
         if (item.header === null) {
             return item.add(data);
         } else {
-            let thisHeader = Object.keys(data);
+            const thisHeader = Object.keys(data);
             // 保证 data 与 table 的header 完全一致，不能多也不能少
             // 如果不匹配，则报错
             item.header.map((u) => {
@@ -347,7 +350,7 @@ const defaultOption: IGlobalOption = {
         // operate preprocessing
         if (! currentTask.error) {
             try {
-                for (let pre of this._OPTION.preprocessing) {
+                for (const pre of this._OPTION.preprocessing) {
                     currentTask = await pre(this, currentTask);
                 }
             } catch (err) {
@@ -362,8 +365,8 @@ const defaultOption: IGlobalOption = {
 
     protected async _asyncDownload(task: IDownloadQueueItem) {
         return new Promise((resolve, reject) => {
-            let nameIndex = task.url.lastIndexOf("/");
-            let fileName = task.url.slice(nameIndex);
+            const nameIndex = task.url.lastIndexOf("/");
+            const fileName = task.url.slice(nameIndex);
 
             if (! task.path) {
                 task.path = this._OPTION.defaultDownloadPath;
@@ -393,13 +396,3 @@ const defaultOption: IGlobalOption = {
 
     }
 }
-
-/**
- * create an instance of NodeSpider
- * @param option
- */
-function create (option: IGlobalOption) {
-    return new NodeSpider(option);
-}
-
-export {decode, loadJQ, create, NodeSpider };

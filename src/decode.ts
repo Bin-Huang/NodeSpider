@@ -1,6 +1,6 @@
 import * as charset from "charset";
 import * as iconv from "iconv-lite";
-import { NodeSpider } from "./spider";
+import NodeSpider from "./spider";
 import { ICrawlCurrentTask } from "./types";
 
 /**
