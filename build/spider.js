@@ -42,39 +42,39 @@ class NodeSpider extends events_1.EventEmitter {
      */
     constructor(opts = {}) {
         super();
-        this._OPTION = Object.assign({}, defaultOption, opts);
-        this._STATUS = {
-            _currentMultiDownload: 0,
-            _currentMultiTask: 0,
-            _working: false,
+        this._STATE = {
+            crawlQueue: this._STATE.option.crawlQueue,
+            currentMultiDownload: 0,
+            currentMultiTask: 0,
+            downloadQueue: this._STATE.option.downloadQueue,
+            option: Object.assign({}, defaultOption, opts),
+            tables: new Map(),
+            working: true,
         };
-        this._CRAWL_QUEUE = this._OPTION.crawlQueue;
-        this._DOWNLOAD_QUEUE = this._OPTION.downloadQueue;
-        this._TABLES = new Map();
         // 每开始一个任务，状态中对应当前异步任务数的记录值加1
         this.on("start_a_task", (type) => {
             if (type === "crawl") {
-                this._STATUS._currentMultiTask++;
+                this._STATE.currentMultiTask++;
             }
             else if (type === "download") {
-                this._STATUS._currentMultiDownload--;
+                this._STATE.currentMultiDownload--;
             }
         });
         // 每完成一个任务，状态中对应当前异步任务数的记录值减1
         this.on("done_a_task", (type) => {
             if (type === "crawl") {
-                this._STATUS._currentMultiTask--;
+                this._STATE.currentMultiTask--;
             }
             else if (type === "download") {
-                this._STATUS._currentMultiDownload--;
+                this._STATE.currentMultiDownload--;
             }
         });
         // 完成一个任务后，判断是否存在未进行任务、进行中未完成任务，如果都不存在则触发“end”事件，否则“火力全开”
         this.on("done_a_task", (type) => {
-            const crawlTaskAllDone = (this._CRAWL_QUEUE.getLength() === 0);
-            const downloadTaskAllDone = (this._DOWNLOAD_QUEUE.getLength() === 0);
-            const multiTaskingIsEmtpy = (this._STATUS._currentMultiTask === 0);
-            const multiDownloadIsEmtpy = (this._STATUS._currentMultiDownload === 0);
+            const crawlTaskAllDone = (this._STATE.crawlQueue.getLength() === 0);
+            const downloadTaskAllDone = (this._STATE.downloadQueue.getLength() === 0);
+            const multiTaskingIsEmtpy = (this._STATE.currentMultiTask === 0);
+            const multiDownloadIsEmtpy = (this._STATE.currentMultiDownload === 0);
             if (crawlTaskAllDone && downloadTaskAllDone && multiDownloadIsEmtpy && multiTaskingIsEmtpy) {
                 this.emit("end");
             }
@@ -85,7 +85,7 @@ class NodeSpider extends events_1.EventEmitter {
         // 在爬虫的生命周期末尾，需要进行一些收尾工作，比如关闭table
         // TODO: 目前仅限 txttable 和 jsontable，更多插件形式的要怎么接入
         this.on("end", () => {
-            const values = this._TABLES.values();
+            const values = this._STATE.tables.values();
             for (const item of values) {
                 item.close();
             }
@@ -114,11 +114,11 @@ class NodeSpider extends events_1.EventEmitter {
             }
             const newTask = Object.assign({}, task, { url: u });
             newTask.url = u;
-            this._CRAWL_QUEUE.add(newTask);
+            this._STATE.crawlQueue.add(newTask);
         });
-        this._STATUS._working = true;
+        this._STATE.working = true;
         this._fire();
-        return this._CRAWL_QUEUE.getSize();
+        return this._STATE.crawlQueue.getSize();
     }
     /**
      * add new download-task to spider's download-list.
@@ -137,9 +137,9 @@ class NodeSpider extends events_1.EventEmitter {
                 return console.log("must need string");
             }
             const newTask = Object.assign({}, task, { url: u });
-            this._DOWNLOAD_QUEUE.add(newTask);
+            this._STATE.downloadQueue.add(newTask);
         });
-        return this._DOWNLOAD_QUEUE.getSize();
+        return this._STATE.downloadQueue.getSize();
     }
     /**
      * Check whether the url has been added
@@ -150,9 +150,9 @@ class NodeSpider extends events_1.EventEmitter {
         if (typeof url !== "string") {
             throw new Error("method check need a string-typed param");
         }
-        const inTodoList = this._CRAWL_QUEUE.check(url);
-        const inDownloadList = this._DOWNLOAD_QUEUE.check(url);
-        return inTodoList || inDownloadList;
+        const isExistCrawlQueue = this._STATE.crawlQueue.check(url);
+        const isExistDownloadQueue = this._STATE.downloadQueue.check(url);
+        return isExistCrawlQueue || isExistDownloadQueue;
     }
     /**
      * 过滤掉一个数组中的重复链接，以及所有已被添加的链接，返回一个新数组
@@ -180,7 +180,7 @@ class NodeSpider extends events_1.EventEmitter {
      * @param {number} maxRetry Maximum number of retries for this task
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
-    retry(task, maxRetry = this._OPTION.defaultRetry, finalErrorCallback = (task) => this.save("log.json", task)) {
+    retry(task, maxRetry = this._STATE.option.defaultRetry, finalErrorCallback = (task) => this.save("log.json", task)) {
         if (task._INFO === undefined) {
             task._INFO = {
                 retried: 0,
@@ -192,14 +192,14 @@ class NodeSpider extends events_1.EventEmitter {
             task._INFO.retried += 1;
             if (task.path) {
                 // 清理
-                this._DOWNLOAD_QUEUE.jump(task);
+                this._STATE.downloadQueue.jump(task);
             }
             else {
                 // 清理
                 task.body = null;
                 task.response = null;
                 task.error = null;
-                this._CRAWL_QUEUE.jump(task);
+                this._STATE.crawlQueue.jump(task);
             }
         }
         else {
@@ -213,17 +213,17 @@ class NodeSpider extends events_1.EventEmitter {
         // TODO: 如果item为对象，则为数据库。通过用户在 item 中自定义的标识符来判断是否已存在
         // 暂时只完成保存到文本的功能，所以默认 item 为文件路径字符串
         if (typeof item === "string") {
-            if (!this._TABLES[item]) {
+            if (!this._STATE.tables[item]) {
                 // 如果不存在，则新建一个table实例
                 // 根据路径中的文件后缀名，决定新建哪种table
                 if (/.txt$/.test(item)) {
-                    this._TABLES[item] = new Table_1.TxtTable(item);
+                    this._STATE.tables[item] = new Table_1.TxtTable(item);
                 }
                 else {
-                    this._TABLES[item] = new Table_1.JsonTable(item);
+                    this._STATE.tables[item] = new Table_1.JsonTable(item);
                 }
             }
-            item = this._TABLES[item];
+            item = this._STATE.tables[item];
         }
         if (item.header === null) {
             return item.add(data);
@@ -250,12 +250,12 @@ class NodeSpider extends events_1.EventEmitter {
      * 火力全开，尝试不断启动新任务，让当前任务数达到最大限制数
      */
     _fire() {
-        while (this._STATUS._currentMultiDownload < this._OPTION.multiDownload) {
-            if (this._DOWNLOAD_QUEUE.isDone()) {
+        while (this._STATE.currentMultiDownload < this._STATE.option.multiDownload) {
+            if (this._STATE.downloadQueue.isDone()) {
                 break;
             }
             else {
-                const task = this._DOWNLOAD_QUEUE.next();
+                const task = this._STATE.downloadQueue.next();
                 this.emit("start_a_task", "download");
                 this._asyncDownload(task)
                     .then(() => {
@@ -268,12 +268,12 @@ class NodeSpider extends events_1.EventEmitter {
                 });
             }
         }
-        while (this._STATUS._currentMultiTask < this._OPTION.multiTasking) {
-            if (this._CRAWL_QUEUE.isDone()) {
+        while (this._STATE.currentMultiTask < this._STATE.option.multiTasking) {
+            if (this._STATE.crawlQueue.isDone()) {
                 break;
             }
             else {
-                const task = this._CRAWL_QUEUE.next();
+                const task = this._STATE.crawlQueue.next();
                 this.emit("start_a_task", "crawl");
                 this._asyncCrawling(task)
                     .then(() => {
@@ -317,7 +317,7 @@ class NodeSpider extends events_1.EventEmitter {
             // operate preprocessing
             if (!currentTask.error) {
                 try {
-                    for (const pre of this._OPTION.preprocessing) {
+                    for (const pre of this._STATE.option.preprocessing) {
                         currentTask = yield pre(this, currentTask);
                     }
                 }
@@ -337,7 +337,7 @@ class NodeSpider extends events_1.EventEmitter {
                 const nameIndex = task.url.lastIndexOf("/");
                 const fileName = task.url.slice(nameIndex);
                 if (!task.path) {
-                    task.path = this._OPTION.defaultDownloadPath;
+                    task.path = this._STATE.option.defaultDownloadPath;
                 }
                 let savePath;
                 if (task.path[task.path.length - 1] === "/") {

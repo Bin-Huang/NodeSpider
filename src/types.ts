@@ -59,11 +59,15 @@ export interface IDownloadCurrentTask extends IDownloadQueueItem {
 
 }
 
-// an instance of NodeSpider's status
-export interface IStatus {
-    _working: boolean;
-    _currentMultiTask: number;
-    _currentMultiDownload: number;
+// NodeSpider' state
+export interface IState {
+    crawlQueue: TaskQueue<ICrawlQueueItem>;
+    downloadQueue: TaskQueue<IDownloadQueueItem>;
+    tables: Map<string, any>;
+    option: IGlobalOption;
+    working: boolean;
+    currentMultiTask: number;
+    currentMultiDownload: number;
 }
 
 // for parameter option, when initialize an instance  of NodeSpider.
