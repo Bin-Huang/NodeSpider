@@ -257,7 +257,7 @@ class NodeSpider extends events_1.EventEmitter {
             else {
                 const task = this._STATE.downloadQueue.next();
                 this.emit("start_a_task", "download");
-                this._asyncDownload(task)
+                asyncDownload(task)
                     .then(() => {
                     this.emit("done_a_task", "download");
                 })
@@ -275,7 +275,7 @@ class NodeSpider extends events_1.EventEmitter {
             else {
                 const task = this._STATE.crawlQueue.next();
                 this.emit("start_a_task", "crawl");
-                this._asyncCrawling(task)
+                asyncCrawling(task)
                     .then(() => {
                     this.emit("done_a_task", "crawl");
                 })
@@ -287,81 +287,81 @@ class NodeSpider extends events_1.EventEmitter {
             }
         }
     }
-    /**
-     * request promise. resolve({error, response})
-     * @param opts {url, method, encoding}
-     */
-    _asyncRequest(opts) {
-        return new Promise((resolve, reject) => {
-            request(opts, (error, response) => {
-                resolve({ error, response });
-            });
-        });
-    }
-    _asyncCrawling(task) {
-        return __awaiter(this, void 0, void 0, function* () {
-            // first, request
-            let { error, response } = yield this._asyncRequest({
-                encoding: null,
-                method: "GET",
-                url: task.url,
-            });
-            // 为什么 currentTask.response.body 已经存在, 还要一个 currentTask.body?
-            // currentTask.response.body 为请求返回的原始body（二进制），供开发者查询
-            // currentTask.body 则是正文字符串，供开发者使用
-            let currentTask = Object.assign({ $: null, body: response.body.toString(), error,
-                response }, task);
-            // then, clear
-            error = null;
-            response = null;
-            // operate preprocessing
-            if (!currentTask.error) {
-                try {
-                    for (const pre of this._STATE.option.preprocessing) {
-                        currentTask = yield pre(this, currentTask);
-                    }
-                }
-                catch (err) {
-                    currentTask.error = err;
-                }
-            }
-            // operate strategy, then clear
-            // TODO: if there are a bug, is it can be throwed?
-            yield currentTask.strategy(currentTask.error, currentTask, currentTask.$);
-            currentTask = null;
-        });
-    }
-    _asyncDownload(task) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return new Promise((resolve, reject) => {
-                const nameIndex = task.url.lastIndexOf("/");
-                const fileName = task.url.slice(nameIndex);
-                if (!task.path) {
-                    task.path = this._STATE.option.defaultDownloadPath;
-                }
-                let savePath;
-                if (task.path[task.path.length - 1] === "/") {
-                    savePath = task.path.slice(0, task.path.length - 1) + fileName;
-                }
-                else {
-                    savePath = task.path + fileName;
-                }
-                const download = request(task.url);
-                const write = fs.createWriteStream(savePath);
-                download.on("error", (error) => {
-                    reject(error);
-                });
-                write.on("error", (error) => {
-                    reject(error);
-                });
-                download.pipe(write);
-                write.on("finish", () => {
-                    resolve();
-                });
-            });
-        });
-    }
 }
 NodeSpider.decode = decode_1.default;
 NodeSpider.loadJQ = loadJQ_1.default;
 exports.default = NodeSpider;
+/**
+ * request promise. resolve({error, response})
+ * @param opts {url, method, encoding}
+ */
+function asyncRequest(opts) {
+    return new Promise((resolve, reject) => {
+        request(opts, (error, response) => {
+            resolve({ error, response });
+        });
+    });
+}
+function asyncCrawling(task) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // first, request
+        let { error, response } = yield this._asyncRequest({
+            encoding: null,
+            method: "GET",
+            url: task.url,
+        });
+        // 为什么 currentTask.response.body 已经存在, 还要一个 currentTask.body?
+        // currentTask.response.body 为请求返回的原始body（二进制），供开发者查询
+        // currentTask.body 则是正文字符串，供开发者使用
+        let currentTask = Object.assign({ $: null, body: response.body.toString(), error,
+            response }, task);
+        // then, clear
+        error = null;
+        response = null;
+        // operate preprocessing
+        if (!currentTask.error) {
+            try {
+                for (const pre of this._STATE.option.preprocessing) {
+                    currentTask = yield pre(this, currentTask);
+                }
+            }
+            catch (err) {
+                currentTask.error = err;
+            }
+        }
+        // operate strategy, then clear
+        // TODO: if there are a bug, is it can be throwed?
+        yield currentTask.strategy(currentTask.error, currentTask, currentTask.$);
+        currentTask = null;
+    });
+}
+function asyncDownload(task) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve, reject) => {
+            const nameIndex = task.url.lastIndexOf("/");
+            const fileName = task.url.slice(nameIndex);
+            if (!task.path) {
+                task.path = this._STATE.option.defaultDownloadPath;
+            }
+            let savePath;
+            if (task.path[task.path.length - 1] === "/") {
+                savePath = task.path.slice(0, task.path.length - 1) + fileName;
+            }
+            else {
+                savePath = task.path + fileName;
+            }
+            const download = request(task.url);
+            const write = fs.createWriteStream(savePath);
+            download.on("error", (error) => {
+                reject(error);
+            });
+            write.on("error", (error) => {
+                reject(error);
+            });
+            download.pipe(write);
+            write.on("finish", () => {
+                resolve();
+            });
+        });
+    });
+}

@@ -279,7 +279,7 @@ export default class NodeSpider extends EventEmitter {
             } else {
                 const task = this._STATE.downloadQueue.next();
                 this.emit("start_a_task", "download");
-                this._asyncDownload(task)
+                asyncDownload(task)
                     .then(() => {
                         this.emit("done_a_task", "download");
                     })
@@ -296,7 +296,7 @@ export default class NodeSpider extends EventEmitter {
             } else {
                 const task = this._STATE.crawlQueue.next();
                 this.emit("start_a_task", "crawl");
-                this._asyncCrawling(task)
+                asyncCrawling(task)
                     .then(() => {
                         this.emit("done_a_task", "crawl");
                     })
@@ -309,84 +309,84 @@ export default class NodeSpider extends EventEmitter {
         }
     }
 
-    /**
-     * request promise. resolve({error, response})
-     * @param opts {url, method, encoding}
-     */
-    protected _asyncRequest(opts) {
-        return new Promise((resolve, reject) => {
-            request(opts, (error, response) => {
-                resolve({ error, response });
-            });
-        });
-    }
+}
 
-    protected async _asyncCrawling(task: ICrawlQueueItem) {
-        // first, request
-        let {error, response}: any = await this._asyncRequest({
-            encoding: null,
-            method: "GET",
-            url: task.url,
+/**
+ * request promise. resolve({error, response})
+ * @param opts {url, method, encoding}
+ */
+function asyncRequest(opts) {
+    return new Promise((resolve, reject) => {
+        request(opts, (error, response) => {
+            resolve({ error, response });
         });
-        // 为什么 currentTask.response.body 已经存在, 还要一个 currentTask.body?
-        // currentTask.response.body 为请求返回的原始body（二进制），供开发者查询
-        // currentTask.body 则是正文字符串，供开发者使用
-        let currentTask: ICrawlCurrentTask = {
-            $: null,
-            body: response.body.toString(),
-            error,
-            response,
-            ... task,
-        };
-        // then, clear
-        error = null;
-        response = null;
-        // operate preprocessing
-        if (! currentTask.error) {
-            try {
-                for (const pre of this._STATE.option.preprocessing) {
-                    currentTask = await pre(this, currentTask);
-                }
-            } catch (err) {
-                currentTask.error = err;
+    });
+}
+
+async function asyncCrawling(task: ICrawlQueueItem) {
+    // first, request
+    let {error, response}: any = await this._asyncRequest({
+        encoding: null,
+        method: "GET",
+        url: task.url,
+    });
+    // 为什么 currentTask.response.body 已经存在, 还要一个 currentTask.body?
+    // currentTask.response.body 为请求返回的原始body（二进制），供开发者查询
+    // currentTask.body 则是正文字符串，供开发者使用
+    let currentTask: ICrawlCurrentTask = {
+        $: null,
+        body: response.body.toString(),
+        error,
+        response,
+        ... task,
+    };
+    // then, clear
+    error = null;
+    response = null;
+    // operate preprocessing
+    if (! currentTask.error) {
+        try {
+            for (const pre of this._STATE.option.preprocessing) {
+                currentTask = await pre(this, currentTask);
             }
+        } catch (err) {
+            currentTask.error = err;
         }
-        // operate strategy, then clear
-        // TODO: if there are a bug, is it can be throwed?
-        await currentTask.strategy(currentTask.error, currentTask, currentTask.$);
-        currentTask = null;
     }
+    // operate strategy, then clear
+    // TODO: if there are a bug, is it can be throwed?
+    await currentTask.strategy(currentTask.error, currentTask, currentTask.$);
+    currentTask = null;
+}
 
-    protected async _asyncDownload(task: IDownloadQueueItem) {
-        return new Promise((resolve, reject) => {
-            const nameIndex = task.url.lastIndexOf("/");
-            const fileName = task.url.slice(nameIndex);
+async function asyncDownload(task: IDownloadQueueItem) {
+    return new Promise((resolve, reject) => {
+        const nameIndex = task.url.lastIndexOf("/");
+        const fileName = task.url.slice(nameIndex);
 
-            if (! task.path) {
-                task.path = this._STATE.option.defaultDownloadPath;
-            }
+        if (! task.path) {
+            task.path = this._STATE.option.defaultDownloadPath;
+        }
 
-            let savePath;
-            if (task.path[task.path.length - 1] === "/") {
-                savePath = task.path.slice(0, task.path.length - 1) + fileName;
-            } else {
-                savePath = task.path + fileName;
-            }
+        let savePath;
+        if (task.path[task.path.length - 1] === "/") {
+            savePath = task.path.slice(0, task.path.length - 1) + fileName;
+        } else {
+            savePath = task.path + fileName;
+        }
 
-            const download = request(task.url);
-            const write = fs.createWriteStream(savePath);
-            download.on("error", (error) => {
-                reject(error);
-            });
-            write.on("error", (error) => {
-                reject(error);
-            });
-
-            download.pipe(write);
-            write.on("finish", () => {
-                resolve();
-            });
+        const download = request(task.url);
+        const write = fs.createWriteStream(savePath);
+        download.on("error", (error) => {
+            reject(error);
+        });
+        write.on("error", (error) => {
+            reject(error);
         });
 
-    }
+        download.pipe(write);
+        write.on("finish", () => {
+            resolve();
+        });
+    });
 }

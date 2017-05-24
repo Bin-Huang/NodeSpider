@@ -34,7 +34,7 @@ export class TxtTable {
             this.stream.write(headerString);
         }
         let chunk = "";
-        for (let item of this.header) {
+        for (const item of this.header) {
             chunk += data[item] + "\t";
         }
         chunk += "\n";
