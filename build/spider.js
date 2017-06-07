@@ -247,7 +247,7 @@ class NodeSpider extends events_1.EventEmitter {
         }
     }
     /**
-     * 火力全开，尝试不断启动新任务，让当前任务数达到最大限制数
+     * 火力全开，不断尝试启动新任务，直到当前任务数达到最大限制数
      */
     _fire() {
         while (this._STATE.currentMultiDownload < this._STATE.option.multiDownload) {
