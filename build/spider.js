@@ -20,6 +20,7 @@ const fs = require("fs");
 const request = require("request");
 const decode_1 = require("./decode");
 const loadJQ_1 = require("./loadJQ");
+const plan_1 = require("./plan");
 const Table_1 = require("./Table");
 const TaskQueue_1 = require("./TaskQueue");
 const defaultOption = {
@@ -206,91 +207,109 @@ class NodeSpider extends events_1.EventEmitter {
             task._INFO.finalErrorCallback(task);
         }
     }
-    // item可以是字符串路径，也可以是对象。若字符串则保存为 txt 或json
-    // 如果是对象，则获得对象的 header 属性并对要保存路径进行检测。通过则调用对象 add 方法。
-    // 每一个人都可以开发 table 对象的生成器。只需要提供 header 和 add 接口。其他由开发者考虑如何完成。
-    save(item, data) {
-        // TODO: 如果item为对象，则为数据库。通过用户在 item 中自定义的标识符来判断是否已存在
-        // 暂时只完成保存到文本的功能，所以默认 item 为文件路径字符串
-        if (typeof item === "string") {
-            if (!this._STATE.tables[item]) {
-                // 如果不存在，则新建一个table实例
-                // 根据路径中的文件后缀名，决定新建哪种table
-                if (/.txt$/.test(item)) {
-                    this._STATE.tables[item] = new Table_1.TxtTable(item);
-                }
-                else {
-                    this._STATE.tables[item] = new Table_1.JsonTable(item);
-                }
-            }
-            item = this._STATE.tables[item];
+    plan(item) {
+        if (typeof item === "function") {
+            const newPlan = new plan_1.Plan(item, null, null, null);
+            const id = this._STATE.planStore.push(newPlan);
+            return id - 1;
         }
-        if (item.header === null) {
-            return item.add(data);
-        }
-        else {
-            const thisHeader = Object.keys(data);
-            // 保证 data 与 table 的header 完全一致，不能多也不能少
-            // 如果不匹配，则报错
-            item.header.map((u) => {
-                if (thisHeader.indexOf(u) === -1) {
-                    return new Error("header do not match");
-                }
-            });
-            thisHeader.map((u) => {
-                if (item.header.indexOf(u) === -1) {
-                    return new Error("header do not match");
-                }
-            });
-            // 一切正常，则传给 item
-            return item.add(data);
-        }
-    }
-    /**
-     * 火力全开，不断尝试启动新任务，直到当前任务数达到最大限制数
-     */
-    _fire() {
-        while (this._STATE.currentMultiDownload < this._STATE.option.multiDownload) {
-            if (this._STATE.downloadQueue.isDone()) {
-                break;
+        if (typeof item === "object") {
+            if (!item.rule) {
+                throw new Error("参数缺少rule成员");
             }
-            else {
-                const task = this._STATE.downloadQueue.next();
-                this.emit("start_a_task", "download");
-                asyncDownload(task)
-                    .then(() => {
-                    this.emit("done_a_task", "download");
-                })
-                    .catch((error) => {
-                    console.log(error);
-                    this.emit("done_a_task", "download");
-                    // TODO: 错误处理
-                });
-            }
+            const rule = item.rule;
+            const request = item.request || null;
+            const use = item.use || null;
+            const info = item.info || null;
+            const newPlan = new plan_1.Plan(rule, request, use, info);
+            const id = this._STATE.planStore.push(newPlan);
+            return id - 1;
         }
-        while (this._STATE.currentMultiTask < this._STATE.option.multiTasking) {
-            if (this._STATE.crawlQueue.isDone()) {
-                break;
-            }
-            else {
-                const task = this._STATE.crawlQueue.next();
-                this.emit("start_a_task", "crawl");
-                asyncCrawling(task)
-                    .then(() => {
-                    this.emit("done_a_task", "crawl");
-                })
-                    .catch((error) => {
-                    console.log(error);
-                    this.emit("done_a_task", "crawl");
-                    // TODO: 错误处理
-                });
-            }
-        }
+        throw new Error("参数错误");
     }
 }
 NodeSpider.decode = decode_1.default;
 NodeSpider.loadJQ = loadJQ_1.default;
 exports.default = NodeSpider;
+{
+}
+save(item, data);
+{
+    // TODO: 如果item为对象，则为数据库。通过用户在 item 中自定义的标识符来判断是否已存在
+    // 暂时只完成保存到文本的功能，所以默认 item 为文件路径字符串
+    if (typeof item === "string") {
+        if (!this._STATE.tables[item]) {
+            // 如果不存在，则新建一个table实例
+            // 根据路径中的文件后缀名，决定新建哪种table
+            if (/.txt$/.test(item)) {
+                this._STATE.tables[item] = new Table_1.TxtTable(item);
+            }
+            else {
+                this._STATE.tables[item] = new Table_1.JsonTable(item);
+            }
+        }
+        item = this._STATE.tables[item];
+    }
+    if (item.header === null) {
+        return item.add(data);
+    }
+    else {
+        const thisHeader = Object.keys(data);
+        // 保证 data 与 table 的header 完全一致，不能多也不能少
+        // 如果不匹配，则报错
+        item.header.map((u) => {
+            if (thisHeader.indexOf(u) === -1) {
+                return new Error("header do not match");
+            }
+        });
+        thisHeader.map((u) => {
+            if (item.header.indexOf(u) === -1) {
+                return new Error("header do not match");
+            }
+        });
+        // 一切正常，则传给 item
+        return item.add(data);
+    }
+}
+_fire();
+{
+    while (this._STATE.currentMultiDownload < this._STATE.option.multiDownload) {
+        if (this._STATE.downloadQueue.isDone()) {
+            break;
+        }
+        else {
+            const task = this._STATE.downloadQueue.next();
+            this.emit("start_a_task", "download");
+            asyncDownload(task)
+                .then(() => {
+                this.emit("done_a_task", "download");
+            })
+                .catch((error) => {
+                console.log(error);
+                this.emit("done_a_task", "download");
+                // TODO: 错误处理
+            });
+        }
+    }
+    while (this._STATE.currentMultiTask < this._STATE.option.multiTasking) {
+        if (this._STATE.crawlQueue.isDone()) {
+            break;
+        }
+        else {
+            const task = this._STATE.crawlQueue.next();
+            this.emit("start_a_task", "crawl");
+            asyncCrawling(task)
+                .then(() => {
+                this.emit("done_a_task", "crawl");
+            })
+                .catch((error) => {
+                console.log(error);
+                this.emit("done_a_task", "crawl");
+                // TODO: 错误处理
+            });
+        }
+    }
+}
 /**
  * request promise. resolve({error, response})
  * @param opts {url, method, encoding}

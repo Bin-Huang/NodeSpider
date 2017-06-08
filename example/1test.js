@@ -20,9 +20,12 @@ const getNews = n.plan((err, current) => {
 });
 
 const userJsonSave = n.table(NodeSpider.saveAsJson("/user.json", 4));
-const getPicture = n.Stragter({
+const getPicture = n.plan({
     request: {
         cookies: "khkhkjnknkjbbkbjhbjv",
+        header: {
+            "klsdfjskl"
+        },
     },
     use: [
         NodeSpider.decode("utf8"),

@@ -1,3 +1,4 @@
+import { Plan } from "./plan";
 import TaskQueue from "./TaskQueue";
 
 // public opts for crawlTask and downloadTask
@@ -64,6 +65,7 @@ export interface IState {
     crawlQueue: TaskQueue<ICrawlQueueItem>;
     downloadQueue: TaskQueue<IDownloadQueueItem>;
     tables: Map<string, any>;
+    planStore: Plan[];
     option: IGlobalOption;
     working: boolean;
     currentMultiTask: number;

@@ -15,6 +15,7 @@ import * as request from "request";
 import * as url from "url";
 import decode from "./decode";
 import loadJQ from "./loadJQ";
+import { IPlanInput, IRule, Plan } from "./plan";
 import { JsonTable, TxtTable } from "./Table";
 import TaskQueue from "./TaskQueue";
 import {
@@ -228,10 +229,35 @@ export default class NodeSpider extends EventEmitter {
 
     }
 
+    public plan(item: IRule|IPlanInput) {
+        if (typeof item === "function") {
+            const newPlan = new Plan(item, null, null, null);
+            const id = this._STATE.planStore.push(newPlan);
+            return id - 1;
+        }
+        if (typeof item === "object") {
+            if (! item.rule) {
+                throw new Error("参数缺少rule成员");
+            }
+            const rule = item.rule;
+            const request = item.request || null;
+            const use = item.use || null;
+            const info = item.info || null;
+            const newPlan = new Plan(rule, request, use, info);
+            const id = this._STATE.planStore.push(newPlan);
+            return id - 1;
+        }
+        throw new Error("参数错误");
+    }
+
+    public pipe(pipeClass); {
+
+    }
+
     // item可以是字符串路径，也可以是对象。若字符串则保存为 txt 或json
     // 如果是对象，则获得对象的 header 属性并对要保存路径进行检测。通过则调用对象 add 方法。
     // 每一个人都可以开发 table 对象的生成器。只需要提供 header 和 add 接口。其他由开发者考虑如何完成。
-    public save(item, data) {
+    public save(item, data); {
         // TODO: 如果item为对象，则为数据库。通过用户在 item 中自定义的标识符来判断是否已存在
         // 暂时只完成保存到文本的功能，所以默认 item 为文件路径字符串
         if (typeof item === "string") {
@@ -272,7 +298,7 @@ export default class NodeSpider extends EventEmitter {
     /**
      * 火力全开，不断尝试启动新任务，直到当前任务数达到最大限制数
      */
-    protected _fire() {
+    protected _fire(); {
         while (this._STATE.currentMultiDownload < this._STATE.option.multiDownload) {
             if (this._STATE.downloadQueue.isDone()) {
                 break;
