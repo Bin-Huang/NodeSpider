@@ -3,19 +3,39 @@ const n = new NodeSpider({
     maxC: 30,
 });
 
-const getNews = n.createStragter((err, current) => {
+const getNews = n.plan((err, current) => {
+    if (err) {
+        return getNews.retry(current, 3);
+    }
     const $ = current.$;
     n.save({title = $("title").text()});
     $("a").forEach(() => {
-        getNews($(this).url());
-        downloadImg($(this).src());
+        n.queue(getNewsPlan, $(this).url());
+        n.download($(this).src());
+        $(this).queue();
+        $(this).queue(getNews);
+        $(this).download();
+        $(this).downloadSrc(downPlan);
     });
 });
 
-const getPicture = n.createStragter({
-    pre: [NodeSpider.decode, NodeSpider.loadJq],
-    cookies: "dfjskljkwioivwkljekjf",
-    callback: (err, current) => {
+const userJsonSave = n.table(NodeSpider.saveAsJson("/user.json", 4));
+const getPicture = n.Stragter({
+    request: {
+        cookies: "khkhkjnknkjbbkbjhbjv",
+    },
+    use: [
+        NodeSpider.decode("utf8"),
+        NodeSpider.loadJq(),
+        NodeSpider.plantform({
+            someOpts: true,
+        }),
+    ],
+    rule: (err, current) => {
+        userJson.save({
+            name: $("a").text(),
+        });
+        downloadAndCompress($("#targetFile").url());
         return null;
     },
 });
@@ -24,18 +44,22 @@ getNews("http://www.baidu.com", {
     path: "skdlfjskljfkls",
 });
 
-const s = new NodeSpider({
-    maxL: 30,
+const downloadAndCompress = n.download({
+    middle: [
+        NodeSpider.Compress(),
+    ],
+    pathToSave: "",
 });
-function myT(err, current) {
-    if (err) {
-        return null;
-    }
-    const $ = current.$;
-    $("a").forEach(() => {
-        $(this).todo();
-        $(this).todo(getdddd);
-    });
-}
 
-s.addTask("ksldfjslkfj", myT);
+const downloadImg = n.downloadPlan({
+    path: "xx/",
+});
+
+const userInfo = n.pipe(NodeSpider.txtPipe({
+    path: "/x/my.json",
+    tags: 4,
+}));
+
+const s = new NodeSpider();
+const dl = s.downloadStarget();
+dl(data);
