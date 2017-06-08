@@ -61,6 +61,7 @@ export default class NodeSpider extends EventEmitter {
             currentMultiTask: 0, // 当前正在进行的任务数量
             downloadQueue: this._STATE.option.downloadQueue,
             option: Object.assign({}, defaultOption, opts),
+            planStore: new Map(),
             tables: new Map(),
             working: true,
         };
@@ -229,11 +230,13 @@ export default class NodeSpider extends EventEmitter {
 
     }
 
-    public plan(item: IRule|IPlanInput) {
+    public plan(item: IRule|IPlanInput): symbol {
         if (typeof item === "function") {
             const newPlan = new Plan(item, null, null, null);
-            const id = this._STATE.planStore.push(newPlan);
-            return id - 1;
+            const id = this._STATE.planStore.size + 1;
+            const key = Symbol("plan" + id);
+            this._STATE.planStore.set(key, newPlan);
+            return key;
         }
         if (typeof item === "object") {
             if (! item.rule) {
@@ -244,20 +247,47 @@ export default class NodeSpider extends EventEmitter {
             const use = item.use || null;
             const info = item.info || null;
             const newPlan = new Plan(rule, request, use, info);
-            const id = this._STATE.planStore.push(newPlan);
-            return id - 1;
+            const id = this._STATE.planStore.size + 1;
+            const key = Symbol("plan" + id);
+            this._STATE.planStore.set(key, newPlan);
+            return key;
         }
         throw new Error("参数错误");
     }
 
-    public pipe(pipeClass); {
-
+    /**
+     * 添加待爬取链接到队列，并指定爬取计划。
+     * @param planKey 指定的爬取计划
+     * @param url 待爬取的链接（们）
+     */
+    public queue(planKey: symbol, url: string | string[]) {
+        // 参数检验
+        if (typeof planKey !== "symbol" || typeof url !== "string" || !Array.isArray(url)) {
+            return new TypeError("queue 参数错误");
+        }
+        // 确定添加到哪个队列(crawlQueue还是downloadQueue?)
+        let queue = null;
+        if (this._STATE.planStore.has(planKey)) {
+            queue = this._STATE.crawlQueue;
+        } else if (this._STATE.dlPlanStore.has(planKey)) {
+            queue = this._STATE.downloadQueue;
+        } else {
+            return new RangeError("plan 不存在");
+        }
+        // 添加到队列
+        if (! Array.isArray(url)) {
+            queue.add({url, plan: planKey});
+        } else {
+            url.map((u) => {
+                queue.add({url, plan: planKey});
+            });
+        }
     }
 
     // item可以是字符串路径，也可以是对象。若字符串则保存为 txt 或json
     // 如果是对象，则获得对象的 header 属性并对要保存路径进行检测。通过则调用对象 add 方法。
     // 每一个人都可以开发 table 对象的生成器。只需要提供 header 和 add 接口。其他由开发者考虑如何完成。
-    public save(item, data); {
+    public save(item, data) {
         // TODO: 如果item为对象，则为数据库。通过用户在 item 中自定义的标识符来判断是否已存在
         // 暂时只完成保存到文本的功能，所以默认 item 为文件路径字符串
         if (typeof item === "string") {
@@ -298,7 +328,7 @@ export default class NodeSpider extends EventEmitter {
     /**
      * 火力全开，不断尝试启动新任务，直到当前任务数达到最大限制数
      */
-    protected _fire(); {
+    protected _fire() {
         while (this._STATE.currentMultiDownload < this._STATE.option.multiDownload) {
             if (this._STATE.downloadQueue.isDone()) {
                 break;

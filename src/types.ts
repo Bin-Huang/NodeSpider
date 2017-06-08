@@ -65,7 +65,8 @@ export interface IState {
     crawlQueue: TaskQueue<ICrawlQueueItem>;
     downloadQueue: TaskQueue<IDownloadQueueItem>;
     tables: Map<string, any>;
-    planStore: Plan[];
+    planStore: Map<symbol, Plan>;
+    dlPlanStore: Map<symbol, Plan>;
     option: IGlobalOption;
     working: boolean;
     currentMultiTask: number;
