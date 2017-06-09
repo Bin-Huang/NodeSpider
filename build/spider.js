@@ -21,16 +21,15 @@ const request = require("request");
 const decode_1 = require("./decode");
 const loadJQ_1 = require("./loadJQ");
 const plan_1 = require("./plan");
+const queue_1 = require("./queue");
 const Table_1 = require("./Table");
-const TaskQueue_1 = require("./TaskQueue");
 const defaultOption = {
-    crawlQueue: new TaskQueue_1.default("url"),
     defaultDownloadPath: "",
     defaultRetry: 3,
-    downloadQueue: new TaskQueue_1.default("url"),
     multiDownload: 2,
     multiTasking: 20,
     preprocessing: [decode_1.default, loadJQ_1.default],
+    queue: new queue_1.default(),
 };
 /**
  * class of NodeSpider
@@ -44,13 +43,13 @@ class NodeSpider extends events_1.EventEmitter {
     constructor(opts = {}) {
         super();
         this._STATE = {
-            crawlQueue: this._STATE.option.crawlQueue,
             currentMultiDownload: 0,
             currentMultiTask: 0,
-            downloadQueue: this._STATE.option.downloadQueue,
+            dlPlanStore: new Map(),
             option: Object.assign({}, defaultOption, opts),
+            pipeStore: new Map(),
             planStore: new Map(),
-            tables: new Map(),
+            queue: this._STATE.option.queue,
             working: true,
         };
         // 每开始一个任务，状态中对应当前异步任务数的记录值加1
@@ -263,6 +262,12 @@ class NodeSpider extends events_1.EventEmitter {
             });
         }
     }
+    // 关于pipeGenerator
+    // 提供 add、close、init
+    // 当第一次被save调用时，先触发init后再add（这样就不会生成空文件）
+    // 爬虫生命周期末尾，自动调用close清理工作
+    pipe(pipeGenerator) {
+    }
     // item可以是字符串路径，也可以是对象。若字符串则保存为 txt 或json
     // 如果是对象，则获得对象的 header 属性并对要保存路径进行检测。通过则调用对象 add 方法。
     // 每一个人都可以开发 table 对象的生成器。只需要提供 header 和 add 接口。其他由开发者考虑如何完成。
@@ -347,6 +352,7 @@ class NodeSpider extends events_1.EventEmitter {
 }
 NodeSpider.decode = decode_1.default;
 NodeSpider.loadJQ = loadJQ_1.default;
+NodeSpider.Queue = queue_1.default;
 exports.default = NodeSpider;
 /**
  * request promise. resolve({error, response})

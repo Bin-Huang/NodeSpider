@@ -1,4 +1,19 @@
-import TaskQueue from "./TaskQueue";
+import { Plan } from "./plan";
+export interface IQueue {
+    addCrawl: (newTask: ITask) => void;
+    addDownload: (newTask: ITask) => void;
+    jumpCrawl: (newTask: ITask) => void;
+    jumpDownload: (newTask: ITask) => void;
+    check: (url: string) => boolean;
+    crawlWaitingNum: () => number;
+    downloadWaitingNum: () => number;
+    totalWaitingNum: () => number;
+    allUrlNum: () => number;
+    isCrawlCompleted: () => boolean;
+    isDownloadCompleted: () => boolean;
+    isAllCompleted: () => boolean;
+    getTask: () => ITask;
+}
 export interface IPublicOption {
 }
 export interface ICrawlOption extends IPublicOption {
@@ -39,17 +54,26 @@ export interface IDownloadQueueItem extends IDownloadTaskInput {
 }
 export interface IDownloadCurrentTask extends IDownloadQueueItem {
 }
-export interface IStatus {
-    _working: boolean;
-    _currentMultiTask: number;
-    _currentMultiDownload: number;
+export interface IState {
+    queue: IQueue;
+    planStore: Map<symbol, Plan>;
+    dlPlanStore: Map<symbol, Plan>;
+    pipeStore: Map<symbol, Plan>;
+    option: IGlobalOption;
+    working: boolean;
+    currentMultiTask: number;
+    currentMultiDownload: number;
 }
 export interface IGlobalOption extends ICrawlOption, IDownloadOption {
     multiTasking: number;
     multiDownload: number;
     defaultRetry: number;
     defaultDownloadPath: string;
-    crawlQueue: TaskQueue<ICrawlQueueItem>;
-    downloadQueue: TaskQueue<IDownloadQueueItem>;
+    queue: IQueue;
     preprocessing: any[];
+}
+export interface ITask {
+    url: string;
+    plan: symbol;
+    special?: any;
 }

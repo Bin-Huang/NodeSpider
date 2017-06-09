@@ -1,5 +1,22 @@
 import { Plan } from "./plan";
-import TaskQueue from "./TaskQueue";
+
+export interface IQueue {
+    addCrawl: (newTask: ITask) => void;
+    addDownload: (newTask: ITask) => void;
+    jumpCrawl: (newTask: ITask) => void;
+    jumpDownload: (newTask: ITask) => void;
+    check: (url: string) => boolean;
+    crawlWaitingNum: () => number;
+    downloadWaitingNum: () => number;
+    totalWaitingNum: () => number;
+    allUrlNum: () => number;
+    isCrawlCompleted: () => boolean;
+    isDownloadCompleted: () => boolean;
+    isAllCompleted: () => boolean;
+    getTask: () => ITask;
+}
+
+// import TaskQueue from "./TaskQueue";
 
 // public opts for crawlTask and downloadTask
 export interface IPublicOption {
@@ -62,11 +79,10 @@ export interface IDownloadCurrentTask extends IDownloadQueueItem {
 
 // NodeSpider' state
 export interface IState {
-    crawlQueue: TaskQueue<ICrawlQueueItem>;
-    downloadQueue: TaskQueue<IDownloadQueueItem>;
-    tables: Map<string, any>;
+    queue: IQueue;
     planStore: Map<symbol, Plan>;
     dlPlanStore: Map<symbol, Plan>;
+    pipeStore: Map<symbol, Plan>;
     option: IGlobalOption;
     working: boolean;
     currentMultiTask: number;
@@ -80,8 +96,14 @@ export interface IGlobalOption extends ICrawlOption, IDownloadOption {
     defaultRetry: number;
     defaultDownloadPath: string;
 
-    crawlQueue: TaskQueue<ICrawlQueueItem>;
-    downloadQueue: TaskQueue<IDownloadQueueItem>;
+    queue: IQueue;
 
     preprocessing: any[];
+}
+
+// for task object in the queue;
+export interface ITask {
+    url: string;
+    plan: symbol;
+    special?: any;
 }

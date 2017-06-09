@@ -1,21 +1,31 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
+import { IQueue, ITask } from "./types";
+
+interface ILinkNode {
+    value: any;
+    next: ILinkNode;
+}
+
 /**
  * 可遍历的链表类
  */
 class LinkedQueue {
+    protected _HEAD: ILinkNode;
+    protected _END: ILinkNode;
+    protected _LENGTH: number;
+
     constructor() {
         this._HEAD = null;
         this._END = this._HEAD;
         this._LENGTH = 0;
     }
+
     /**
      * 将新的值作为尾结点添加到链表
      * @param {*} value
      * @memberOf LinkedQueue
      */
-    add(value) {
-        const newLinkNode = {
+    public add(value: any) {
+        const newLinkNode: ILinkNode = {
             value,
             next: null,
         };
@@ -23,140 +33,148 @@ class LinkedQueue {
         if (this._HEAD) {
             this._END.next = newLinkNode;
             this._END = newLinkNode;
-        }
-        else {
+        } else {
             this._HEAD = this._END = newLinkNode;
         }
     }
+
     /**
      * 返回当前头节点的值，并抛弃头节点
      * @returns
      * @returns {*} value
      * @memberOf LinkedQueue
      */
-    next() {
+    public next() {
         const current = this._HEAD;
         if (!current) {
             return null;
-        }
-        else {
+        } else {
             this._HEAD = this._HEAD.next; // 丢弃头链环，回收已遍历链节的内存
+
             // 当链表中无元素时，保证 _END 为 null
-            if (!this._HEAD) {
+            if (! this._HEAD) {
                 this._END = null;
             }
+
             this._LENGTH--;
             return current.value;
         }
     }
+
     /**
      * 将新的值作为头节点添加到链表（插队）
      * @param {any} value
      * @memberOf LinkedQueue
      */
-    jump(value) {
-        const newLinkNode = {
+    public jump(value) {
+        const newLinkNode: ILinkNode = {
             value,
             next: null,
         };
         this._LENGTH++;
+
         if (this._HEAD) {
             newLinkNode.next = this._HEAD;
             this._HEAD = newLinkNode;
-        }
-        else {
+        } else {
             this._HEAD = this._END = newLinkNode;
         }
     }
+
     /**
      * 返回链表的长度
      * @returns
      * @memberOf LinkedQueue
      */
-    getLength() {
+    public getLength() {
         return this._LENGTH;
     }
+
     /**
      * 判断队列是否为空
      * @returns {boolean} 当没有节点时，返回 true
      * @memberOf LinkedQueue
      */
-    isEmpty() {
+    public isEmpty() {
         if (this._HEAD) {
             return false;
-        }
-        else {
+        } else {
             return true;
         }
     }
 }
+
 /**
  * 为NodeSpider量身定做的taskqueue
  */
 // tslint:disable-next-line:max-classes-per-file
-class Queue {
+export default class Queue implements IQueue {
+    protected urlPool: Set<string>;
+    protected crawlQueue: LinkedQueue;
+    protected downloadQueue: LinkedQueue;
     constructor() {
         this.urlPool = new Set();
         this.crawlQueue = new LinkedQueue();
         this.downloadQueue = new LinkedQueue();
     }
-    addCrawl(newTask) {
+    public addCrawl(newTask: ITask) {
         this.urlPool.add(newTask.url);
         this.crawlQueue.add(newTask);
     }
-    addDownload(newTask) {
+    public addDownload(newTask: ITask) {
         this.urlPool.add(newTask.url);
         this.downloadQueue.add(newTask);
     }
-    jumpCrawl(newTask) {
+    public jumpCrawl(newTask: ITask) {
         this.urlPool.add(newTask.url);
         this.crawlQueue.jump(newTask);
     }
-    jumpDownload(newTask) {
+    public jumpDownload(newTask: ITask) {
         this.urlPool.add(newTask.url);
         this.downloadQueue.jump(newTask);
     }
-    check(url) {
+    public check(url: string) {
         return this.urlPool.has(url);
     }
-    crawlWaitingNum() {
+    public crawlWaitingNum() {
         return this.crawlQueue.getLength();
     }
-    downloadWaitingNum() {
+    public downloadWaitingNum() {
         return this.downloadQueue.getLength();
     }
-    totalWaitingNum() {
+    public totalWaitingNum() {
         return this.crawlQueue.getLength() + this.downloadQueue.getLength();
     }
-    allUrlNum() {
+    public allUrlNum() {
         return this.urlPool.size;
     }
-    isCrawlCompleted() {
+    public isCrawlCompleted() {
         return this.crawlQueue.isEmpty();
     }
-    isDownloadCompleted() {
+    public isDownloadCompleted() {
         return this.downloadQueue.isEmpty();
     }
-    isAllCompleted() {
+    public isAllCompleted() {
         return this.crawlQueue.isEmpty() && this.downloadQueue.isEmpty();
     }
-    getTask() {
+    public getTask() {
         let result = this.downloadQueue.next();
-        if (!result) {
+        if (! result) {
             result = this.crawlQueue.next();
         }
-        if (!result) {
+        if (! result) {
             return null;
         }
         return result;
     }
 }
-exports.default = Queue;
 // tslint:disable-next-line:max-classes-per-file
+
 // export default class TaskQueue<T> {
 //     protected _SET: Set < any > ;
 //     protected key: string;
 //     private _QUEUE: LinkedQueue;
+
 //     /**
 //      * 为任务排队设计的队列
 //      * @param {string} key 元素的标识符，用来判断元素是否已经存在
@@ -166,6 +184,7 @@ exports.default = Queue;
 //         this._QUEUE = new LinkedQueue();
 //         this.key = key;
 //     }
+
 //     /**
 //      * 向队列添加新元素，并记录标识符。
 //      * @param item {*} 待添加的元素。必须包含队列需要的标识符成员，否则报错
@@ -178,6 +197,7 @@ exports.default = Queue;
 //         this._QUEUE.add(item);
 //         this._SET.add(id);
 //     }
+
 //     /**
 //      * 向队列添加新元素并插队，以及记录标识符
 //      * @param item {*} 待添加的元素。必须包含标识符成员，否则报错
@@ -190,6 +210,7 @@ exports.default = Queue;
 //         this._QUEUE.jump(item);
 //         this._SET.add(id);
 //     }
+
 //     /**
 //      * 查询队列是否已添加过标识符为输入参数的元素（即使元素已被提取）
 //      * @param id {string} 需要查询的标识符
@@ -198,6 +219,7 @@ exports.default = Queue;
 //     public check(id: string) {
 //         return this._SET.has(id);
 //     }
+
 //     /**
 //      * 从清单中单向读取一个元素. 每次调用都会按顺序返回不同的项目
 //      * @returns {T} 当前的项目
@@ -205,6 +227,7 @@ exports.default = Queue;
 //     public next() {
 //         return (this._QUEUE.next()) as T;
 //     }
+
 //     /**
 //      * 返回清单中未读取元素的数量
 //      * @returns {number}
@@ -212,6 +235,7 @@ exports.default = Queue;
 //     public getLength() {
 //         return this._QUEUE.getLength();
 //     }
+
 //     /**
 //      * 返回清单中所有添加过的元素数量（包括已读取和未读取）
 //      * @returns {number}
@@ -219,6 +243,7 @@ exports.default = Queue;
 //     public getSize() {
 //         return this._SET.size;
 //     }
+
 //     /**
 //      * 判断是否已读取清单中所有任务,如果没有未读取任务，返回true
 //      * @returns {boolean}

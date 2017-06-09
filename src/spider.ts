@@ -16,8 +16,8 @@ import * as url from "url";
 import decode from "./decode";
 import loadJQ from "./loadJQ";
 import { IPlanInput, IRule, Plan } from "./plan";
+import Queue from "./queue";
 import { JsonTable, TxtTable } from "./Table";
-import TaskQueue from "./TaskQueue";
 import {
     ICrawlCurrentTask,
     ICrawlQueueItem,
@@ -30,13 +30,12 @@ import {
 } from "./types";
 
 const defaultOption: IGlobalOption = {
-    crawlQueue: new TaskQueue<ICrawlQueueItem>("url"),
     defaultDownloadPath: "",
     defaultRetry: 3,
-    downloadQueue: new TaskQueue<IDownloadQueueItem>("url"),
     multiDownload: 2,
     multiTasking: 20,
     preprocessing: [decode, loadJQ],
+    queue: new Queue(),
 };
 
 /**
@@ -46,6 +45,7 @@ const defaultOption: IGlobalOption = {
 export default class NodeSpider extends EventEmitter {
     public static decode = decode;
     public static loadJQ = loadJQ;
+    public static Queue = Queue;
 
     protected _STATE: IState;
     /**
@@ -56,13 +56,13 @@ export default class NodeSpider extends EventEmitter {
         super();
 
         this._STATE = {
-            crawlQueue: this._STATE.option.crawlQueue,
             currentMultiDownload: 0,   // 当前进行的下载的数量
             currentMultiTask: 0, // 当前正在进行的任务数量
-            downloadQueue: this._STATE.option.downloadQueue,
+            dlPlanStore: new Map(),
             option: Object.assign({}, defaultOption, opts),
+            pipeStore: new Map(),
             planStore: new Map(),
-            tables: new Map(),
+            queue: this._STATE.option.queue,
             working: true,
         };
 
@@ -282,6 +282,14 @@ export default class NodeSpider extends EventEmitter {
                 queue.add({url, plan: planKey});
             });
         }
+    }
+
+    // 关于pipeGenerator
+    // 提供 add、close、init
+    // 当第一次被save调用时，先触发init后再add（这样就不会生成空文件）
+    // 爬虫生命周期末尾，自动调用close清理工作
+    public pipe(pipeGenerator) {
+
     }
 
     // item可以是字符串路径，也可以是对象。若字符串则保存为 txt 或json
