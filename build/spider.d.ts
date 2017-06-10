@@ -2,9 +2,10 @@
 import { EventEmitter } from "events";
 import decode from "./decode";
 import loadJQ from "./loadJQ";
+import { jsonPipe, txtPipe } from "./pipe";
 import { IPlanInput, IRule } from "./plan";
 import Queue from "./queue";
-import { ICrawlCurrentTask, ICrawlTaskInput, IDownloadTaskInput, IState } from "./types";
+import { ICrawlCurrentTask, ICrawlTaskInput, IDownloadTaskInput, IPipe, IState } from "./types";
 /**
  * class of NodeSpider
  * @class NodeSpider
@@ -13,6 +14,8 @@ export default class NodeSpider extends EventEmitter {
     static decode: typeof decode;
     static loadJQ: typeof loadJQ;
     static Queue: typeof Queue;
+    static txtPipe: typeof txtPipe;
+    static jsonPipe: typeof jsonPipe;
     protected _STATE: IState;
     /**
      * create an instance of NodeSpider
@@ -56,8 +59,8 @@ export default class NodeSpider extends EventEmitter {
      * @param url 待爬取的链接（们）
      */
     queue(planKey: symbol, url: string | string[]): RangeError;
-    pipe(pipeGenerator: any): void;
-    save(item: any, data: any): any;
+    pipe(pipeObject: IPipe): symbol;
+    save(pipeKey: symbol, data: any): Error;
     /**
      * 火力全开，不断尝试启动新任务，直到当前任务数达到最大限制数
      */

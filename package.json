@@ -5,6 +5,7 @@
   "main": "index.js",
   "typings": "./build/spider.d.ts",
   "dependencies": {
+    "apjson": "^1.0.6",
     "charset": "^1.0.0",
     "cheerio": "^0.22.0",
     "filenamify-url": "^1.0.0",

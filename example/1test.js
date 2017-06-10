@@ -24,7 +24,7 @@ const getPicture = n.plan({
     request: {
         cookies: "khkhkjnknkjbbkbjhbjv",
         header: {
-            "klsdfjskl"
+            "klsdfjskl",
         },
     },
     use: [
@@ -43,7 +43,7 @@ const getPicture = n.plan({
     },
 });
 
-getNews("http://www.baidu.com", {
+n.download(getPicture, "http://www.baidu.com", {
     path: "skdlfjskljfkls",
 });
 
@@ -58,10 +58,12 @@ const downloadImg = n.downloadPlan({
     path: "xx/",
 });
 
-const userInfo = n.pipe(NodeSpider.txtPipe({
-    path: "/x/my.json",
-    tags: 4,
-}));
+const userInfo = n.pipe(NodeSpider.txtPipe("./s/my.txt", [
+    "name",
+    "age",
+    "score",
+]));
+const userJsonInfo = n.pipe(NodeSpider.jsonPipe("./my.json", 4));
 
 const s = new NodeSpider();
 const dl = s.downloadStarget();

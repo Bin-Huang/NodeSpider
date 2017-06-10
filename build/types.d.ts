@@ -14,6 +14,10 @@ export interface IQueue {
     isAllCompleted: () => boolean;
     getTask: () => ITask;
 }
+export interface IPipe {
+    add: (data: any) => void;
+    close: () => void;
+}
 export interface IPublicOption {
 }
 export interface ICrawlOption extends IPublicOption {
@@ -58,7 +62,7 @@ export interface IState {
     queue: IQueue;
     planStore: Map<symbol, Plan>;
     dlPlanStore: Map<symbol, Plan>;
-    pipeStore: Map<symbol, Plan>;
+    pipeStore: Map<symbol, IPipe>;
     option: IGlobalOption;
     working: boolean;
     currentMultiTask: number;

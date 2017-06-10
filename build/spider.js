@@ -20,9 +20,9 @@ const fs = require("fs");
 const request = require("request");
 const decode_1 = require("./decode");
 const loadJQ_1 = require("./loadJQ");
+const pipe_1 = require("./pipe");
 const plan_1 = require("./plan");
 const queue_1 = require("./queue");
-const Table_1 = require("./Table");
 const defaultOption = {
     defaultDownloadPath: "",
     defaultRetry: 3,
@@ -72,11 +72,9 @@ class NodeSpider extends events_1.EventEmitter {
         });
         // 完成一个任务后，判断是否存在未进行任务、进行中未完成任务，如果都不存在则触发“end”事件，否则“火力全开”
         this.on("done_a_task", (type) => {
-            const crawlTaskAllDone = (this._STATE.crawlQueue.getLength() === 0);
-            const downloadTaskAllDone = (this._STATE.downloadQueue.getLength() === 0);
             const multiTaskingIsEmtpy = (this._STATE.currentMultiTask === 0);
             const multiDownloadIsEmtpy = (this._STATE.currentMultiDownload === 0);
-            if (crawlTaskAllDone && downloadTaskAllDone && multiDownloadIsEmtpy && multiTaskingIsEmtpy) {
+            if (this._STATE.queue.isAllCompleted() && multiDownloadIsEmtpy && multiTaskingIsEmtpy) {
                 this.emit("end");
             }
             else {
@@ -138,7 +136,7 @@ class NodeSpider extends events_1.EventEmitter {
                 return console.log("must need string");
             }
             const newTask = Object.assign({}, task, { url: u });
-            this._STATE.downloadQueue.add(newTask);
+            this._STATE.queue.addDownload(newTask);
         });
         return this._STATE.downloadQueue.getSize();
     }
@@ -242,23 +240,23 @@ class NodeSpider extends events_1.EventEmitter {
             return new TypeError("queue 参数错误");
         }
         // 确定添加到哪个队列(crawlQueue还是downloadQueue?)
-        let queue = null;
+        let addToQueue = null;
         if (this._STATE.planStore.has(planKey)) {
-            queue = this._STATE.crawlQueue;
+            addToQueue = this._STATE.queue.addCrawl;
         }
         else if (this._STATE.dlPlanStore.has(planKey)) {
-            queue = this._STATE.downloadQueue;
+            addToQueue = this._STATE.queue.addDownload;
         }
         else {
             return new RangeError("plan 不存在");
         }
         // 添加到队列
         if (!Array.isArray(url)) {
-            queue.add({ url, plan: planKey });
+            addToQueue({ url, plan: planKey });
         }
         else {
             url.map((u) => {
-                queue.add({ url, plan: planKey });
+                addToQueue({ url, plan: planKey });
             });
         }
     }
@@ -266,47 +264,22 @@ class NodeSpider extends events_1.EventEmitter {
     // 提供 add、close、init
     // 当第一次被save调用时，先触发init后再add（这样就不会生成空文件）
     // 爬虫生命周期末尾，自动调用close清理工作
-    pipe(pipeGenerator) {
+    pipe(pipeObject) {
+        // TODO C 检测参数是否符合Ipipe
+        const id = this._STATE.pipeStore.size + 1;
+        const key = Symbol("pipe" + id);
+        this._STATE.pipeStore.set(key, pipeObject);
+        return key;
     }
     // item可以是字符串路径，也可以是对象。若字符串则保存为 txt 或json
     // 如果是对象，则获得对象的 header 属性并对要保存路径进行检测。通过则调用对象 add 方法。
     // 每一个人都可以开发 table 对象的生成器。只需要提供 header 和 add 接口。其他由开发者考虑如何完成。
-    save(item, data) {
-        // TODO: 如果item为对象，则为数据库。通过用户在 item 中自定义的标识符来判断是否已存在
-        // 暂时只完成保存到文本的功能，所以默认 item 为文件路径字符串
-        if (typeof item === "string") {
-            if (!this._STATE.tables[item]) {
-                // 如果不存在，则新建一个table实例
-                // 根据路径中的文件后缀名，决定新建哪种table
-                if (/.txt$/.test(item)) {
-                    this._STATE.tables[item] = new Table_1.TxtTable(item);
-                }
-                else {
-                    this._STATE.tables[item] = new Table_1.JsonTable(item);
-                }
-            }
-            item = this._STATE.tables[item];
+    save(pipeKey, data) {
+        if (!this._STATE.pipeStore.has(pipeKey)) {
+            return new Error("unknowed pipe");
         }
-        if (item.header === null) {
-            return item.add(data);
-        }
-        else {
-            const thisHeader = Object.keys(data);
-            // 保证 data 与 table 的header 完全一致，不能多也不能少
-            // 如果不匹配，则报错
-            item.header.map((u) => {
-                if (thisHeader.indexOf(u) === -1) {
-                    return new Error("header do not match");
-                }
-            });
-            thisHeader.map((u) => {
-                if (item.header.indexOf(u) === -1) {
-                    return new Error("header do not match");
-                }
-            });
-            // 一切正常，则传给 item
-            return item.add(data);
-        }
+        const pipe = this._STATE.pipeStore.get(pipeKey);
+        pipe.add(data);
     }
     /**
      * 火力全开，不断尝试启动新任务，直到当前任务数达到最大限制数
@@ -353,6 +326,8 @@ class NodeSpider extends events_1.EventEmitter {
 NodeSpider.decode = decode_1.default;
 NodeSpider.loadJQ = loadJQ_1.default;
 NodeSpider.Queue = queue_1.default;
+NodeSpider.txtPipe = pipe_1.txtPipe;
+NodeSpider.jsonPipe = pipe_1.jsonPipe;
 exports.default = NodeSpider;
 /**
  * request promise. resolve({error, response})

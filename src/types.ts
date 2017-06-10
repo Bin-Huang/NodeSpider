@@ -16,6 +16,11 @@ export interface IQueue {
     getTask: () => ITask;
 }
 
+export interface IPipe {
+    add: (data: any) => void;
+    close: () => void;
+}
+
 // import TaskQueue from "./TaskQueue";
 
 // public opts for crawlTask and downloadTask
@@ -82,7 +87,7 @@ export interface IState {
     queue: IQueue;
     planStore: Map<symbol, Plan>;
     dlPlanStore: Map<symbol, Plan>;
-    pipeStore: Map<symbol, Plan>;
+    pipeStore: Map<symbol, IPipe>;
     option: IGlobalOption;
     working: boolean;
     currentMultiTask: number;
