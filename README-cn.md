@@ -6,11 +6,28 @@ Easier and more efficient to crawl a website and extract data, NodeSpider can sa
 简单上手、方便使用、灵活、可扩展。NodeSpider提供了很多实用的方法，让你远离大量“无聊和繁琐”的开发流程，只需专注于爬取策略，从而节省你的宝贵时间
 
 # 预处理 preprocessing
-所有预处理插件必须满足以下要求：
-- [接受参数thisSpider, currentTask]必须接受四个参数: [thisSpider, currentTask]
-- [若有异步, 必须使用 async]
-- [若为异步，resolve传递currentTask] resolve 必须传递1个参数作为结果: currentTask 当前任务信息, 其中文档操作符可以是自带的jq，也可以是 plantom的 page， 反正两者不兼容(当使用plantom时，再使用自带jq选择器是没有意义的)
-- [若为异步, reject传递error]如果预处理失败，reject 必须返回 error，以此直接报错停止
+## 使用
+```javascript
+const myPlan = n.plan({
+    use: [
+        NodeSpider.decode(),
+        NodeSpider.loadJQ(),
+        loadPlantForm({
+            // some opts;
+        }),
+    ],
+    rule: (err, current) => {
+        // ...
+    }
+})
+```
+预处理函数本质是一个返回函数的函数。声明plan时，可在use数组中按顺序执行预处理函数。
+
+## 协议
+所有预处理函数执行后，返回的函数必须满足以下要求：
+- [接受参数thisSpider, currentTask]必须接受参数: [thisSpider, currentTask]
+- [返回参数currentTask]
+- [若有异步, 必须封装到promise并返回，并以resolve传递currentTask，并以reject传递可能的error]
 
 # 错误处理的思想
 传给用户是为了让用户retry重试，或者在爬取策略中自行调试。

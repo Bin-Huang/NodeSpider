@@ -1,4 +1,5 @@
 import { Plan } from "./plan";
+import NodeSpider from "./spider";
 export interface IQueue {
     addCrawl: (newTask: ITask) => void;
     addDownload: (newTask: ITask) => void;
@@ -78,6 +79,22 @@ export interface IGlobalOption extends ICrawlOption, IDownloadOption {
 }
 export interface ITask {
     url: string;
-    plan: symbol;
+    planKey: symbol;
     special?: any;
+    maxRetry?: number;
+    hasRetried?: number;
 }
+export interface ICurrentCrawl extends ITask {
+    plan: Plan;
+    response: any;
+    body: string;
+    error: Error;
+}
+export declare type IRule = (err: Error, current: ICurrentCrawl) => void | Promise<void>;
+export interface IPlanInput {
+    rule: IRule;
+    request?: any;
+    use?: any[];
+    info?: any;
+}
+export declare type TPreOperation = (thisSpider: NodeSpider, current: ICurrentCrawl) => ICurrentCrawl | Promise<ICurrentCrawl>;

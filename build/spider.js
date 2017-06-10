@@ -82,64 +82,67 @@ class NodeSpider extends events_1.EventEmitter {
             }
         });
         // 在爬虫的生命周期末尾，需要进行一些收尾工作，比如关闭table
-        // TODO: 目前仅限 txttable 和 jsontable，更多插件形式的要怎么接入
         this.on("end", () => {
-            const values = this._STATE.tables.values();
+            const values = this._STATE.pipeStore.values();
             for (const item of values) {
                 item.close();
             }
         });
     }
-    /**
-     * Add new crawling-task to spider's todo-list (regardless of whether the link has been added)
-     * @param {ITask} task
-     * @returns {number} the number of urls has been added.
-     */
-    addTask(task) {
-        // TODO:  addTask 会习惯在 task 中直接声明 callback匿名函数，这种大量重复的匿名函数会消耗内存。
-        if (typeof task.strategy !== "function") {
-            return console.log("need function");
-        }
-        let urls;
-        if (Array.isArray(task.url)) {
-            urls = task.url;
-        }
-        else {
-            urls = [task.url];
-        }
-        urls.map((u) => {
-            if (typeof u !== "string") {
-                return console.log("must be string");
-            }
-            const newTask = Object.assign({}, task, { url: u });
-            newTask.url = u;
-            this._STATE.crawlQueue.add(newTask);
-        });
-        this._STATE.working = true;
-        this._fire();
-        return this._STATE.crawlQueue.getSize();
-    }
-    /**
-     * add new download-task to spider's download-list.
-     * @param task
-     */
-    addDownload(task) {
-        let urls;
-        if (Array.isArray(task.url)) {
-            urls = task.url;
-        }
-        else {
-            urls = [task.url];
-        }
-        urls.map((u) => {
-            if (typeof u !== "string") {
-                return console.log("must need string");
-            }
-            const newTask = Object.assign({}, task, { url: u });
-            this._STATE.queue.addDownload(newTask);
-        });
-        return this._STATE.downloadQueue.getSize();
-    }
+    // /**
+    //  * Add new crawling-task to spider's todo-list (regardless of whether the link has been added)
+    //  * @param {ITask} task
+    //  * @returns {number} the number of urls has been added.
+    //  */
+    // public addTask(task: ICrawlTaskInput) {
+    //     // TODO:  addTask 会习惯在 task 中直接声明 callback匿名函数，这种大量重复的匿名函数会消耗内存。
+    //     if (typeof task.strategy !== "function") {
+    //         return console.log("need function");
+    //     }
+    //     let urls;
+    //     if (Array.isArray(task.url)) {
+    //         urls = task.url;
+    //     } else {
+    //         urls = [ task.url ];
+    //     }
+    //     urls.map((u)  => {
+    //         if (typeof u !== "string") {
+    //             return console.log("must be string");
+    //         }
+    //         const newTask = {
+    //             ... task,
+    //             url: u,
+    //         };
+    //         newTask.url = u;
+    //         this._STATE.crawlQueue.add(newTask);
+    //     });
+    //     this._STATE.working = true;
+    //     this._fire();
+    //     return this._STATE.crawlQueue.getSize();
+    // }
+    // /**
+    //  * add new download-task to spider's download-list.
+    //  * @param task
+    //  */
+    // public addDownload(task: IDownloadTaskInput) {
+    //     let urls;
+    //     if (Array.isArray(task.url)) {
+    //         urls = task.url;
+    //     } else {
+    //         urls = [ task.url ];
+    //     }
+    //     urls.map((u) => {
+    //         if (typeof u !== "string") {
+    //             return console.log("must need string");
+    //         }
+    //         const newTask = {
+    //             ...task,
+    //             url: u,
+    //         };
+    //         this._STATE.queue.addDownload(newTask);
+    //     });
+    //     return this._STATE.downloadQueue.getSize();
+    // }
     /**
      * Check whether the url has been added
      * @param {string} url
@@ -149,9 +152,7 @@ class NodeSpider extends events_1.EventEmitter {
         if (typeof url !== "string") {
             throw new Error("method check need a string-typed param");
         }
-        const isExistCrawlQueue = this._STATE.crawlQueue.check(url);
-        const isExistDownloadQueue = this._STATE.downloadQueue.check(url);
-        return isExistCrawlQueue || isExistDownloadQueue;
+        return this._STATE.queue.check(url);
     }
     /**
      * 过滤掉一个数组中的重复链接，以及所有已被添加的链接，返回一个新数组
@@ -286,11 +287,11 @@ class NodeSpider extends events_1.EventEmitter {
      */
     _fire() {
         while (this._STATE.currentMultiDownload < this._STATE.option.multiDownload) {
-            if (this._STATE.downloadQueue.isDone()) {
+            if (this._STATE.queue.isDownloadCompleted()) {
                 break;
             }
             else {
-                const task = this._STATE.downloadQueue.next();
+                const task = this._STATE.queue.getTask();
                 this.emit("start_a_task", "download");
                 asyncDownload(task)
                     .then(() => {
@@ -304,13 +305,13 @@ class NodeSpider extends events_1.EventEmitter {
             }
         }
         while (this._STATE.currentMultiTask < this._STATE.option.multiTasking) {
-            if (this._STATE.crawlQueue.isDone()) {
+            if (this._STATE.queue.isDownloadCompleted()) {
                 break;
             }
             else {
-                const task = this._STATE.crawlQueue.next();
+                const task = this._STATE.queue.getTask();
                 this.emit("start_a_task", "crawl");
-                asyncCrawling(task)
+                this._asyncCrawling(task)
                     .then(() => {
                     this.emit("done_a_task", "crawl");
                 })
@@ -321,6 +322,45 @@ class NodeSpider extends events_1.EventEmitter {
                 });
             }
         }
+    }
+    _asyncCrawling(task) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const plan = this._STATE.planStore.get(task.planKey);
+            if (!plan) {
+                return new Error("unknown plan");
+            }
+            // request
+            const requestOpts = plan.request || {};
+            const specialOpts = task.special || {};
+            const item = Object.assign({ encoding: null }, requestOpts, specialOpts, { url: task.url });
+            const { error, response, body } = yield requestAsync(item);
+            let current = Object.assign({
+                response,
+                plan,
+                body,
+                error,
+            }, task);
+            // TODO:
+            const use = (plan.use) ? plan.use : [
+                NodeSpider.decode(),
+                NodeSpider.loadJQ(),
+            ];
+            // 按顺序执行预处理函数，对current进行预处理
+            for (const preFun of use) {
+                let result = preFun(this, current);
+                if (result instanceof Promise) {
+                    result = yield result;
+                }
+                current = result;
+            }
+            // 根据开发者定义的抓取规则进行操作
+            const result = plan.rule(error, current);
+            if (result instanceof Promise) {
+                yield result;
+            }
+            // 结尾的清理工作
+            current = null;
+        });
     }
 }
 NodeSpider.decode = decode_1.default;
@@ -338,39 +378,6 @@ function asyncRequest(opts) {
         request(opts, (error, response) => {
             resolve({ error, response });
         });
-    });
-}
-function asyncCrawling(task) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // first, request
-        let { error, response } = yield this._asyncRequest({
-            encoding: null,
-            method: "GET",
-            url: task.url,
-        });
-        // 为什么 currentTask.response.body 已经存在, 还要一个 currentTask.body?
-        // currentTask.response.body 为请求返回的原始body（二进制），供开发者查询
-        // currentTask.body 则是正文字符串，供开发者使用
-        let currentTask = Object.assign({ $: null, body: response.body.toString(), error,
-            response }, task);
-        // then, clear
-        error = null;
-        response = null;
-        // operate preprocessing
-        if (!currentTask.error) {
-            try {
-                for (const pre of this._STATE.option.preprocessing) {
-                    currentTask = yield pre(this, currentTask);
-                }
-            }
-            catch (err) {
-                currentTask.error = err;
-            }
-        }
-        // operate strategy, then clear
-        // TODO: if there are a bug, is it can be throwed?
-        yield currentTask.strategy(currentTask.error, currentTask, currentTask.$);
-        currentTask = null;
     });
 }
 function asyncDownload(task) {
@@ -400,6 +407,13 @@ function asyncDownload(task) {
             write.on("finish", () => {
                 resolve();
             });
+        });
+    });
+}
+function requestAsync(item) {
+    return new Promise((resolve, reject) => {
+        request(item, (error, response, body) => {
+            resolve({ error, response, body });
         });
     });
 }

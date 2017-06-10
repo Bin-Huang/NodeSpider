@@ -1,7 +1,11 @@
 import * as cheerio from "cheerio";
 import * as url from "url";
 import NodeSpider from "./spider";
-import {ICrawlCurrentTask} from "./types";
+import {ICurrentCrawl, TPreOperation} from "./types";
+
+export default function loadJQ(): TPreOperation {
+    return loadJqOperation;
+}
 
 /**
  * 根据currentTask.body加载jQ对象，并扩展url、todo、download方法，以第三个参数$的形式传递
@@ -9,15 +13,15 @@ import {ICrawlCurrentTask} from "./types";
  * @param currentTask
  * @return currentTask
  */
-export default function loadJQ(thisSpider: NodeSpider, currentTask: ICrawlCurrentTask) {
-    let $ = cheerio.load(currentTask.body);
+function loadJqOperation(thisSpider: NodeSpider, currentTask: ICurrentCrawl) {
+    const $ = cheerio.load(currentTask.body);
 
     // 扩展：添加 url 方法
     // 返回当前节点（们）链接的的绝对路径(array)
     // 自动处理了锚和 javascript: void(0)
-    $.prototype.url = function () {
-        let result = [];
-        $(this).each(function () {
+    $.prototype.url = function() {
+        const result = [];
+        $(this).each(function() {
             let newUrl = $(this).attr("href");
             // 如果是类似 'javascirpt: void(0)' 的 js 代码，直接跳过
             if (/^javascript/.test(newUrl)) {
@@ -28,7 +32,7 @@ export default function loadJQ(thisSpider: NodeSpider, currentTask: ICrawlCurren
                 newUrl = url.resolve(currentTask.url, newUrl);
             }
             // 去除连接中的查询和锚
-            let u = url.parse(newUrl);
+            const u = url.parse(newUrl);
             newUrl = u.protocol + u.auth + u.host + u.pathname;
             result.push(newUrl);
         });
@@ -40,8 +44,8 @@ export default function loadJQ(thisSpider: NodeSpider, currentTask: ICrawlCurren
      * @returns {array}
      */
     $.prototype.src = function() {
-        let result = [];
-        $(this).each(function () {
+        const result = [];
+        $(this).each(function() {
             let newUrl = $(this).attr("src");
             // 如果是相对路径，补全路径为绝对路径
             if (newUrl && !/^https?:\/\//.test(newUrl)) {
@@ -59,7 +63,7 @@ export default function loadJQ(thisSpider: NodeSpider, currentTask: ICrawlCurren
      * 可以传入函数作为任务的回掉函数
      * 也可以是一个包括设置的对象，如果对象中不存在callback成员，则默认当前任务的callback
      */
-    $.prototype.todo = function (option) {
+    $.prototype.todo = function(option) {
         let newUrls = $(this).url();
         newUrls = thisSpider.filter(newUrls);
 
@@ -80,7 +84,7 @@ export default function loadJQ(thisSpider: NodeSpider, currentTask: ICrawlCurren
         } else if (typeof option === "object") {
             option.callback = option.callback ? option.callback : currentTask.strategy;
             newUrls.map((u) => {
-                let newTask = Object.assign({}, option);
+                const newTask = Object.assign({}, option);
                 newTask.url = u;
                 thisSpider.addTask(newTask);
             });
@@ -95,7 +99,7 @@ export default function loadJQ(thisSpider: NodeSpider, currentTask: ICrawlCurren
      * 可以传入字符串作为下载内容的保存路径
      * 也可以是一个包括设置的对象，如果对象中不存在path成员，则为默认保存路径
      */
-    $.prototype.download = function (option) {
+    $.prototype.download = function(option) {
         let newUrls = $(this).url();
         newUrls = thisSpider.filter(newUrls);
         if (typeof option === "undefined") {
@@ -115,7 +119,7 @@ export default function loadJQ(thisSpider: NodeSpider, currentTask: ICrawlCurren
         } else if (typeof option === "object") {
             option.path = option.path ? option.path : null;
             newUrls.map((u) => {
-                let newTask = {
+                const newTask = {
                     ...option,
                     url: u,
                 };

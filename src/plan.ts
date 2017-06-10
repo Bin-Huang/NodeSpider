@@ -1,25 +1,10 @@
-export interface ICurrent {
-    url: string;
-    plan: Plan;
-    response: any;
-    body: any;
-    error: Error;
-    hasRetried?: number;
-}
-export type IRule = (err: Error, current: ICurrent) => void;
-
-export interface IPlanInput {
-    rule: IRule;
-    request?: any;
-    use?: any[];
-    info?: any;
-}
+import { IRule, TPreOperation } from "./types";
 
 export class Plan {
     public rule: IRule;
     // TODO C 更完善的类型提示
     public request: any;
-    public use: any[];
+    public use: TPreOperation[];
     public info: any;
     // TODO C 包括下面参数的类型
     constructor(rule: IRule, request: any, use: any[], info: any) {

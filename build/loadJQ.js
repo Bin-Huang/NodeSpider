@@ -2,19 +2,23 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const cheerio = require("cheerio");
 const url = require("url");
+function loadJQ() {
+    return loadJqOperation;
+}
+exports.default = loadJQ;
 /**
  * 根据currentTask.body加载jQ对象，并扩展url、todo、download方法，以第三个参数$的形式传递
  * @param thisSpider
  * @param currentTask
  * @return currentTask
  */
-function loadJQ(thisSpider, currentTask) {
-    let $ = cheerio.load(currentTask.body);
+function loadJqOperation(thisSpider, currentTask) {
+    const $ = cheerio.load(currentTask.body);
     // 扩展：添加 url 方法
     // 返回当前节点（们）链接的的绝对路径(array)
     // 自动处理了锚和 javascript: void(0)
     $.prototype.url = function () {
-        let result = [];
+        const result = [];
         $(this).each(function () {
             let newUrl = $(this).attr("href");
             // 如果是类似 'javascirpt: void(0)' 的 js 代码，直接跳过
@@ -26,7 +30,7 @@ function loadJQ(thisSpider, currentTask) {
                 newUrl = url.resolve(currentTask.url, newUrl);
             }
             // 去除连接中的查询和锚
-            let u = url.parse(newUrl);
+            const u = url.parse(newUrl);
             newUrl = u.protocol + u.auth + u.host + u.pathname;
             result.push(newUrl);
         });
@@ -37,7 +41,7 @@ function loadJQ(thisSpider, currentTask) {
      * @returns {array}
      */
     $.prototype.src = function () {
-        let result = [];
+        const result = [];
         $(this).each(function () {
             let newUrl = $(this).attr("src");
             // 如果是相对路径，补全路径为绝对路径
@@ -77,7 +81,7 @@ function loadJQ(thisSpider, currentTask) {
         else if (typeof option === "object") {
             option.callback = option.callback ? option.callback : currentTask.strategy;
             newUrls.map((u) => {
-                let newTask = Object.assign({}, option);
+                const newTask = Object.assign({}, option);
                 newTask.url = u;
                 thisSpider.addTask(newTask);
             });
@@ -112,7 +116,7 @@ function loadJQ(thisSpider, currentTask) {
         else if (typeof option === "object") {
             option.path = option.path ? option.path : null;
             newUrls.map((u) => {
-                let newTask = Object.assign({}, option, { url: u });
+                const newTask = Object.assign({}, option, { url: u });
                 thisSpider.addDownload(newTask);
             });
         }
@@ -120,4 +124,3 @@ function loadJQ(thisSpider, currentTask) {
     currentTask.$ = $;
     return currentTask;
 }
-exports.default = loadJQ;

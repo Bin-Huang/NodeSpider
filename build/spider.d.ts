@@ -3,9 +3,8 @@ import { EventEmitter } from "events";
 import decode from "./decode";
 import loadJQ from "./loadJQ";
 import { jsonPipe, txtPipe } from "./pipe";
-import { IPlanInput, IRule } from "./plan";
 import Queue from "./queue";
-import { ICrawlCurrentTask, ICrawlTaskInput, IDownloadTaskInput, IPipe, IState } from "./types";
+import { ICrawlCurrentTask, IPipe, IPlanInput, IRule, IState, ITask } from "./types";
 /**
  * class of NodeSpider
  * @class NodeSpider
@@ -23,22 +22,11 @@ export default class NodeSpider extends EventEmitter {
      */
     constructor(opts?: {});
     /**
-     * Add new crawling-task to spider's todo-list (regardless of whether the link has been added)
-     * @param {ITask} task
-     * @returns {number} the number of urls has been added.
-     */
-    addTask(task: ICrawlTaskInput): any;
-    /**
-     * add new download-task to spider's download-list.
-     * @param task
-     */
-    addDownload(task: IDownloadTaskInput): any;
-    /**
      * Check whether the url has been added
      * @param {string} url
      * @returns {boolean}
      */
-    isExist(url: string): any;
+    isExist(url: string): boolean;
     /**
      * 过滤掉一个数组中的重复链接，以及所有已被添加的链接，返回一个新数组
      * @param urlArray {array}
@@ -65,4 +53,5 @@ export default class NodeSpider extends EventEmitter {
      * 火力全开，不断尝试启动新任务，直到当前任务数达到最大限制数
      */
     protected _fire(): void;
+    protected _asyncCrawling(task: ITask): Promise<Error>;
 }

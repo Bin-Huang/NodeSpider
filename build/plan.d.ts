@@ -1,22 +1,8 @@
-export interface ICurrent {
-    url: string;
-    plan: Plan;
-    response: any;
-    body: any;
-    error: Error;
-    hasRetried?: number;
-}
-export declare type IRule = (err: Error, current: ICurrent) => void;
-export interface IPlanInput {
-    rule: IRule;
-    request?: any;
-    use?: any[];
-    info?: any;
-}
+import { IRule, TPreOperation } from "./types";
 export declare class Plan {
     rule: IRule;
     request: any;
-    use: any[];
+    use: TPreOperation[];
     info: any;
     constructor(rule: IRule, request: any, use: any[], info: any);
 }

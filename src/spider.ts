@@ -16,18 +16,22 @@ import * as url from "url";
 import decode from "./decode";
 import loadJQ from "./loadJQ";
 import { jsonPipe, txtPipe } from "./pipe";
-import { IPlanInput, IRule, Plan } from "./plan";
+import { Plan } from "./plan";
 import Queue from "./queue";
 import {
     ICrawlCurrentTask,
     ICrawlQueueItem,
     ICrawlTaskInput,
+    ICurrentCrawl,
     IDownloadCurrentTask,
     IDownloadQueueItem,
     IDownloadTaskInput,
     IGlobalOption,
     IPipe,
+    IPlanInput,
+    IRule,
     IState,
+    ITask,
 } from "./types";
 
 const defaultOption: IGlobalOption = {
@@ -96,72 +100,71 @@ export default class NodeSpider extends EventEmitter {
             }
         });
         // 在爬虫的生命周期末尾，需要进行一些收尾工作，比如关闭table
-        // TODO: 目前仅限 txttable 和 jsontable，更多插件形式的要怎么接入
         this.on("end", () => {
-            const values = this._STATE.tables.values();
+            const values = this._STATE.pipeStore.values();
             for (const item of values) {
                 item.close();
             }
         });
     }
 
-    /**
-     * Add new crawling-task to spider's todo-list (regardless of whether the link has been added)
-     * @param {ITask} task
-     * @returns {number} the number of urls has been added.
-     */
-    public addTask(task: ICrawlTaskInput) {
-        // TODO:  addTask 会习惯在 task 中直接声明 callback匿名函数，这种大量重复的匿名函数会消耗内存。
-        if (typeof task.strategy !== "function") {
-            return console.log("need function");
-        }
-        let urls;
-        if (Array.isArray(task.url)) {
-            urls = task.url;
-        } else {
-            urls = [ task.url ];
-        }
-        urls.map((u)  => {
-            if (typeof u !== "string") {
-                return console.log("must be string");
-            }
-            const newTask = {
-                ... task,
-                url: u,
-            };
-            newTask.url = u;
-            this._STATE.crawlQueue.add(newTask);
-        });
+    // /**
+    //  * Add new crawling-task to spider's todo-list (regardless of whether the link has been added)
+    //  * @param {ITask} task
+    //  * @returns {number} the number of urls has been added.
+    //  */
+    // public addTask(task: ICrawlTaskInput) {
+    //     // TODO:  addTask 会习惯在 task 中直接声明 callback匿名函数，这种大量重复的匿名函数会消耗内存。
+    //     if (typeof task.strategy !== "function") {
+    //         return console.log("need function");
+    //     }
+    //     let urls;
+    //     if (Array.isArray(task.url)) {
+    //         urls = task.url;
+    //     } else {
+    //         urls = [ task.url ];
+    //     }
+    //     urls.map((u)  => {
+    //         if (typeof u !== "string") {
+    //             return console.log("must be string");
+    //         }
+    //         const newTask = {
+    //             ... task,
+    //             url: u,
+    //         };
+    //         newTask.url = u;
+    //         this._STATE.crawlQueue.add(newTask);
+    //     });
 
-        this._STATE.working = true;
-        this._fire();
-        return this._STATE.crawlQueue.getSize();
-    }
+    //     this._STATE.working = true;
+    //     this._fire();
+    //     return this._STATE.crawlQueue.getSize();
+    // }
 
-    /**
-     * add new download-task to spider's download-list.
-     * @param task
-     */
-    public addDownload(task: IDownloadTaskInput) {
-        let urls;
-        if (Array.isArray(task.url)) {
-            urls = task.url;
-        } else {
-            urls = [ task.url ];
-        }
-        urls.map((u) => {
-            if (typeof u !== "string") {
-                return console.log("must need string");
-            }
-            const newTask = {
-                ...task,
-                url: u,
-            };
+    // /**
+    //  * add new download-task to spider's download-list.
+    //  * @param task
+    //  */
+    // public addDownload(task: IDownloadTaskInput) {
+    //     let urls;
+    //     if (Array.isArray(task.url)) {
+    //         urls = task.url;
+    //     } else {
+    //         urls = [ task.url ];
+    //     }
+    //     urls.map((u) => {
+    //         if (typeof u !== "string") {
+    //             return console.log("must need string");
+    //         }
+    //         const newTask = {
+    //             ...task,
+    //             url: u,
+    //         };
 
-            this._STATE.queue.addDownload(newTask);
-        });
-        return this._STATE.downloadQueue.getSize();
-    }
+    //         this._STATE.queue.addDownload(newTask);
+    //     });
+    //     return this._STATE.downloadQueue.getSize();
+    // }
 
     /**
      * Check whether the url has been added
@@ -172,9 +175,7 @@ export default class NodeSpider extends EventEmitter {
         if (typeof url !== "string") {
             throw new Error("method check need a string-typed param");
         }
-        const isExistCrawlQueue = this._STATE.crawlQueue.check(url);
-        const isExistDownloadQueue = this._STATE.downloadQueue.check(url);
-        return isExistCrawlQueue || isExistDownloadQueue;
+        return this._STATE.queue.check(url);
     }
 
     /**
@@ -314,10 +315,10 @@ export default class NodeSpider extends EventEmitter {
      */
     protected _fire() {
         while (this._STATE.currentMultiDownload < this._STATE.option.multiDownload) {
-            if (this._STATE.downloadQueue.isDone()) {
+            if (this._STATE.queue.isDownloadCompleted()) {
                 break;
             } else {
-                const task = this._STATE.downloadQueue.next();
+                const task = this._STATE.queue.getTask();
                 this.emit("start_a_task", "download");
                 asyncDownload(task)
                     .then(() => {
@@ -331,12 +332,12 @@ export default class NodeSpider extends EventEmitter {
             }
         }
         while (this._STATE.currentMultiTask < this._STATE.option.multiTasking) {
-            if (this._STATE.crawlQueue.isDone()) {
+            if (this._STATE.queue.isDownloadCompleted()) {
                 break;
             } else {
-                const task = this._STATE.crawlQueue.next();
+                const task = this._STATE.queue.getTask();
                 this.emit("start_a_task", "crawl");
-                asyncCrawling(task)
+                this._asyncCrawling(task)
                     .then(() => {
                         this.emit("done_a_task", "crawl");
                     })
@@ -347,6 +348,48 @@ export default class NodeSpider extends EventEmitter {
                     });
             }
         }
+    }
+
+    protected async _asyncCrawling(task: ITask) {
+        const plan = this._STATE.planStore.get(task.planKey);
+        if (! plan) {
+            return new Error("unknown plan");
+        }
+        // request
+        const requestOpts = plan.request || {};
+        const specialOpts = task.special || {};
+        const item = Object.assign({ encoding: null }, requestOpts, specialOpts, {url: task.url});
+        const {error, response, body} = await requestAsync(item);
+
+        let current: ICurrentCrawl = Object.assign({
+            response,
+            plan,
+            body,
+            error,
+        }, task);
+
+        // TODO:
+        const use = (plan.use) ? plan.use : [
+            NodeSpider.decode(),
+            NodeSpider.loadJQ(),
+        ];
+        // 按顺序执行预处理函数，对current进行预处理
+        for (const preFun of use) {
+            let result = preFun(this, current);
+            if (result instanceof Promise) {
+                result = await result;
+            }
+            current = result;
+        }
+
+        // 根据开发者定义的抓取规则进行操作
+        const result = plan.rule(error, current);
+        if (result instanceof Promise) {
+            await result;
+        }
+        // 结尾的清理工作
+        current = null;
+
     }
 
 }
@@ -361,42 +404,6 @@ function asyncRequest(opts) {
             resolve({ error, response });
         });
     });
-}
-
-async function asyncCrawling(task: ICrawlQueueItem) {
-    // first, request
-    let {error, response}: any = await this._asyncRequest({
-        encoding: null,
-        method: "GET",
-        url: task.url,
-    });
-    // 为什么 currentTask.response.body 已经存在, 还要一个 currentTask.body?
-    // currentTask.response.body 为请求返回的原始body（二进制），供开发者查询
-    // currentTask.body 则是正文字符串，供开发者使用
-    let currentTask: ICrawlCurrentTask = {
-        $: null,
-        body: response.body.toString(),
-        error,
-        response,
-        ... task,
-    };
-    // then, clear
-    error = null;
-    response = null;
-    // operate preprocessing
-    if (! currentTask.error) {
-        try {
-            for (const pre of this._STATE.option.preprocessing) {
-                currentTask = await pre(this, currentTask);
-            }
-        } catch (err) {
-            currentTask.error = err;
-        }
-    }
-    // operate strategy, then clear
-    // TODO: if there are a bug, is it can be throwed?
-    await currentTask.strategy(currentTask.error, currentTask, currentTask.$);
-    currentTask = null;
 }
 
 async function asyncDownload(task: IDownloadQueueItem) {
@@ -427,6 +434,14 @@ async function asyncDownload(task: IDownloadQueueItem) {
         download.pipe(write);
         write.on("finish", () => {
             resolve();
+        });
+    });
+}
+
+function requestAsync(item) {
+    return new Promise<{error: Error, response, body: string}>((resolve, reject) => {
+        request(item, (error, response, body) => {
+            resolve({error, response, body});
         });
     });
 }
