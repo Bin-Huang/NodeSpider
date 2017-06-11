@@ -18,7 +18,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
 const fs = require("fs");
 const request = require("request");
-const url = require("url");
 const decode_1 = require("./decode");
 const loadJQ_1 = require("./loadJQ");
 const pipe_1 = require("./pipe");
@@ -290,6 +289,14 @@ class NodeSpider extends events_1.EventEmitter {
                 addToQueue({ url, plan: planKey });
             });
         }
+        this._STATE.working = true;
+        this._fire();
+        return [
+            this._STATE.queue.crawlWaitingNum(),
+            this._STATE.queue.downloadWaitingNum(),
+            this._STATE.queue.crawlWaitingNum(),
+            this._STATE.queue.allUrlNum(),
+        ];
     }
     // 关于pipeGenerator
     // 提供 add、close、init
@@ -360,9 +367,9 @@ class NodeSpider extends events_1.EventEmitter {
                 return new Error("unknown plan");
             }
             // request
-            const requestOpts = plan.request || {};
-            const specialOpts = task.special || {};
-            const item = Object.assign({ encoding: null }, requestOpts, specialOpts, { url: task.url });
+            const requestOpts = plan.request;
+            const specialOpts = task.special;
+            const item = Object.assign(requestOpts, specialOpts, { url: task.url });
             const { error, response, body } = yield requestAsync(item);
             let current = Object.assign({
                 response,
@@ -370,12 +377,8 @@ class NodeSpider extends events_1.EventEmitter {
                 body,
                 error,
             }, task);
-            const use = (plan.use) ? plan.use : [
-                NodeSpider.decode(),
-                NodeSpider.loadJQ(),
-            ];
             // 按顺序执行预处理函数，对current进行预处理
-            for (const preFun of use) {
+            for (const preFun of plan.use) {
                 let result = preFun(this, current);
                 if (result instanceof Promise) {
                     result = yield result;
@@ -398,20 +401,16 @@ class NodeSpider extends events_1.EventEmitter {
                 return new Error("unknown plan");
             }
             // request
-            const requestOpts = plan.request || {};
-            const specialOpts = task.special || {};
-            const item = Object.assign({ encoding: null }, requestOpts, specialOpts, { url: task.url });
-            const stream = require(item);
-            // TODO C add support to transform middle
-            // if (plan.use) {
-            //     for (const item of plan.use) {
-            //         stream.pipe(item);
-            //     }
-            // }
+            const requestOpts = plan.request;
+            const specialOpts = task.special;
+            const item = Object.assign(requestOpts, specialOpts, { url: task.url });
+            let stream = require(item);
+            // TODO B 灵感写法，未必正确
+            for (const pl of plan.use) {
+                stream = stream.pipe(pl);
+            }
             // 获得文件名
-            const urlObj = url.parse(task.url);
-            const pathname = urlObj.pathname;
-            const filename = pathname.slice(pathname.lastIndexOf("/"));
+            const filename = task.url.slice(task.url.lastIndexOf("/") + 1);
             const write = fs.createWriteStream(plan.path + filename);
             stream.pipe(write);
             // TODO B 事件报错及完成情况反馈: 未完成
@@ -436,47 +435,6 @@ NodeSpider.Queue = queue_1.default;
 NodeSpider.txtPipe = pipe_1.txtPipe;
 NodeSpider.jsonPipe = pipe_1.jsonPipe;
 exports.default = NodeSpider;
-/**
- * request promise. resolve({error, response})
- * @param opts {url, method, encoding}
- */
-function asyncRequest(opts) {
-    return new Promise((resolve, reject) => {
-        request(opts, (error, response) => {
-            resolve({ error, response });
-        });
-    });
-}
-function asyncDownload(task) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return new Promise((resolve, reject) => {
-            const nameIndex = task.url.lastIndexOf("/");
-            const fileName = task.url.slice(nameIndex);
-            if (!task.path) {
-                task.path = this._STATE.option.defaultDownloadPath;
-            }
-            let savePath;
-            if (task.path[task.path.length - 1] === "/") {
-                savePath = task.path.slice(0, task.path.length - 1) + fileName;
-            }
-            else {
-                savePath = task.path + fileName;
-            }
-            const download = request(task.url);
-            const write = fs.createWriteStream(savePath);
-            download.on("error", (error) => {
-                reject(error);
-            });
-            write.on("error", (error) => {
-                reject(error);
-            });
-            download.pipe(write);
-            write.on("finish", () => {
-                resolve();
-            });
-        });
-    });
-}
 function requestAsync(item) {
     return new Promise((resolve, reject) => {
         request(item, (error, response, body) => {

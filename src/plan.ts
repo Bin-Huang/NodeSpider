@@ -1,3 +1,4 @@
+import NodeSpider from "./spider";
 import { IRule, THandleError, THandleFinish, TPreOperation } from "./types";
 
 // TODO A 重要思想
@@ -13,10 +14,14 @@ export class Plan {
     public info: any;
     // TODO C 包括下面参数的类型
     constructor(rule: IRule, request?: any, use?: any[], info?: any) {
-        this.rule = rule;
-        this.request = request || {};
-        this.use = use || [];
+        request = request || {};
+        this.request = Object.assign({encoding: null}, request);
+        this.use = use || [
+            NodeSpider.decode(),
+            NodeSpider.loadJQ(),
+        ];
         this.info = info || {};
+        this.rule = rule;
     }
 }
 

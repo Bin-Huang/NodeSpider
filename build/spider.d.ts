@@ -47,7 +47,7 @@ export default class NodeSpider extends EventEmitter {
      * @param planKey 指定的爬取计划
      * @param url 待爬取的链接（们）
      */
-    queue(planKey: symbol, url: string | string[]): RangeError;
+    queue(planKey: symbol, url: string | string[]): number[];
     pipe(pipeObject: IPipe): symbol;
     save(pipeKey: symbol, data: any): Error;
     /**
