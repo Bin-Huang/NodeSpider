@@ -181,31 +181,41 @@ class NodeSpider extends events_1.EventEmitter {
      * @param {number} maxRetry Maximum number of retries for this task
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
-    retry(task, maxRetry = this._STATE.option.defaultRetry, finalErrorCallback = (task) => this.save("log.json", task)) {
-        if (task._INFO === undefined) {
-            task._INFO = {
-                retried: 0,
-                maxRetry,
-                finalErrorCallback,
-            };
+    retry(current, maxRetry = this._STATE.option.defaultRetry, finalErrorCallback) {
+        // TODO C 参数检验
+        const task = {
+            hasRetried: current.hasRetried,
+            maxRetry: current.maxRetry,
+            planKey: current.planKey,
+            special: current.special,
+            url: current.url,
+        };
+        if (!task.hasRetried) {
+            task.hasRetried = 1;
         }
-        if (task._INFO.maxRetry > task._INFO.retried) {
-            task._INFO.retried += 1;
-            if (task.path) {
-                // 清理
-                this._STATE.downloadQueue.jump(task);
-            }
-            else {
-                // 清理
-                task.body = null;
-                task.response = null;
-                task.error = null;
-                this._STATE.crawlQueue.jump(task);
-            }
+        if (!task.maxRetry) {
+            task.maxRetry = maxRetry;
+        }
+        finalErrorCallback = (finalErrorCallback) ? finalErrorCallback : (current) => {
+            return new Error("达到最大重试次数，依旧错误");
+        };
+        if (task.hasRetried >= task.maxRetry) {
+            return finalErrorCallback(current);
+        }
+        // 判断是哪种任务，crawl or download?
+        let jumpFun = null;
+        if (this._STATE.planStore.has(task.planKey)) {
+            jumpFun = this._STATE.queue.jumpCrawl;
+        }
+        else if (this._STATE.dlPlanStore.has(task.planKey)) {
+            jumpFun = this._STATE.queue.jumpDownload;
         }
         else {
-            task._INFO.finalErrorCallback(task);
+            return new Error("unknown plan");
         }
+        // 重新添加到队列
+        task.hasRetried++;
+        jumpFun(task);
     }
     plan(item) {
         if (typeof item === "function") {

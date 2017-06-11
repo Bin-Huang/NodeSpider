@@ -90,6 +90,10 @@ export interface ICurrentCrawl extends ITask {
     body: string;
     error: Error;
 }
+export interface ICurrentDownload extends ITask {
+    plan: DownloadPlan;
+    error: Error;
+}
 export declare type IRule = (err: Error, current: ICurrentCrawl) => void | Promise<void>;
 export interface IPlanInput {
     rule: IRule;
