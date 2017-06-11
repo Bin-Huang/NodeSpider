@@ -72,7 +72,7 @@ export default class NodeSpider extends EventEmitter {
             if (type === "crawl") {
                 this._STATE.currentMultiTask ++;
             } else if (type === "download") {
-                this._STATE.currentMultiDownload --;
+                this._STATE.currentMultiDownload ++;
             }
         });
         // 每完成一个任务，状态中对应当前异步任务数的记录值减1
@@ -101,64 +101,6 @@ export default class NodeSpider extends EventEmitter {
             }
         });
     }
-
-    // /**
-    //  * Add new crawling-task to spider's todo-list (regardless of whether the link has been added)
-    //  * @param {ITask} task
-    //  * @returns {number} the number of urls has been added.
-    //  */
-    // public addTask(task: ICrawlTaskInput) {
-    //     // TODO:  addTask 会习惯在 task 中直接声明 callback匿名函数，这种大量重复的匿名函数会消耗内存。
-    //     if (typeof task.strategy !== "function") {
-    //         return console.log("need function");
-    //     }
-    //     let urls;
-    //     if (Array.isArray(task.url)) {
-    //         urls = task.url;
-    //     } else {
-    //         urls = [ task.url ];
-    //     }
-    //     urls.map((u)  => {
-    //         if (typeof u !== "string") {
-    //             return console.log("must be string");
-    //         }
-    //         const newTask = {
-    //             ... task,
-    //             url: u,
-    //         };
-    //         newTask.url = u;
-    //         this._STATE.crawlQueue.add(newTask);
-    //     });
-
-    //     this._STATE.working = true;
-    //     this._fire();
-    //     return this._STATE.crawlQueue.getSize();
-    // }
-
-    // /**
-    //  * add new download-task to spider's download-list.
-    //  * @param task
-    //  */
-    // public addDownload(task: IDownloadTaskInput) {
-    //     let urls;
-    //     if (Array.isArray(task.url)) {
-    //         urls = task.url;
-    //     } else {
-    //         urls = [ task.url ];
-    //     }
-    //     urls.map((u) => {
-    //         if (typeof u !== "string") {
-    //             return console.log("must need string");
-    //         }
-    //         const newTask = {
-    //             ...task,
-    //             url: u,
-    //         };
-
-    //         this._STATE.queue.addDownload(newTask);
-    //     });
-    //     return this._STATE.downloadQueue.getSize();
-    // }
 
     /**
      * Check whether the url has been added
@@ -200,7 +142,7 @@ export default class NodeSpider extends EventEmitter {
      */
     public retry(
         current: ICurrentCrawl|ICurrentDownload,
-        maxRetry = this._STATE.option.defaultRetry,
+        maxRetry = 3,
         finalErrorCallback?: (current: ICurrentCrawl|ICurrentDownload) => void,
     ) {
         // TODO C 参数检验
@@ -212,15 +154,17 @@ export default class NodeSpider extends EventEmitter {
             url: current.url,
         };
         if (! task.hasRetried) {
-            task.hasRetried = 1;
+            task.hasRetried = 0;
         }
         if (! task.maxRetry) {
             task.maxRetry = maxRetry;
         }
-        finalErrorCallback = (finalErrorCallback) ? finalErrorCallback : (current) => {
-            // TODO C 更好的报错
-            return new Error("达到最大重试次数，依旧错误");
-        };
+        if (! finalErrorCallback) {
+            finalErrorCallback = (currentTask: ICurrentCrawl | ICurrentDownload) => {
+                console.log("达到最大重试次数，但依旧错误");
+            };
+        }
+
         if (task.hasRetried >= task.maxRetry) {
             return finalErrorCallback(current);
         }
@@ -318,6 +262,9 @@ export default class NodeSpider extends EventEmitter {
             addToQueue({url, plan: planKey});
         } else {
             url.map((u) => {
+                if (typeof u !== "string") {
+                    return new Error("url数组中存在非字符串成员");
+                }
                 addToQueue({url, plan: planKey});
             });
         }
@@ -366,14 +313,16 @@ export default class NodeSpider extends EventEmitter {
             } else {
                 const task = this._STATE.queue.getTask();
                 this.emit("start_a_task", "download");
-                asyncDownload(task)
+                this._asyncDownload(task)
                     .then(() => {
                         this.emit("done_a_task", "download");
                     })
                     .catch((error) => {
-                        console.log(error);
+                        // 【【这里的错误处理思想】】
+                        // 所有可能的错误，应该交给开发者编写的plan来处理
+                        // 比如在rule中处理错误，或者是在handleError中处理
+                        // 所以此处catch的错误，必须要再额外处理，只需要触发终止当前任务的事件即可
                         this.emit("done_a_task", "download");
-                        // TODO: 错误处理
                     });
             }
         }
@@ -388,9 +337,11 @@ export default class NodeSpider extends EventEmitter {
                         this.emit("done_a_task", "crawl");
                     })
                     .catch((error) => {
-                        console.log(error);
+                        // 【【这里的错误处理思想】】
+                        // 所有可能的错误，应该交给开发者编写的plan来处理
+                        // 比如在rule中处理错误，或者是在handleError中处理
+                        // 所以此处catch的错误，必须要再额外处理，只需要触发终止当前任务的事件即可
                         this.emit("done_a_task", "crawl");
-                        // TODO: 错误处理
                     });
             }
         }
@@ -443,7 +394,7 @@ export default class NodeSpider extends EventEmitter {
             const specialOpts = task.special;
             const item = Object.assign(requestOpts, specialOpts, {url: task.url});
 
-            let stream = require(item);
+            let stream: fs.ReadStream = request(item);
             // TODO B 灵感写法，未必正确
             for (const pl of plan.use) {
                 stream = stream.pipe(pl);

@@ -39,7 +39,7 @@ export default class NodeSpider extends EventEmitter {
      * @param {number} maxRetry Maximum number of retries for this task
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
-    retry(current: ICurrentCrawl | ICurrentDownload, maxRetry?: any, finalErrorCallback?: (current: ICurrentCrawl | ICurrentDownload) => void): void | Error;
+    retry(current: ICurrentCrawl | ICurrentDownload, maxRetry?: number, finalErrorCallback?: (current: ICurrentCrawl | ICurrentDownload) => void): void | Error;
     plan(item: IRule | IPlanInput): symbol;
     downloadPlan(item: THandleError | IDownloadPlanInput): symbol;
     /**
