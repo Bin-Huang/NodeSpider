@@ -1,4 +1,4 @@
-import { Plan } from "./plan";
+import { DownloadPlan, Plan } from "./plan";
 import NodeSpider from "./spider";
 
 export interface IQueue {
@@ -87,7 +87,7 @@ export interface IDownloadCurrentTask extends IDownloadQueueItem {
 export interface IState {
     queue: IQueue;
     planStore: Map<symbol, Plan>;
-    dlPlanStore: Map<symbol, Plan>;
+    dlPlanStore: Map<symbol, DownloadPlan>;
     pipeStore: Map<symbol, IPipe>;
     option: IGlobalOption;
     working: boolean;

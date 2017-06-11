@@ -11,6 +11,7 @@ export declare class DownloadPlan {
     request: any;
     use: any[];
     info: any;
-    callback: any;
-    constructor(callback: any, path: any, request: any, use: any, info: any);
+    handleError: any;
+    finishCallback: any;
+    constructor(finishCallback: any, handleError: any, path: any, request: any, use: any, info: any);
 }

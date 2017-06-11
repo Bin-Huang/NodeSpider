@@ -12,12 +12,13 @@ class Plan {
 exports.Plan = Plan;
 // tslint:disable-next-line:max-classes-per-file
 class DownloadPlan {
-    constructor(callback, path, request, use, info) {
+    constructor(finishCallback, handleError, path, request, use, info) {
         this.path = path;
         this.request = request || null;
         this.use = use || null;
         this.info = info || null;
-        this.callback = callback;
+        this.handleError = handleError;
+        this.finishCallback = finishCallback;
     }
 }
 exports.DownloadPlan = DownloadPlan;

@@ -54,4 +54,5 @@ export default class NodeSpider extends EventEmitter {
      */
     protected _fire(): void;
     protected _asyncCrawling(task: ITask): Promise<Error>;
+    protected _asyncDownload(task: ITask): Promise<{}>;
 }

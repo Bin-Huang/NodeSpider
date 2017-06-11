@@ -22,12 +22,14 @@ export class DownloadPlan {
     public request: any;
     public use: any[];
     public info: any;
-    public callback: any;
-    constructor(callback, path, request, use, info) {
+    public handleError: any;
+    public finishCallback: any;
+    constructor(finishCallback, handleError, path, request, use, info) {
         this.path = path;
         this.request = request || null;
         this.use = use || null;
         this.info = info || null;
-        this.callback = callback;
+        this.handleError = handleError;
+        this.finishCallback = finishCallback;
     }
 }

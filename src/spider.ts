@@ -368,7 +368,6 @@ export default class NodeSpider extends EventEmitter {
             error,
         }, task);
 
-        // TODO:
         const use = (plan.use) ? plan.use : [
             NodeSpider.decode(),
             NodeSpider.loadJQ(),
@@ -389,7 +388,51 @@ export default class NodeSpider extends EventEmitter {
         }
         // 结尾的清理工作
         current = null;
+    }
 
+    protected  _asyncDownload(task: ITask) {
+        return new Promise((resolve, reject) => {
+            const plan = this._STATE.dlPlanStore.get(task.planKey);
+            if (! plan) {
+                return new Error("unknown plan");
+            }
+            // request
+            const requestOpts = plan.request || {};
+            const specialOpts = task.special || {};
+            const item = Object.assign({ encoding: null }, requestOpts, specialOpts, {url: task.url});
+
+            const stream = require(item);
+
+            // TODO C add support to transform middle
+            // if (plan.use) {
+            //     for (const item of plan.use) {
+            //         stream.pipe(item);
+            //     }
+            // }
+
+            // 获得文件名
+            const urlObj = url.parse(task.url);
+            const pathname = urlObj.pathname;
+            const filename = pathname.slice(pathname.lastIndexOf("/"));
+
+            const write = fs.createWriteStream(plan.path + filename);
+            stream.pipe(write);
+
+            // TODO B 事件报错及完成情况反馈: 未完成
+            stream.on("error", (e) => {
+                plan.handleError(e);
+                reject();
+            });
+            write.on("error", (e) => {
+                plan.handleError(e);
+                reject();
+            });
+            write.on("drain", () => {
+                plan.finishCallback();
+                resolve();
+            });
+
+        });
     }
 
 }
