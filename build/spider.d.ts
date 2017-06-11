@@ -4,7 +4,7 @@ import decode from "./decode";
 import loadJQ from "./loadJQ";
 import { jsonPipe, txtPipe } from "./pipe";
 import Queue from "./queue";
-import { ICurrentCrawl, ICurrentDownload, IPipe, IPlanInput, IRule, IState, ITask } from "./types";
+import { ICurrentCrawl, ICurrentDownload, IDownloadPlanInput, IPipe, IPlanInput, IRule, IState, ITask, THandleError } from "./types";
 /**
  * class of NodeSpider
  * @class NodeSpider
@@ -39,8 +39,9 @@ export default class NodeSpider extends EventEmitter {
      * @param {number} maxRetry Maximum number of retries for this task
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
-    retry(current: ICurrentCrawl | ICurrentDownload, maxRetry?: number, finalErrorCallback?: (current: ICurrentCrawl | ICurrentDownload) => void): void | Error;
+    retry(current: ICurrentCrawl | ICurrentDownload, maxRetry?: any, finalErrorCallback?: (current: ICurrentCrawl | ICurrentDownload) => void): void | Error;
     plan(item: IRule | IPlanInput): symbol;
+    downloadPlan(item: THandleError | IDownloadPlanInput): symbol;
     /**
      * 添加待爬取链接到队列，并指定爬取计划。
      * @param planKey 指定的爬取计划

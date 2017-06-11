@@ -16,31 +16,24 @@ import * as url from "url";
 import decode from "./decode";
 import loadJQ from "./loadJQ";
 import { jsonPipe, txtPipe } from "./pipe";
-import { Plan } from "./plan";
+import { DownloadPlan, Plan } from "./plan";
 import Queue from "./queue";
 import {
-    ICrawlCurrentTask,
-    ICrawlQueueItem,
-    ICrawlTaskInput,
     ICurrentCrawl,
     ICurrentDownload,
-    IDownloadCurrentTask,
-    IDownloadQueueItem,
-    IDownloadTaskInput,
+    IDownloadPlanInput,
     IGlobalOption,
     IPipe,
     IPlanInput,
     IRule,
     IState,
     ITask,
+    THandleError,
 } from "./types";
 
 const defaultOption: IGlobalOption = {
-    defaultDownloadPath: "",
-    defaultRetry: 3,
     multiDownload: 2,
     multiTasking: 20,
-    preprocessing: [decode, loadJQ],
     queue: new Queue(),
 };
 
@@ -225,6 +218,7 @@ export default class NodeSpider extends EventEmitter {
             task.maxRetry = maxRetry;
         }
         finalErrorCallback = (finalErrorCallback) ? finalErrorCallback : (current) => {
+            // TODO C 更好的报错
             return new Error("达到最大重试次数，依旧错误");
         };
         if (task.hasRetried >= task.maxRetry) {
@@ -271,6 +265,35 @@ export default class NodeSpider extends EventEmitter {
         throw new Error("参数错误");
     }
 
+    public downloadPlan(item: THandleError|IDownloadPlanInput): symbol {
+        if (typeof item === "function") {
+            const newPlan = new DownloadPlan(item);
+            const id = this._STATE.dlPlanStore.size + 1;
+            const key = Symbol("downloadPlan" + id);
+            this._STATE.dlPlanStore.set(key, newPlan);
+            return key;
+        }
+        if (typeof item === "object") {
+            if (! item.handleError) {
+                throw new Error("参数缺少handleError成员");
+            }
+            // TODO: 参数检验
+            const newPlan = new DownloadPlan(
+                item.handleError,
+                item.handleFinish,
+                item.path,
+                item.request,
+                item.use,
+                item.info,
+            );
+
+            const id = this._STATE.dlPlanStore.size + 1;
+            const key = Symbol("downloadPlan" + id);
+            this._STATE.dlPlanStore.set(key, newPlan);
+            return key;
+        }
+        throw new Error("参数错误");
+    }
     /**
      * 添加待爬取链接到队列，并指定爬取计划。
      * @param planKey 指定的爬取计划
@@ -433,16 +456,16 @@ export default class NodeSpider extends EventEmitter {
             stream.pipe(write);
 
             // TODO B 事件报错及完成情况反馈: 未完成
-            stream.on("error", (e) => {
-                plan.handleError(e);
+            stream.on("error", (error, current) => {
+                plan.handleError(error, current);
                 reject();
             });
-            write.on("error", (e) => {
-                plan.handleError(e);
+            write.on("error", (error, current) => {
+                plan.handleError(error, current);
                 reject();
             });
-            write.on("drain", () => {
-                plan.finishCallback();
+            write.on("drain", (current) => {
+                plan.handleFinish(current);
                 resolve();
             });
 

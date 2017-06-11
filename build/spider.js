@@ -25,11 +25,8 @@ const pipe_1 = require("./pipe");
 const plan_1 = require("./plan");
 const queue_1 = require("./queue");
 const defaultOption = {
-    defaultDownloadPath: "",
-    defaultRetry: 3,
     multiDownload: 2,
     multiTasking: 20,
-    preprocessing: [decode_1.default, loadJQ_1.default],
     queue: new queue_1.default(),
 };
 /**
@@ -197,6 +194,7 @@ class NodeSpider extends events_1.EventEmitter {
             task.maxRetry = maxRetry;
         }
         finalErrorCallback = (finalErrorCallback) ? finalErrorCallback : (current) => {
+            // TODO C 更好的报错
             return new Error("达到最大重试次数，依旧错误");
         };
         if (task.hasRetried >= task.maxRetry) {
@@ -237,6 +235,27 @@ class NodeSpider extends events_1.EventEmitter {
             const id = this._STATE.planStore.size + 1;
             const key = Symbol("plan" + id);
             this._STATE.planStore.set(key, newPlan);
+            return key;
+        }
+        throw new Error("参数错误");
+    }
+    downloadPlan(item) {
+        if (typeof item === "function") {
+            const newPlan = new plan_1.DownloadPlan(item);
+            const id = this._STATE.dlPlanStore.size + 1;
+            const key = Symbol("downloadPlan" + id);
+            this._STATE.dlPlanStore.set(key, newPlan);
+            return key;
+        }
+        if (typeof item === "object") {
+            if (!item.handleError) {
+                throw new Error("参数缺少handleError成员");
+            }
+            // TODO: 参数检验
+            const newPlan = new plan_1.DownloadPlan(item.handleError, item.handleFinish, item.path, item.request, item.use, item.info);
+            const id = this._STATE.dlPlanStore.size + 1;
+            const key = Symbol("downloadPlan" + id);
+            this._STATE.dlPlanStore.set(key, newPlan);
             return key;
         }
         throw new Error("参数错误");
@@ -396,16 +415,16 @@ class NodeSpider extends events_1.EventEmitter {
             const write = fs.createWriteStream(plan.path + filename);
             stream.pipe(write);
             // TODO B 事件报错及完成情况反馈: 未完成
-            stream.on("error", (e) => {
-                plan.handleError(e);
+            stream.on("error", (error, current) => {
+                plan.handleError(error, current);
                 reject();
             });
-            write.on("error", (e) => {
-                plan.handleError(e);
+            write.on("error", (error, current) => {
+                plan.handleError(error, current);
                 reject();
             });
-            write.on("drain", () => {
-                plan.finishCallback();
+            write.on("drain", (current) => {
+                plan.handleFinish(current);
                 resolve();
             });
         });

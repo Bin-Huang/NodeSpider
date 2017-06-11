@@ -19,46 +19,6 @@ export interface IPipe {
     add: (data: any) => void;
     close: () => void;
 }
-export interface IPublicOption {
-}
-export interface ICrawlOption extends IPublicOption {
-    preprocessing?: any[];
-}
-export interface ICrawlTaskInput extends ICrawlOption {
-    url: string | string[];
-    strategy: (err: Error, currentTask: ICrawlCurrentTask, $) => any;
-}
-export interface ICrawlQueueItem extends ICrawlTaskInput {
-    url: string;
-    _INFO?: {
-        maxRetry: number;
-        retried: number;
-        finalErrorCallback: (currentTask: ICrawlCurrentTask) => any;
-    };
-}
-export interface ICrawlCurrentTask extends ICrawlQueueItem {
-    response: any;
-    error: Error;
-    body: string;
-    $: any;
-}
-export interface IDownloadOption extends IPublicOption {
-}
-export interface IDownloadTaskInput extends IDownloadOption {
-    url: string | string[];
-    path?: string;
-    callback?: (err: Error, currentTask: IDownloadCurrentTask) => void;
-}
-export interface IDownloadQueueItem extends IDownloadTaskInput {
-    url: string;
-    _INFO?: {
-        maxRetry: number;
-        retried: number;
-        finalErrorCallback: (currentTask: IDownloadCurrentTask) => void;
-    };
-}
-export interface IDownloadCurrentTask extends IDownloadQueueItem {
-}
 export interface IState {
     queue: IQueue;
     planStore: Map<symbol, Plan>;
@@ -69,13 +29,10 @@ export interface IState {
     currentMultiTask: number;
     currentMultiDownload: number;
 }
-export interface IGlobalOption extends ICrawlOption, IDownloadOption {
+export interface IGlobalOption {
     multiTasking: number;
     multiDownload: number;
-    defaultRetry: number;
-    defaultDownloadPath: string;
     queue: IQueue;
-    preprocessing: any[];
 }
 export interface ITask {
     url: string;
@@ -97,6 +54,16 @@ export interface ICurrentDownload extends ITask {
 export declare type IRule = (err: Error, current: ICurrentCrawl) => void | Promise<void>;
 export interface IPlanInput {
     rule: IRule;
+    request?: any;
+    use?: any[];
+    info?: any;
+}
+export declare type THandleError = (err: Error, current: ICurrentDownload) => void | Promise<void>;
+export declare type THandleFinish = (current: ICurrentDownload) => void | Promise<void>;
+export interface IDownloadPlanInput {
+    handleError: THandleError;
+    handleFinish?: THandleFinish;
+    path?: string;
     request?: any;
     use?: any[];
     info?: any;

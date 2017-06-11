@@ -1,4 +1,9 @@
-import { IRule, TPreOperation } from "./types";
+import { IRule, THandleError, THandleFinish, TPreOperation } from "./types";
+
+// TODO A 重要思想
+// plan 内容应该足够的详细，包含缺省值的默认值
+
+// 所有对开发者开放的api函数，如nodespider的开放api方法，必须保证参数的完整性。
 
 export class Plan {
     public rule: IRule;
@@ -7,11 +12,11 @@ export class Plan {
     public use: TPreOperation[];
     public info: any;
     // TODO C 包括下面参数的类型
-    constructor(rule: IRule, request: any, use: any[], info: any) {
+    constructor(rule: IRule, request?: any, use?: any[], info?: any) {
         this.rule = rule;
-        this.request = request || null;
-        this.use = use || null;
-        this.info = info || null;
+        this.request = request || {};
+        this.use = use || [];
+        this.info = info || {};
     }
 }
 
@@ -22,14 +27,25 @@ export class DownloadPlan {
     public request: any;
     public use: any[];
     public info: any;
-    public handleError: any;
-    public finishCallback: any;
-    constructor(finishCallback, handleError, path, request, use, info) {
-        this.path = path;
-        this.request = request || null;
-        this.use = use || null;
-        this.info = info || null;
+    public handleError: THandleError;
+    public handleFinish: THandleFinish;
+    constructor(
+        handleError: THandleError,
+        handleFinish?: THandleFinish,
+        path?: string,
+        request?, use?, info?,
+    ) {
         this.handleError = handleError;
-        this.finishCallback = finishCallback;
+        if (handleFinish) {
+            this.handleFinish = handleFinish;
+        } else {
+            this.handleFinish = (current) => {
+                console.log(`download done! ${current.url}`);
+            };
+        }
+        this.path = path || "";
+        this.request = request || {};
+        this.use = use || [];
+        this.info = info || {};
     }
 }
