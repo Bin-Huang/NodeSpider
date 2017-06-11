@@ -246,7 +246,7 @@ export default class NodeSpider extends EventEmitter {
     public queue(planKey: symbol, url: string | string[]): number[] {
         // 参数检验
         if (typeof planKey !== "symbol" || typeof url !== "string" || !Array.isArray(url)) {
-            return new TypeError("queue 参数错误");
+            throw new TypeError("queue 参数错误");
         }
         // 确定添加到哪个队列(crawlQueue还是downloadQueue?)
         let addToQueue = null;
@@ -255,7 +255,7 @@ export default class NodeSpider extends EventEmitter {
         } else if (this._STATE.dlPlanStore.has(planKey)) {
             addToQueue = this._STATE.queue.addDownload;
         } else {
-            return new RangeError("plan 不存在");
+            throw new RangeError("plan 不存在");
         }
         // 添加到队列
         if (! Array.isArray(url)) {
@@ -313,15 +313,12 @@ export default class NodeSpider extends EventEmitter {
             } else {
                 const task = this._STATE.queue.getTask();
                 this.emit("start_a_task", "download");
+                // 【【这里的错误处理思想】】
+                // 所有可能的错误，应该交给开发者编写的plan来处理
+                // 比如在rule中处理错误，或者是在handleError中处理
+                // 所以此处catch的错误，必须要再额外处理，只需要触发终止当前任务的事件即可
                 this._asyncDownload(task)
                     .then(() => {
-                        this.emit("done_a_task", "download");
-                    })
-                    .catch((error) => {
-                        // 【【这里的错误处理思想】】
-                        // 所有可能的错误，应该交给开发者编写的plan来处理
-                        // 比如在rule中处理错误，或者是在handleError中处理
-                        // 所以此处catch的错误，必须要再额外处理，只需要触发终止当前任务的事件即可
                         this.emit("done_a_task", "download");
                     });
             }
@@ -334,13 +331,6 @@ export default class NodeSpider extends EventEmitter {
                 this.emit("start_a_task", "crawl");
                 this._asyncCrawling(task)
                     .then(() => {
-                        this.emit("done_a_task", "crawl");
-                    })
-                    .catch((error) => {
-                        // 【【这里的错误处理思想】】
-                        // 所有可能的错误，应该交给开发者编写的plan来处理
-                        // 比如在rule中处理错误，或者是在handleError中处理
-                        // 所以此处catch的错误，必须要再额外处理，只需要触发终止当前任务的事件即可
                         this.emit("done_a_task", "crawl");
                     });
             }
@@ -405,17 +395,23 @@ export default class NodeSpider extends EventEmitter {
             const write = fs.createWriteStream(plan.path + filename);
             stream.pipe(write);
 
-            // TODO B 事件报错及完成情况反馈: 未完成
+            let isError = false;
             stream.on("error", (error, current) => {
+                isError = true;
+                stream.close();
+                write.close();
                 plan.handleError(error, current);
-                reject();
             });
             write.on("error", (error, current) => {
+                isError = true;
+                stream.close();
+                write.close();
                 plan.handleError(error, current);
-                reject();
             });
-            write.on("drain", (current) => {
-                plan.handleFinish(current);
+            write.on("finish", (current) => {
+                if (! isError) {
+                    plan.handleFinish(current);
+                }
                 resolve();
             });
 
