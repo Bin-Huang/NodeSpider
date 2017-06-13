@@ -63,9 +63,10 @@ export default class NodeSpider extends EventEmitter {
             option: Object.assign({}, defaultOption, opts),
             pipeStore: new Map(),
             planStore: new Map(),
-            queue: this._STATE.option.queue,
+            queue: null,
             working: true,
         };
+        this._STATE.queue = this._STATE.option.queue;
 
         // 每开始一个任务，状态中对应当前异步任务数的记录值加1
         this.on("start_a_task", (type: "crawl" | "download") => {
@@ -245,27 +246,41 @@ export default class NodeSpider extends EventEmitter {
      */
     public queue(planKey: symbol, url: string | string[]): number[] {
         // 参数检验
-        if (typeof planKey !== "symbol" || typeof url !== "string" || !Array.isArray(url)) {
+        if (typeof planKey !== "symbol" || typeof url !== "string") {
             throw new TypeError("queue 参数错误");
         }
+
         // 确定添加到哪个队列(crawlQueue还是downloadQueue?)
-        let addToQueue = null;
+        let toCrawl = null; // True代表addCrawl，False代表addDownload
         if (this._STATE.planStore.has(planKey)) {
-            addToQueue = this._STATE.queue.addCrawl;
-        } else if (this._STATE.dlPlanStore.has(planKey)) {
-            addToQueue = this._STATE.queue.addDownload;
-        } else {
+            toCrawl = true;
+        }
+        else if (this._STATE.dlPlanStore.has(planKey)) {
+            toCrawl = false;
+        }
+        else {
             throw new RangeError("plan 不存在");
         }
+
         // 添加到队列
-        if (! Array.isArray(url)) {
-            addToQueue({url, plan: planKey});
-        } else {
+        // TODO C 完善 special
+        if (!Array.isArray(url)) {
+            if (toCrawl) {
+                this._STATE.queue.addCrawl({url, planKey});
+            } else {
+                this._STATE.queue.addDownload({url, planKey});
+            }
+        }
+        else {
             url.map((u) => {
                 if (typeof u !== "string") {
                     return new Error("url数组中存在非字符串成员");
                 }
-                addToQueue({url, plan: planKey});
+                if (toCrawl) {
+                    this._STATE.queue.addCrawl({url, planKey});
+                } else {
+                    this._STATE.queue.addDownload({url, planKey});
+                }
             });
         }
 
@@ -324,7 +339,7 @@ export default class NodeSpider extends EventEmitter {
             }
         }
         while (this._STATE.currentMultiTask < this._STATE.option.multiTasking) {
-            if (this._STATE.queue.isDownloadCompleted()) {
+            if (this._STATE.queue.isCrawlCompleted()) {
                 break;
             } else {
                 const task = this._STATE.queue.getTask();
