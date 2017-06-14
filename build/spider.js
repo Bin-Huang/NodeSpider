@@ -214,7 +214,7 @@ class NodeSpider extends events_1.EventEmitter {
      */
     queue(planKey, url) {
         // 参数检验
-        if (typeof planKey !== "symbol" || typeof url !== "string") {
+        if (typeof planKey !== "symbol") {
             throw new TypeError("queue 参数错误");
         }
         // 确定添加到哪个队列(crawlQueue还是downloadQueue?)
@@ -244,10 +244,10 @@ class NodeSpider extends events_1.EventEmitter {
                     return new Error("url数组中存在非字符串成员");
                 }
                 if (toCrawl) {
-                    this._STATE.queue.addCrawl({ url, planKey });
+                    this._STATE.queue.addCrawl({ url: u, planKey });
                 }
                 else {
-                    this._STATE.queue.addDownload({ url, planKey });
+                    this._STATE.queue.addDownload({ url: u, planKey });
                 }
             });
         }
@@ -299,6 +299,10 @@ class NodeSpider extends events_1.EventEmitter {
                 this._asyncDownload(task)
                     .then(() => {
                     this.emit("done_a_task", "download");
+                })
+                    .catch((e) => {
+                    console.log(e);
+                    this.emit("done_a_task", "download");
                 });
             }
         }
@@ -311,6 +315,10 @@ class NodeSpider extends events_1.EventEmitter {
                 this.emit("start_a_task", "crawl");
                 this._asyncCrawling(task)
                     .then(() => {
+                    this.emit("done_a_task", "crawl");
+                })
+                    .catch((e) => {
+                    console.log(e);
                     this.emit("done_a_task", "crawl");
                 });
             }
@@ -334,12 +342,14 @@ class NodeSpider extends events_1.EventEmitter {
                 error,
             }, task);
             // 按顺序执行预处理函数，对current进行预处理
-            for (const preFun of plan.use) {
-                let result = preFun(this, current);
-                if (result instanceof Promise) {
-                    result = yield result;
+            if (!error) {
+                for (const preFun of plan.use) {
+                    let result = preFun(this, current);
+                    if (result instanceof Promise) {
+                        result = yield result;
+                    }
+                    current = result;
                 }
-                current = result;
             }
             // 根据开发者定义的抓取规则进行操作
             const result = plan.rule(error, current);
@@ -360,22 +370,29 @@ class NodeSpider extends events_1.EventEmitter {
             const requestOpts = plan.request;
             const specialOpts = task.special;
             const item = Object.assign(requestOpts, specialOpts, { url: task.url });
+            let isError = false; // for whether need to call handleFinish when finish
             let stream = request(item);
-            // TODO B 灵感写法，未必正确
-            for (const pl of plan.use) {
-                stream = stream.pipe(pl);
-            }
-            // 获得文件名
-            const filename = task.url.slice(task.url.lastIndexOf("/") + 1);
-            const write = fs.createWriteStream(plan.path + filename);
-            stream.pipe(write);
-            let isError = false;
             stream.on("error", (error, current) => {
                 isError = true;
                 stream.close();
                 write.close();
                 plan.handleError(error, current);
             });
+            // 获得文件名
+            const filename = task.url.slice(task.url.lastIndexOf("/") + 1);
+            const write = fs.createWriteStream(plan.path + filename);
+            // TODO B 灵感写法，未必正确
+            // TODO C 错误处理
+            for (const pl of plan.use) {
+                stream = stream.pipe(pl);
+                stream.on("error", (error, current) => {
+                    isError = true;
+                    stream.close();
+                    write.close();
+                    plan.handleError(error, current);
+                });
+            }
+            stream.pipe(write);
             write.on("error", (error, current) => {
                 isError = true;
                 stream.close();

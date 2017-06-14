@@ -19,21 +19,24 @@ function loadJqOperation(thisSpider: NodeSpider, currentTask: ICurrentCrawl) {
     // 扩展：添加 url 方法
     // 返回当前节点（们）链接的的绝对路径(array)
     // 自动处理了锚和 javascript: void(0)
+    // TODO B 存在不合法链接的返回
     $.prototype.url = function() {
         const result = [];
         $(this).each(function() {
             let newUrl = $(this).attr("href");
-            // 如果是类似 'javascirpt: void(0)' 的 js 代码，直接跳过
-            if (/^javascript/.test(newUrl)) {
+            // 如果为空，或是类似 'javascirpt: void(0)' 的 js 代码，直接跳过
+            if (! newUrl || /^javascript/.test(newUrl)) {
                 return false;
             }
             // 如果是相对路径，补全路径为绝对路径
             if (newUrl && !/^https?:\/\//.test(newUrl)) {
                 newUrl = url.resolve(currentTask.url, newUrl);
             }
-            // 去除连接中的查询和锚
-            const u = url.parse(newUrl);
-            newUrl = u.protocol + u.auth + u.host + u.pathname;
+            // 去除连接中的锚
+            const anchorIndex = newUrl.lastIndexOf("#");
+            if (anchorIndex !== -1) {
+                newUrl = newUrl.slice(0, anchorIndex);
+            }
             result.push(newUrl);
         });
         return result;

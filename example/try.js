@@ -2,14 +2,20 @@ const NodeSpider = require("../index");
 
 const n = new NodeSpider();
 
+let i = 100;
 const myPlan = n.plan((err, current) => {
     if (err) {
         return console.log(err);
     }
-    console.log(current.body);
     const $ = current.$;
-    console.log($("title").text());
+    n.queue(myPlan, $("a").url());
+
+    if (i < 0) {
+        i = 100;
+        console.log(n._STATE.queue.allUrlNum());
+    } else {
+        i--;
+    }
 });
 
-console.log(myPlan)
 n.queue(myPlan, "http://www.baidu.com");

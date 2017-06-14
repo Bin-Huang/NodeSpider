@@ -246,7 +246,7 @@ export default class NodeSpider extends EventEmitter {
      */
     public queue(planKey: symbol, url: string | string[]): number[] {
         // 参数检验
-        if (typeof planKey !== "symbol" || typeof url !== "string") {
+        if (typeof planKey !== "symbol") {
             throw new TypeError("queue 参数错误");
         }
 
@@ -254,11 +254,9 @@ export default class NodeSpider extends EventEmitter {
         let toCrawl = null; // True代表addCrawl，False代表addDownload
         if (this._STATE.planStore.has(planKey)) {
             toCrawl = true;
-        }
-        else if (this._STATE.dlPlanStore.has(planKey)) {
+        } else if (this._STATE.dlPlanStore.has(planKey)) {
             toCrawl = false;
-        }
-        else {
+        } else {
             throw new RangeError("plan 不存在");
         }
 
@@ -270,16 +268,15 @@ export default class NodeSpider extends EventEmitter {
             } else {
                 this._STATE.queue.addDownload({url, planKey});
             }
-        }
-        else {
+        } else {
             url.map((u) => {
                 if (typeof u !== "string") {
                     return new Error("url数组中存在非字符串成员");
                 }
                 if (toCrawl) {
-                    this._STATE.queue.addCrawl({url, planKey});
+                    this._STATE.queue.addCrawl({url: u, planKey});
                 } else {
-                    this._STATE.queue.addDownload({url, planKey});
+                    this._STATE.queue.addDownload({url: u, planKey});
                 }
             });
         }
@@ -335,6 +332,10 @@ export default class NodeSpider extends EventEmitter {
                 this._asyncDownload(task)
                     .then(() => {
                         this.emit("done_a_task", "download");
+                    })
+                    .catch((e) => {
+                        console.log(e);
+                        this.emit("done_a_task", "download");
                     });
             }
         }
@@ -346,6 +347,10 @@ export default class NodeSpider extends EventEmitter {
                 this.emit("start_a_task", "crawl");
                 this._asyncCrawling(task)
                     .then(() => {
+                        this.emit("done_a_task", "crawl");
+                    })
+                    .catch((e) => {
+                        console.log(e);
                         this.emit("done_a_task", "crawl");
                     });
             }
@@ -371,12 +376,14 @@ export default class NodeSpider extends EventEmitter {
         }, task);
 
         // 按顺序执行预处理函数，对current进行预处理
-        for (const preFun of plan.use) {
-            let result = preFun(this, current);
-            if (result instanceof Promise) {
-                result = await result;
+        if (! error) {
+            for (const preFun of plan.use) {
+                let result = preFun(this, current);
+                if (result instanceof Promise) {
+                    result = await result;
+                }
+                current = result;
             }
-            current = result;
         }
 
         // 根据开发者定义的抓取规则进行操作
@@ -399,24 +406,33 @@ export default class NodeSpider extends EventEmitter {
             const specialOpts = task.special;
             const item = Object.assign(requestOpts, specialOpts, {url: task.url});
 
+            let isError = false;    // for whether need to call handleFinish when finish
+
             let stream: fs.ReadStream = request(item);
-            // TODO B 灵感写法，未必正确
-            for (const pl of plan.use) {
-                stream = stream.pipe(pl);
-            }
-
-            // 获得文件名
-            const filename = task.url.slice(task.url.lastIndexOf("/") + 1);
-            const write = fs.createWriteStream(plan.path + filename);
-            stream.pipe(write);
-
-            let isError = false;
             stream.on("error", (error, current) => {
                 isError = true;
                 stream.close();
                 write.close();
                 plan.handleError(error, current);
             });
+
+            // 获得文件名
+            const filename = task.url.slice(task.url.lastIndexOf("/") + 1);
+            const write = fs.createWriteStream(plan.path + filename);
+
+            // TODO B 灵感写法，未必正确
+            // TODO C 错误处理
+            for (const pl of plan.use) {
+                stream = stream.pipe(pl);
+                stream.on("error", (error, current) => {
+                    isError = true;
+                    stream.close();
+                    write.close();
+                    plan.handleError(error, current);
+                });
+            }
+            stream.pipe(write);
+
             write.on("error", (error, current) => {
                 isError = true;
                 stream.close();

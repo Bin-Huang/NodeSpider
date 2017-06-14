@@ -62,7 +62,7 @@ class JsonTable {
         this.first = true;
     }
     add(data) {
-        if (!this.closeSign) {
+        if (this.closeSign) {
             throw new Error("Apjson WARN: can not append any more, because it has been closed.");
         }
         let newStr = JSON.stringify(data, null, this.space + this.space);
