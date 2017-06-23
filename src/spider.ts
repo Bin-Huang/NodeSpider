@@ -1,4 +1,3 @@
-// TODO: request 传入 opts，以及更多的 option，类似 proxy
 // TODO: 更好的报错机制: 报错建议？以及去除多余的 console.error
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
 // TODO: 使用 node 自带 stringdecode 代替 iconv-lite
@@ -146,7 +145,6 @@ export default class NodeSpider extends EventEmitter {
         maxRetry = 3,
         finalErrorCallback?: (current: ICurrentCrawl|ICurrentDownload) => void,
     ) {
-        // TODO C 参数检验
         const task = {
             hasRetried: current.hasRetried,
             maxRetry: current.maxRetry,
@@ -222,7 +220,7 @@ export default class NodeSpider extends EventEmitter {
             if (! item.handleError) {
                 throw new Error("参数缺少handleError成员");
             }
-            // TODO: 参数检验
+            // TODO: 其他参数检验
             const newPlan = new DownloadPlan(
                 item.handleError,
                 item.handleFinish,
@@ -243,8 +241,9 @@ export default class NodeSpider extends EventEmitter {
      * 添加待爬取链接到队列，并指定爬取计划。
      * @param planKey 指定的爬取计划
      * @param url 待爬取的链接（们）
+     * @param special
      */
-    public queue(planKey: symbol, url: string | string[]): number[] {
+    public queue(planKey: symbol, url: string | string[], special?: any): number[] {
         // 参数检验
         if (typeof planKey !== "symbol") {
             throw new TypeError("queue 参数错误");
@@ -261,12 +260,12 @@ export default class NodeSpider extends EventEmitter {
         }
 
         // 添加到队列
-        // TODO C 完善 special
+        // TODO C 完善 special: 过滤掉其中不相干的成员？
         if (!Array.isArray(url)) {
             if (toCrawl) {
-                this._STATE.queue.addCrawl({url, planKey});
+                this._STATE.queue.addCrawl({url, planKey, special});
             } else {
-                this._STATE.queue.addDownload({url, planKey});
+                this._STATE.queue.addDownload({url, planKey, special});
             }
         } else {
             url.map((u) => {
@@ -296,7 +295,9 @@ export default class NodeSpider extends EventEmitter {
     // 当第一次被save调用时，先触发init后再add（这样就不会生成空文件）
     // 爬虫生命周期末尾，自动调用close清理工作
     public pipe(pipeObject: IPipe): symbol {
-        // TODO C 检测参数是否符合Ipipe
+        if (typeof pipeObject !== "object" || ! pipeObject.add || !pipeObject.close) {
+            throw new Error("不符合pipe");
+        }
 
         const id = this._STATE.pipeStore.size + 1;
         const key = Symbol("pipe" + id);
@@ -423,7 +424,7 @@ export default class NodeSpider extends EventEmitter {
             // TODO B 灵感写法，未必正确
             // TODO C 错误处理
             for (const pl of plan.use) {
-                stream = stream.pipe(pl);
+                stream = stream.pipe(pl);   // 灵感写法
                 stream.on("error", (error, current) => {
                     isError = true;
                     stream.close();
