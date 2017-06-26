@@ -157,11 +157,15 @@ export default class Queue implements IQueue {
     public isAllCompleted() {
         return this.crawlQueue.isEmpty() && this.downloadQueue.isEmpty();
     }
-    public getTask() {
-        let result = this.downloadQueue.next();
+    public getCrawlTask() {
+        const result = this.crawlQueue.next();
         if (! result) {
-            result = this.crawlQueue.next();
+            return null;
         }
+        return result;
+    }
+    public getDownloadTask() {
+        const result = this.downloadQueue.next();
         if (! result) {
             return null;
         }

@@ -14,7 +14,8 @@ export interface IQueue {
     isCrawlCompleted: () => boolean;
     isDownloadCompleted: () => boolean;
     isAllCompleted: () => boolean;
-    getTask: () => ITask;
+    getCrawlTask: () => ITask;
+    getDownloadTask: () => ITask;
 }
 
 export interface IPipe {
@@ -43,6 +44,7 @@ export interface IGlobalOption {
     // defaultRetry: number;
     // defaultDownloadPath: string;
 
+    rateLimit: number;
     queue: IQueue;
 
     // preprocessing: any[];

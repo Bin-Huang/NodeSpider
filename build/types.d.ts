@@ -13,7 +13,8 @@ export interface IQueue {
     isCrawlCompleted: () => boolean;
     isDownloadCompleted: () => boolean;
     isAllCompleted: () => boolean;
-    getTask: () => ITask;
+    getCrawlTask: () => ITask;
+    getDownloadTask: () => ITask;
 }
 export interface IPipe {
     add: (data: any) => void;
@@ -32,6 +33,7 @@ export interface IState {
 export interface IGlobalOption {
     multiTasking: number;
     multiDownload: number;
+    rateLimit: number;
     queue: IQueue;
 }
 export interface ITask {

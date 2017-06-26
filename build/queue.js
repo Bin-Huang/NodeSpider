@@ -140,11 +140,15 @@ class Queue {
     isAllCompleted() {
         return this.crawlQueue.isEmpty() && this.downloadQueue.isEmpty();
     }
-    getTask() {
-        let result = this.downloadQueue.next();
+    getCrawlTask() {
+        const result = this.crawlQueue.next();
         if (!result) {
-            result = this.crawlQueue.next();
+            return null;
         }
+        return result;
+    }
+    getDownloadTask() {
+        const result = this.downloadQueue.next();
         if (!result) {
             return null;
         }

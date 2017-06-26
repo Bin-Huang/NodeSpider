@@ -46,14 +46,11 @@ export default class NodeSpider extends EventEmitter {
      * 添加待爬取链接到队列，并指定爬取计划。
      * @param planKey 指定的爬取计划
      * @param url 待爬取的链接（们）
+     * @param special
      */
-    queue(planKey: symbol, url: string | string[]): number[];
+    queue(planKey: symbol, url: string | string[], special?: any): number[];
     pipe(pipeObject: IPipe): symbol;
     save(pipeKey: symbol, data: any): Error;
-    /**
-     * 火力全开，不断尝试启动新任务，直到当前任务数达到最大限制数
-     */
-    protected _fire(): void;
     protected _asyncCrawling(task: ITask): Promise<Error>;
     protected _asyncDownload(task: ITask): Promise<{}>;
 }

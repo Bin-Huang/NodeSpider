@@ -26,6 +26,7 @@ const defaultOption = {
     multiDownload: 2,
     multiTasking: 20,
     queue: new queue_1.default(),
+    rateLimit: 2,
 };
 /**
  * class of NodeSpider
@@ -38,6 +39,7 @@ class NodeSpider extends events_1.EventEmitter {
      */
     constructor(opts = {}) {
         super();
+        // TODO B opts 检测是否合法
         this._STATE = {
             currentMultiDownload: 0,
             currentMultiTask: 0,
@@ -50,34 +52,27 @@ class NodeSpider extends events_1.EventEmitter {
         };
         this._STATE.queue = this._STATE.option.queue;
         // 每开始一个任务，状态中对应当前异步任务数的记录值加1
-        this.on("start_a_task", (type) => {
-            if (type === "crawl") {
-                this._STATE.currentMultiTask++;
-            }
-            else if (type === "download") {
-                this._STATE.currentMultiDownload++;
-            }
-        });
+        // this.on("start_a_task", (type: "crawl" | "download") => {
+        //     if (type === "crawl") {
+        //         this._STATE.currentMultiTask ++;
+        //     } else if (type === "download") {
+        //         this._STATE.currentMultiDownload ++;
+        //     }
+        // });
         // 每完成一个任务，状态中对应当前异步任务数的记录值减1
-        this.on("done_a_task", (type) => {
-            if (type === "crawl") {
-                this._STATE.currentMultiTask--;
-            }
-            else if (type === "download") {
-                this._STATE.currentMultiDownload--;
-            }
-        });
-        // 完成一个任务后，判断是否存在未进行任务、进行中未完成任务，如果都不存在则触发“end”事件，否则“火力全开”
-        this.on("done_a_task", (type) => {
-            const multiTaskingIsEmtpy = (this._STATE.currentMultiTask === 0);
-            const multiDownloadIsEmtpy = (this._STATE.currentMultiDownload === 0);
-            if (this._STATE.queue.isAllCompleted() && multiDownloadIsEmtpy && multiTaskingIsEmtpy) {
-                this.emit("end");
-            }
-            else {
-                this._fire();
-            }
-        });
+        // this.on("done_a_task", (type: "crawl" | "download") => {
+        //     if (type === "crawl") {
+        //         this._STATE.currentMultiTask --;
+        //     } else if (type === "download") {
+        //         this._STATE.currentMultiDownload --;
+        //     }
+        //     // 完成一个任务后，判断是否存在未进行任务、进行中未完成任务，如果都不存在则触发“end”事件，否则“火力全开”
+        //     const multiTaskingIsEmtpy: boolean = (this._STATE.currentMultiTask === 0);
+        //     const multiDownloadIsEmtpy: boolean = (this._STATE.currentMultiDownload === 0);
+        //     if (this._STATE.queue.isAllCompleted() && multiDownloadIsEmtpy && multiTaskingIsEmtpy) {
+        //         this.emit("end");
+        //     }
+        // });
         // 在爬虫的生命周期末尾，需要进行一些收尾工作，比如关闭table
         this.on("end", () => {
             const values = this._STATE.pipeStore.values();
@@ -85,6 +80,14 @@ class NodeSpider extends events_1.EventEmitter {
                 item.close();
             }
         });
+        setInterval(() => {
+            if (this._STATE.currentMultiTask < this._STATE.option.multiTasking) {
+                startCrawl.bind(this)();
+            }
+            if (this._STATE.currentMultiDownload < this._STATE.option.multiDownload) {
+                startDownload.bind(this)();
+            }
+        }, this._STATE.option.rateLimit);
     }
     /**
      * Check whether the url has been added
@@ -251,7 +254,7 @@ class NodeSpider extends events_1.EventEmitter {
             });
         }
         this._STATE.working = true;
-        this._fire();
+        // this._fire();
         return [
             this._STATE.queue.crawlWaitingNum(),
             this._STATE.queue.downloadWaitingNum(),
@@ -282,49 +285,29 @@ class NodeSpider extends events_1.EventEmitter {
         const pipe = this._STATE.pipeStore.get(pipeKey);
         pipe.add(data);
     }
-    /**
-     * 火力全开，不断尝试启动新任务，直到当前任务数达到最大限制数
-     */
-    _fire() {
-        while (this._STATE.currentMultiDownload < this._STATE.option.multiDownload) {
-            if (this._STATE.queue.isDownloadCompleted()) {
-                break;
-            }
-            else {
-                const task = this._STATE.queue.getTask();
-                this.emit("start_a_task", "download");
-                // 【【这里的错误处理思想】】
-                // 所有可能的错误，应该交给开发者编写的plan来处理
-                // 比如在rule中处理错误，或者是在handleError中处理
-                // 所以此处catch的错误，必须要再额外处理，只需要触发终止当前任务的事件即可
-                this._asyncDownload(task)
-                    .then(() => {
-                    this.emit("done_a_task", "download");
-                })
-                    .catch((e) => {
-                    console.log(e);
-                    this.emit("done_a_task", "download");
-                });
-            }
-        }
-        while (this._STATE.currentMultiTask < this._STATE.option.multiTasking) {
-            if (this._STATE.queue.isCrawlCompleted()) {
-                break;
-            }
-            else {
-                const task = this._STATE.queue.getTask();
-                this.emit("start_a_task", "crawl");
-                this._asyncCrawling(task)
-                    .then(() => {
-                    this.emit("done_a_task", "crawl");
-                })
-                    .catch((e) => {
-                    console.log(e);
-                    this.emit("done_a_task", "crawl");
-                });
-            }
-        }
-    }
+    // /**
+    //  * 火力全开，不断尝试启动新任务，直到当前任务数达到最大限制数
+    //  */
+    // protected _fire() {
+    //     // TODO B support download task
+    //     // if (this._STATE.currentMultiDownload < this._STATE.option.multiDownload) {
+    //     //     if (! this._STATE.queue.isDownloadCompleted()) {
+    //     //         const task = this._STATE.queue.getTask();
+    //     //         this.emit("start_a_task", "download");
+    //     //         // 【【这里的错误处理思想】】
+    //     //         // 所有可能的错误，应该交给开发者编写的plan来处理
+    //     //         // 比如在rule中处理错误，或者是在handleError中处理
+    //     //         // 所以此处catch的错误，必须要再额外处理，只需要触发终止当前任务的事件即可
+    //     //         this._asyncDownload(task)
+    //     //             .then(() => {
+    //     //                 this.emit("done_a_task", "download");
+    //     //             })
+    //     //             .catch((e) => {
+    //     //                 console.log(e);
+    //     //                 this.emit("done_a_task", "download");
+    //     //             });
+    //     //     }
+    // }
     _asyncCrawling(task) {
         return __awaiter(this, void 0, void 0, function* () {
             const plan = this._STATE.planStore.get(task.planKey);
@@ -421,4 +404,36 @@ function requestAsync(item) {
             resolve({ error, response, body });
         });
     });
+}
+function startCrawl() {
+    if (!this._STATE.queue.isCrawlCompleted()) {
+        const task = this._STATE.queue.getCrawlTask();
+        this._STATE.currentMultiTask++;
+        this._asyncCrawling(task)
+            .then(() => {
+            this._STATE.currentMultiTask--;
+        })
+            .catch((e) => {
+            console.log(e);
+            this._STATE.currentMultiTask--;
+        });
+    }
+}
+function startDownload() {
+    if (!this._STATE.queue.isDownloadCompleted()) {
+        const task = this._STATE.queue.getDownloadTask();
+        this._STATE.currentMultiDownload++;
+        // 【【这里的错误处理思想】】
+        // 所有可能的错误，应该交给开发者编写的plan来处理
+        // 比如在rule中处理错误，或者是在handleError中处理
+        // 所以此处catch的错误，必须要再额外处理，只需要触发终止当前任务的事件即可
+        this._asyncDownload(task)
+            .then(() => {
+            this._STATE.currentMultiDownload--;
+        })
+            .catch((e) => {
+            console.log(e);
+            this._STATE.currentMultiDownload--;
+        });
+    }
 }
