@@ -82,10 +82,10 @@ class NodeSpider extends events_1.EventEmitter {
         });
         setInterval(() => {
             if (this._STATE.currentMultiTask < this._STATE.option.multiTasking) {
-                startCrawl.bind(this)();
+                startCrawl(this);
             }
             if (this._STATE.currentMultiDownload < this._STATE.option.multiDownload) {
-                startDownload.bind(this)();
+                startDownload(this);
             }
         }, this._STATE.option.rateLimit);
     }
@@ -212,9 +212,10 @@ class NodeSpider extends events_1.EventEmitter {
      * 添加待爬取链接到队列，并指定爬取计划。
      * @param planKey 指定的爬取计划
      * @param url 待爬取的链接（们）
-     * @param special
+     * @param special （可选）针对当前链接的特别设置，将覆盖与plan重复的设置
      */
     queue(planKey, url, special) {
+        // TODO B special 应该更智能的覆盖 plan
         // 参数检验
         if (typeof planKey !== "symbol") {
             throw new TypeError("queue 参数错误");
@@ -285,112 +286,6 @@ class NodeSpider extends events_1.EventEmitter {
         const pipe = this._STATE.pipeStore.get(pipeKey);
         pipe.add(data);
     }
-    // /**
-    //  * 火力全开，不断尝试启动新任务，直到当前任务数达到最大限制数
-    //  */
-    // protected _fire() {
-    //     // TODO B support download task
-    //     // if (this._STATE.currentMultiDownload < this._STATE.option.multiDownload) {
-    //     //     if (! this._STATE.queue.isDownloadCompleted()) {
-    //     //         const task = this._STATE.queue.getTask();
-    //     //         this.emit("start_a_task", "download");
-    //     //         // 【【这里的错误处理思想】】
-    //     //         // 所有可能的错误，应该交给开发者编写的plan来处理
-    //     //         // 比如在rule中处理错误，或者是在handleError中处理
-    //     //         // 所以此处catch的错误，必须要再额外处理，只需要触发终止当前任务的事件即可
-    //     //         this._asyncDownload(task)
-    //     //             .then(() => {
-    //     //                 this.emit("done_a_task", "download");
-    //     //             })
-    //     //             .catch((e) => {
-    //     //                 console.log(e);
-    //     //                 this.emit("done_a_task", "download");
-    //     //             });
-    //     //     }
-    // }
-    _asyncCrawling(task) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const plan = this._STATE.planStore.get(task.planKey);
-            if (!plan) {
-                return new Error("unknown plan");
-            }
-            // request
-            const requestOpts = plan.request;
-            const specialOpts = task.special;
-            const item = Object.assign(requestOpts, specialOpts, { url: task.url });
-            const { error, response, body } = yield requestAsync(item);
-            let current = Object.assign({
-                response,
-                plan,
-                body,
-                error,
-            }, task);
-            // 按顺序执行预处理函数，对current进行预处理
-            if (!error) {
-                for (const preFun of plan.use) {
-                    let result = preFun(this, current);
-                    if (result instanceof Promise) {
-                        result = yield result;
-                    }
-                    current = result;
-                }
-            }
-            // 根据开发者定义的抓取规则进行操作
-            const result = plan.rule(error, current);
-            if (result instanceof Promise) {
-                yield result;
-            }
-            // 结尾的清理工作
-            current = null;
-        });
-    }
-    _asyncDownload(task) {
-        return new Promise((resolve, reject) => {
-            const plan = this._STATE.dlPlanStore.get(task.planKey);
-            if (!plan) {
-                return new Error("unknown plan");
-            }
-            // request
-            const requestOpts = plan.request;
-            const specialOpts = task.special;
-            const item = Object.assign(requestOpts, specialOpts, { url: task.url });
-            let isError = false; // for whether need to call handleFinish when finish
-            let stream = request(item);
-            stream.on("error", (error, current) => {
-                isError = true;
-                stream.close();
-                write.close();
-                plan.handleError(error, current);
-            });
-            // 获得文件名
-            const filename = task.url.slice(task.url.lastIndexOf("/") + 1);
-            const write = fs.createWriteStream(plan.path + filename);
-            // TODO B 灵感写法，未必正确
-            // TODO C 错误处理
-            for (const pl of plan.use) {
-                stream = stream.pipe(pl); // 灵感写法
-                stream.on("error", (error, current) => {
-                    isError = true;
-                    stream.close();
-                    write.close();
-                    plan.handleError(error, current);
-                });
-            }
-            stream.pipe(write);
-            write.on("error", (error, current) => {
-                isError = true;
-                stream.close();
-                write.close();
-                plan.handleError(error, current);
-            });
-            write.on("finish", (current) => {
-                if (!isError) {
-                    plan.handleFinish(current);
-                }
-                resolve();
-            });
-        });
-    }
 }
 NodeSpider.decode = decode_1.default;
 NodeSpider.loadJQ = loadJQ_1.default;
@@ -405,35 +300,118 @@ function requestAsync(item) {
         });
     });
 }
-function startCrawl() {
-    if (!this._STATE.queue.isCrawlCompleted()) {
-        const task = this._STATE.queue.getCrawlTask();
-        this._STATE.currentMultiTask++;
-        this._asyncCrawling(task)
+function startCrawl(self) {
+    if (!self._STATE.queue.isCrawlCompleted()) {
+        const task = self._STATE.queue.getCrawlTask();
+        self._STATE.currentMultiTask++;
+        _asyncCrawling(task, self)
             .then(() => {
-            this._STATE.currentMultiTask--;
+            self._STATE.currentMultiTask--;
         })
             .catch((e) => {
             console.log(e);
-            this._STATE.currentMultiTask--;
+            self._STATE.currentMultiTask--;
         });
     }
 }
-function startDownload() {
-    if (!this._STATE.queue.isDownloadCompleted()) {
-        const task = this._STATE.queue.getDownloadTask();
-        this._STATE.currentMultiDownload++;
+function startDownload(self) {
+    if (!self._STATE.queue.isDownloadCompleted()) {
+        const task = self._STATE.queue.getDownloadTask();
+        self._STATE.currentMultiDownload++;
         // 【【这里的错误处理思想】】
         // 所有可能的错误，应该交给开发者编写的plan来处理
         // 比如在rule中处理错误，或者是在handleError中处理
         // 所以此处catch的错误，必须要再额外处理，只需要触发终止当前任务的事件即可
-        this._asyncDownload(task)
+        _asyncDownload(task, self)
             .then(() => {
-            this._STATE.currentMultiDownload--;
+            self._STATE.currentMultiDownload--;
         })
             .catch((e) => {
             console.log(e);
-            this._STATE.currentMultiDownload--;
+            self._STATE.currentMultiDownload--;
         });
     }
+}
+function _asyncCrawling(task, self) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const plan = self._STATE.planStore.get(task.planKey);
+        if (!plan) {
+            return new Error("unknown plan");
+        }
+        // request
+        const requestOpts = plan.request;
+        const specialOpts = task.special;
+        const item = Object.assign(requestOpts, specialOpts, { url: task.url });
+        const { error, response, body } = yield requestAsync(item);
+        let current = Object.assign({
+            response,
+            plan,
+            body,
+            error,
+        }, task);
+        // 按顺序执行预处理函数，对current进行预处理
+        if (!error) {
+            for (const preFun of plan.use) {
+                let result = preFun(self, current);
+                if (result instanceof Promise) {
+                    result = yield result;
+                }
+                current = result;
+            }
+        }
+        // 根据开发者定义的抓取规则进行操作
+        const result = plan.rule(error, current);
+        if (result instanceof Promise) {
+            yield result;
+        }
+        // 结尾的清理工作
+        current = null;
+    });
+}
+function _asyncDownload(task, self) {
+    return new Promise((resolve, reject) => {
+        const plan = self._STATE.dlPlanStore.get(task.planKey);
+        if (!plan) {
+            return new Error("unknown plan");
+        }
+        // request
+        const requestOpts = plan.request;
+        const specialOpts = task.special;
+        const item = Object.assign(requestOpts, specialOpts, { url: task.url });
+        let isError = false; // for whether need to call handleFinish when finish
+        let stream = request(item);
+        stream.on("error", (error, current) => {
+            isError = true;
+            stream.close();
+            write.close();
+            plan.handleError(error, current);
+        });
+        // 获得文件名
+        const filename = task.url.slice(task.url.lastIndexOf("/") + 1);
+        const write = fs.createWriteStream(plan.path + filename);
+        // TODO B 灵感写法，未必正确
+        // TODO C 错误处理
+        for (const pl of plan.use) {
+            stream = stream.pipe(pl); // 灵感写法
+            stream.on("error", (error, current) => {
+                isError = true;
+                stream.close();
+                write.close();
+                plan.handleError(error, current);
+            });
+        }
+        stream.pipe(write);
+        write.on("error", (error, current) => {
+            isError = true;
+            stream.close();
+            write.close();
+            plan.handleError(error, current);
+        });
+        write.on("finish", (current) => {
+            if (!isError) {
+                plan.handleFinish(current);
+            }
+            resolve();
+        });
+    });
 }

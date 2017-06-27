@@ -4,7 +4,7 @@ import decode from "./decode";
 import loadJQ from "./loadJQ";
 import { jsonPipe, txtPipe } from "./pipe";
 import Queue from "./queue";
-import { ICurrentCrawl, ICurrentDownload, IDownloadPlanInput, IPipe, IPlanInput, IRule, IState, ITask, THandleError } from "./types";
+import { ICurrentCrawl, ICurrentDownload, IDownloadPlanInput, IPipe, IPlanInput, IRule, IState, THandleError } from "./types";
 /**
  * class of NodeSpider
  * @class NodeSpider
@@ -15,7 +15,7 @@ export default class NodeSpider extends EventEmitter {
     static Queue: typeof Queue;
     static txtPipe: typeof txtPipe;
     static jsonPipe: typeof jsonPipe;
-    protected _STATE: IState;
+    _STATE: IState;
     /**
      * create an instance of NodeSpider
      * @param opts
@@ -46,11 +46,9 @@ export default class NodeSpider extends EventEmitter {
      * 添加待爬取链接到队列，并指定爬取计划。
      * @param planKey 指定的爬取计划
      * @param url 待爬取的链接（们）
-     * @param special
+     * @param special （可选）针对当前链接的特别设置，将覆盖与plan重复的设置
      */
     queue(planKey: symbol, url: string | string[], special?: any): number[];
     pipe(pipeObject: IPipe): symbol;
     save(pipeKey: symbol, data: any): Error;
-    protected _asyncCrawling(task: ITask): Promise<Error>;
-    protected _asyncDownload(task: ITask): Promise<{}>;
 }
