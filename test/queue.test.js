@@ -55,7 +55,7 @@ test("test queue's count", () => {
     });
     testNum(q, 3, 2, 5);
 
-    q.getTask();
+    q.getDownloadTask();
     testNum(q, 3, 1, 5);
 
     q.addDownload({
@@ -64,20 +64,20 @@ test("test queue's count", () => {
     });
     testNum(q, 3, 2, 6);
 
-    q.getTask();
+    q.getDownloadTask();
     testNum(q, 3, 1, 6);
-    q.getTask();
+    q.getDownloadTask();
     testNum(q, 3, 0, 6);
-    q.getTask();
+    q.getCrawlTask();
     testNum(q, 2, 0, 6);
-    q.getTask();
+    q.getCrawlTask();
     testNum(q, 1, 0, 6);
 
-    q.getTask();
+    q.getCrawlTask();
     testNum(q, 0, 0, 6);
-    q.getTask();
+    q.getCrawlTask();
     testNum(q, 0, 0, 6);
-    q.getTask();
+    q.getDownloadTask();
     testNum(q, 0, 0, 6);
 
     q.addCrawl({
@@ -110,7 +110,7 @@ test("test queue's count", () => {
     });
     testNum(q, 3, 2, 11);
 
-    q.getTask();
+    q.getDownloadTask();
     testNum(q, 3, 1, 11);
 });
 
@@ -134,16 +134,16 @@ test("queue test", () => {
     expect(q.check("sdkjfskld")).not.toBe(true);
     expect(q.check("dddd")).not.toBe(true);
 
-    expect(q.getTask()).toEqual({url: "d1"});
-    expect(q.getTask()).toEqual({url: "d2"});
-    expect(q.getTask()).toEqual({url: "d3"});
-    expect(q.getTask()).toEqual({url: "u1"});
-    expect(q.getTask()).toEqual({url: "u2"});
-    expect(q.getTask()).toEqual({url: "u3"});
-    expect(q.getTask()).toEqual({url: "u4"});
-    expect(q.getTask()).toEqual({url: "u5"});
-    expect(q.getTask()).toBeNull();
-    expect(q.getTask()).toBeNull();
+    expect(q.getDownloadTask()).toEqual({url: "d1"});
+    expect(q.getDownloadTask()).toEqual({url: "d2"});
+    expect(q.getDownloadTask()).toEqual({url: "d3"});
+    expect(q.getCrawlTask()).toEqual({url: "u1"});
+    expect(q.getCrawlTask()).toEqual({url: "u2"});
+    expect(q.getCrawlTask()).toEqual({url: "u3"});
+    expect(q.getCrawlTask()).toEqual({url: "u4"});
+    expect(q.getCrawlTask()).toEqual({url: "u5"});
+    expect(q.getCrawlTask()).toBeNull();
+    expect(q.getDownloadTask()).toBeNull();
 
     q.addDownload({url: "top0"});
     q.addCrawl({url: "top4"});
@@ -151,12 +151,12 @@ test("queue test", () => {
     q.addDownload({url: "top1"});
     q.jumpDownload({url: "top-1"});
     q.jumpCrawl({url: "top2"});
-    expect(q.getTask()).toEqual({url: "top-1"});
-    expect(q.getTask()).toEqual({url: "top0"});
-    expect(q.getTask()).toEqual({url: "top1"});
-    expect(q.getTask()).toEqual({url: "top2"});
-    expect(q.getTask()).toEqual({url: "top3"});
-    expect(q.getTask()).toEqual({url: "top4"});
-    expect(q.getTask()).toBeNull();
-    expect(q.getTask()).toBeNull();
+    expect(q.getDownloadTask()).toEqual({url: "top-1"});
+    expect(q.getDownloadTask()).toEqual({url: "top0"});
+    expect(q.getDownloadTask()).toEqual({url: "top1"});
+    expect(q.getCrawlTask()).toEqual({url: "top2"});
+    expect(q.getCrawlTask()).toEqual({url: "top3"});
+    expect(q.getCrawlTask()).toEqual({url: "top4"});
+    expect(q.getCrawlTask()).toBeNull();
+    expect(q.getDownloadTask()).toBeNull();
 });

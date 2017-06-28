@@ -51,28 +51,6 @@ class NodeSpider extends events_1.EventEmitter {
             working: true,
         };
         this._STATE.queue = this._STATE.option.queue;
-        // 每开始一个任务，状态中对应当前异步任务数的记录值加1
-        // this.on("start_a_task", (type: "crawl" | "download") => {
-        //     if (type === "crawl") {
-        //         this._STATE.currentMultiTask ++;
-        //     } else if (type === "download") {
-        //         this._STATE.currentMultiDownload ++;
-        //     }
-        // });
-        // 每完成一个任务，状态中对应当前异步任务数的记录值减1
-        // this.on("done_a_task", (type: "crawl" | "download") => {
-        //     if (type === "crawl") {
-        //         this._STATE.currentMultiTask --;
-        //     } else if (type === "download") {
-        //         this._STATE.currentMultiDownload --;
-        //     }
-        //     // 完成一个任务后，判断是否存在未进行任务、进行中未完成任务，如果都不存在则触发“end”事件，否则“火力全开”
-        //     const multiTaskingIsEmtpy: boolean = (this._STATE.currentMultiTask === 0);
-        //     const multiDownloadIsEmtpy: boolean = (this._STATE.currentMultiDownload === 0);
-        //     if (this._STATE.queue.isAllCompleted() && multiDownloadIsEmtpy && multiTaskingIsEmtpy) {
-        //         this.emit("end");
-        //     }
-        // });
         // 在爬虫的生命周期末尾，需要进行一些收尾工作，比如关闭table
         this.on("end", () => {
             const values = this._STATE.pipeStore.values();
@@ -126,7 +104,7 @@ class NodeSpider extends events_1.EventEmitter {
      * @param {number} maxRetry Maximum number of retries for this task
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
-    retry(current, maxRetry = 3, finalErrorCallback) {
+    retry(current, maxRetry = 1, finalErrorCallback) {
         const task = {
             hasRetried: current.hasRetried,
             maxRetry: current.maxRetry,
