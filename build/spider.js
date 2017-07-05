@@ -320,10 +320,10 @@ function _asyncCrawling(task, self) {
             return new Error("unknown plan");
         }
         // 真正执行的爬取计划 = 任务指定的计划 + 该任务特别设置。由两者合并覆盖而成
-        const specialPlan = Object.assign(plan, task.special);
+        const specialPlan = Object.assign({}, plan, task.special);
         // request
-        const requestOption = Object.assign(specialPlan.request, { url: task.url });
-        const { error, response, body } = yield requestAsync(requestOption);
+        Object.assign(specialPlan.request, { url: task.url });
+        const { error, response, body } = yield requestAsync(specialPlan.request);
         let current = Object.assign(task, {
             response,
             plan,
@@ -359,10 +359,10 @@ function _asyncDownload(task, self) {
             return new Error("unknown plan");
         }
         // request
-        const specialPlan = Object.assign(plan, task.special);
-        const requestOps = Object.assign(specialPlan.request, { url: task.url });
+        const specialPlan = Object.assign({}, plan, task.special);
         let isError = false; // for whether need to call handleFinish when finish
-        let stream = request(requestOps);
+        Object.assign(specialPlan.request, { url: task.url });
+        let stream = request(specialPlan.request);
         stream.on("error", (error, current) => {
             isError = true;
             stream.close();

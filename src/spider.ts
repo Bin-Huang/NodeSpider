@@ -350,11 +350,11 @@ async function _asyncCrawling(task: ITask, self: NodeSpider) {
     }
 
     // 真正执行的爬取计划 = 任务指定的计划 + 该任务特别设置。由两者合并覆盖而成
-    const specialPlan = Object.assign(plan, task.special);
+    const specialPlan = Object.assign({}, plan, task.special);
 
     // request
-    const requestOption = Object.assign(specialPlan.request, {url: task.url});
-    const {error, response, body} = await requestAsync(requestOption);
+    Object.assign(specialPlan.request, {url: task.url});
+    const {error, response, body} = await requestAsync(specialPlan.request);
 
     let current: ICurrentCrawl = Object.assign(task, {
         response,
@@ -393,13 +393,12 @@ function _asyncDownload(task: ITask, self: NodeSpider) {
             return new Error("unknown plan");
         }
         // request
-        const specialPlan = Object.assign(plan, task.special);
-
-        const requestOps = Object.assign(specialPlan.request, {url: task.url});
+        const specialPlan = Object.assign({}, plan, task.special);
 
         let isError = false;    // for whether need to call handleFinish when finish
 
-        let stream: fs.ReadStream = request(requestOps);
+        Object.assign(specialPlan.request, {url: task.url});
+        let stream: fs.ReadStream = request(specialPlan.request);
         stream.on("error", (error, current) => {
             isError = true;
             stream.close();
