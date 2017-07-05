@@ -361,6 +361,7 @@ async function _asyncCrawling(task: ITask, self: NodeSpider) {
         plan,
         body,
         error,
+        info: specialPlan.info,
     });
 
     // 如果没有错误，按顺序执行预处理函数，对current进行预处理

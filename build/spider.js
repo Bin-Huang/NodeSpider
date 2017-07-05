@@ -329,6 +329,7 @@ function _asyncCrawling(task, self) {
             plan,
             body,
             error,
+            info: specialPlan.info,
         });
         // 如果没有错误，按顺序执行预处理函数，对current进行预处理
         if (!error) {
