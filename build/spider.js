@@ -19,7 +19,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
 const fs = require("fs");
 const request = require("request");
-const plan_1 = require("./plan");
+const preLoadJq_1 = require("./preLoadJq");
+const preToUtf8_1 = require("./preToUtf8");
 const queue_1 = require("./queue");
 const defaultOption = {
     multiDownload: 2,
@@ -141,49 +142,55 @@ class NodeSpider extends events_1.EventEmitter {
         jumpFun(task);
     }
     plan(item) {
+        // 当只传入一个rule函数，则包装成 IPlanInput 对象
         if (typeof item === "function") {
-            const newPlan = new plan_1.Plan(item, null, null, null);
-            const id = this._STATE.planStore.size + 1;
-            const key = Symbol("plan" + id);
-            this._STATE.planStore.set(key, newPlan);
-            return key;
+            item = { rule: item };
         }
-        if (typeof item === "object") {
-            if (!item.rule) {
-                throw new Error("参数缺少rule成员");
-            }
-            const rule = item.rule;
-            const request = item.request || null;
-            const use = item.use || null;
-            const info = item.info || null;
-            const newPlan = new plan_1.Plan(rule, request, use, info);
-            const id = this._STATE.planStore.size + 1;
-            const key = Symbol("plan" + id);
-            this._STATE.planStore.set(key, newPlan);
-            return key;
+        // 类型检测
+        if (typeof item !== "object") {
+            throw new Error("参数类型错误，只能是函数或则对象");
         }
-        throw new Error("参数错误");
+        if (!item.rule) {
+            throw new Error("参数缺少rule成员");
+        }
+        // 默认值填充
+        const pre = item.pre || [
+            preToUtf8_1.default(),
+            preLoadJq_1.default(),
+        ];
+        const request = Object.assign({ encoding: null }, item.request);
+        const info = item.info || {};
+        const rule = item.rule;
+        // 在爬虫中注册plan并返回key
+        const id = this._STATE.planStore.size + 1;
+        const key = Symbol("plan" + id);
+        this._STATE.planStore.set(key, { request, pre, rule, info });
+        return key;
     }
     downloadPlan(item) {
+        // 如果参数是函数，包裹成 IDownloadPlanInput 对象
         if (typeof item === "function") {
-            const newPlan = new plan_1.DownloadPlan(item);
-            const id = this._STATE.dlPlanStore.size + 1;
-            const key = Symbol("downloadPlan" + id);
-            this._STATE.dlPlanStore.set(key, newPlan);
-            return key;
+            item = { handleError: item };
         }
-        if (typeof item === "object") {
-            if (!item.handleError) {
-                throw new Error("参数缺少handleError成员");
-            }
-            // TODO: 其他参数检验
-            const newPlan = new plan_1.DownloadPlan(item.handleError, item.handleFinish, item.path, item.request, item.use, item.info);
-            const id = this._STATE.dlPlanStore.size + 1;
-            const key = Symbol("downloadPlan" + id);
-            this._STATE.dlPlanStore.set(key, newPlan);
-            return key;
+        // 参数类型检测
+        if (typeof item !== "object") {
+            throw new Error("参数类型错误，只能是函数或则对象");
         }
-        throw new Error("参数错误");
+        if (!item.handleError) {
+            throw new Error("参数缺少handleError成员");
+        }
+        // 默认值填充
+        const handleError = item.handleError;
+        const handleFinish = item.handleFinish || null;
+        const path = item.path || "";
+        const request = item.request || {};
+        const pre = item.pre || [];
+        const info = item.info || {};
+        // 在爬虫中注册并返回key
+        const id = this._STATE.dlPlanStore.size + 1;
+        const key = Symbol("downloadPlan" + id);
+        this._STATE.dlPlanStore.set(key, { handleError, handleFinish, path, request, pre, info });
+        return key;
     }
     /**
      * 添加待爬取链接到队列，并指定爬取计划。
@@ -322,7 +329,7 @@ function _asyncCrawling(task, self) {
         }, task);
         // 按顺序执行预处理函数，对current进行预处理
         if (!error) {
-            for (const preFun of plan.use) {
+            for (const preFun of plan.pre) {
                 let result = preFun(self, current);
                 if (result instanceof Promise) {
                     result = yield result;
@@ -362,7 +369,7 @@ function _asyncDownload(task, self) {
         const write = fs.createWriteStream(plan.path + filename);
         // TODO B 灵感写法，未必正确
         // TODO C 错误处理
-        for (const pl of plan.use) {
+        for (const pl of plan.pre) {
             stream = stream.pipe(pl); // 灵感写法
             stream.on("error", (error, current) => {
                 isError = true;

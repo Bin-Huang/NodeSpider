@@ -1,5 +1,6 @@
-import { DownloadPlan, Plan } from "./plan";
 import NodeSpider from "./spider";
+
+// TODO C 每一个类型都应该有注释
 
 export interface IQueue {
     addCrawl: (newTask: ITask) => void;
@@ -28,8 +29,8 @@ export interface IPipe {
 // NodeSpider' state
 export interface IState {
     queue: IQueue;
-    planStore: Map<symbol, Plan>;
-    dlPlanStore: Map<symbol, DownloadPlan>;
+    planStore: Map<symbol, IPlan>;
+    dlPlanStore: Map<symbol, IDownloadPlan>;
     pipeStore: Map<symbol, IPipe>;
     option: IDefaultOption;
     working: boolean;
@@ -59,37 +60,30 @@ export interface ITask {
     hasRetried?: number;
 }
 export interface ICurrentCrawl extends ITask {
-    plan: Plan;
+    plan: IPlan;
     response: any;
     body: string;
     error: Error;
 }
 export interface ICurrentDownload extends ITask {
-    plan: DownloadPlan;
+    plan: IDownloadPlan;
     error: Error;
 }
 
-export interface IPlan {
-    request: any;
-    rule: (err: Error, current: ICurrentCrawl|ICurrentDownload) => void;
-    pre: TPreOperation[];
-    info: any;
-}
-export interface IDownloadPlan {
-    handleError: THandleError;
-    handleFinish: THandleFinish;
-    path: string;
-    request: any;
-    use: any;
-    info: any;
-}
-
+// TODO C 重命名 use、rule、info？
 export type IRule = (err: Error, current: ICurrentCrawl) => void | Promise<void>;
+export type TPreOperation = (thisSpider: NodeSpider, current: ICurrentCrawl) => ICurrentCrawl | Promise<ICurrentCrawl>;
 export interface IPlanInput {
     rule: IRule;
     request?: any;
-    use?: any[];
+    pre?: TPreOperation[];
     info?: any;
+}
+export interface IPlan extends IPlanInput {
+    request: any;
+    rule: IRule;
+    pre: TPreOperation[];
+    info: any;
 }
 
 export type THandleError = (err: Error, current: ICurrentDownload) => void | Promise<void>;
@@ -99,9 +93,15 @@ export interface IDownloadPlanInput {
     handleFinish?: THandleFinish;
     path?: string;
     request?: any;
-    use?: any[] ;
+    pre?: any[] ;
     info?: any;
 
 }
-
-export type TPreOperation = (thisSpider: NodeSpider, current: ICurrentCrawl) => ICurrentCrawl | Promise<ICurrentCrawl>;
+export interface IDownloadPlan extends IDownloadPlanInput {
+    handleError: THandleError;
+    handleFinish: THandleFinish;
+    path: string;
+    request: any;
+    pre: any;
+    info: any;
+}
