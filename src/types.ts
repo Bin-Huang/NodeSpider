@@ -31,14 +31,14 @@ export interface IState {
     planStore: Map<symbol, Plan>;
     dlPlanStore: Map<symbol, DownloadPlan>;
     pipeStore: Map<symbol, IPipe>;
-    option: IGlobalOption;
+    option: IDefaultOption;
     working: boolean;
     currentMultiTask: number;
     currentMultiDownload: number;
 }
 
 // for parameter option, when initialize an instance  of NodeSpider.
-export interface IGlobalOption {
+export interface IDefaultOption {
     multiTasking: number;
     multiDownload: number;
     // defaultRetry: number;
@@ -67,6 +67,21 @@ export interface ICurrentCrawl extends ITask {
 export interface ICurrentDownload extends ITask {
     plan: DownloadPlan;
     error: Error;
+}
+
+export interface IPlan {
+    request: any;
+    rule: (err: Error, current: ICurrentCrawl|ICurrentDownload) => void;
+    pre: TPreOperation[];
+    info: any;
+}
+export interface IDownloadPlan {
+    handleError: THandleError;
+    handleFinish: THandleFinish;
+    path: string;
+    request: any;
+    use: any;
+    info: any;
 }
 
 export type IRule = (err: Error, current: ICurrentCrawl) => void | Promise<void>;

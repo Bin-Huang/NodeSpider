@@ -1,8 +1,5 @@
 /// <reference types="node" />
 import { EventEmitter } from "events";
-import decode from "./decode";
-import loadJQ from "./loadJQ";
-import { jsonPipe, txtPipe } from "./pipe";
 import Queue from "./queue";
 import { ICurrentCrawl, ICurrentDownload, IDownloadPlanInput, IPipe, IPlanInput, IRule, IState, THandleError } from "./types";
 /**
@@ -10,11 +7,7 @@ import { ICurrentCrawl, ICurrentDownload, IDownloadPlanInput, IPipe, IPlanInput,
  * @class NodeSpider
  */
 export default class NodeSpider extends EventEmitter {
-    static decode: typeof decode;
-    static loadJQ: typeof loadJQ;
     static Queue: typeof Queue;
-    static txtPipe: typeof txtPipe;
-    static jsonPipe: typeof jsonPipe;
     _STATE: IState;
     /**
      * create an instance of NodeSpider

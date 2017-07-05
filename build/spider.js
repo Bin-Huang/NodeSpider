@@ -5,6 +5,8 @@
 // 简单上手的回掉函数 + 自由定制的事件驱动
 // mysql 插件
 // redis queue
+// TODO: 更好的模块接口
+// TODO B 完成 special
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -17,9 +19,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
 const fs = require("fs");
 const request = require("request");
-const decode_1 = require("./decode");
-const loadJQ_1 = require("./loadJQ");
-const pipe_1 = require("./pipe");
 const plan_1 = require("./plan");
 const queue_1 = require("./queue");
 const defaultOption = {
@@ -265,11 +264,7 @@ class NodeSpider extends events_1.EventEmitter {
         pipe.add(data);
     }
 }
-NodeSpider.decode = decode_1.default;
-NodeSpider.loadJQ = loadJQ_1.default;
 NodeSpider.Queue = queue_1.default;
-NodeSpider.txtPipe = pipe_1.txtPipe;
-NodeSpider.jsonPipe = pipe_1.jsonPipe;
 exports.default = NodeSpider;
 function requestAsync(item) {
     return new Promise((resolve, reject) => {
@@ -317,10 +312,8 @@ function _asyncCrawling(task, self) {
             return new Error("unknown plan");
         }
         // request
-        const requestOpts = plan.request;
-        const specialOpts = task.special;
-        const item = Object.assign(requestOpts, specialOpts, { url: task.url });
-        const { error, response, body } = yield requestAsync(item);
+        const requestOption = Object.assign(plan.request, task.special, { url: task.url });
+        const { error, response, body } = yield requestAsync(requestOption);
         let current = Object.assign({
             response,
             plan,

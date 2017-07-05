@@ -4,6 +4,8 @@
 // 简单上手的回掉函数 + 自由定制的事件驱动
 // mysql 插件
 // redis queue
+// TODO: 更好的模块接口
+// TODO B 完成 special
 
 import * as charset from "charset";
 import * as cheerio from "cheerio";
@@ -12,16 +14,13 @@ import * as fs from "fs";
 import * as iconv from "iconv-lite";
 import * as request from "request";
 import * as url from "url";
-import decode from "./decode";
-import loadJQ from "./loadJQ";
-import { jsonPipe, txtPipe } from "./pipe";
 import { DownloadPlan, Plan } from "./plan";
 import Queue from "./queue";
 import {
     ICurrentCrawl,
     ICurrentDownload,
+    IDefaultOption,
     IDownloadPlanInput,
-    IGlobalOption,
     IPipe,
     IPlanInput,
     IRule,
@@ -30,7 +29,7 @@ import {
     THandleError,
 } from "./types";
 
-const defaultOption: IGlobalOption = {
+const defaultOption: IDefaultOption = {
     multiDownload: 2,
     multiTasking: 20,
     queue: new Queue(),
@@ -42,11 +41,7 @@ const defaultOption: IGlobalOption = {
  * @class NodeSpider
  */
 export default class NodeSpider extends EventEmitter {
-    public static decode = decode;
-    public static loadJQ = loadJQ;
     public static Queue = Queue;
-    public static txtPipe = txtPipe;
-    public static jsonPipe = jsonPipe;
 
     public _STATE: IState;
     /**
@@ -351,10 +346,8 @@ async function _asyncCrawling(task: ITask, self: NodeSpider) {
         return new Error("unknown plan");
     }
     // request
-    const requestOpts = plan.request;
-    const specialOpts = task.special;
-    const item = Object.assign(requestOpts, specialOpts, {url: task.url});
-    const {error, response, body} = await requestAsync(item);
+    const requestOption = Object.assign(plan.request, task.special, {url: task.url});
+    const {error, response, body} = await requestAsync(requestOption);
 
     let current: ICurrentCrawl = Object.assign({
         response,

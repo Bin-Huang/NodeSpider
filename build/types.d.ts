@@ -25,12 +25,12 @@ export interface IState {
     planStore: Map<symbol, Plan>;
     dlPlanStore: Map<symbol, DownloadPlan>;
     pipeStore: Map<symbol, IPipe>;
-    option: IGlobalOption;
+    option: IDefaultOption;
     working: boolean;
     currentMultiTask: number;
     currentMultiDownload: number;
 }
-export interface IGlobalOption {
+export interface IDefaultOption {
     multiTasking: number;
     multiDownload: number;
     rateLimit: number;
@@ -52,6 +52,20 @@ export interface ICurrentCrawl extends ITask {
 export interface ICurrentDownload extends ITask {
     plan: DownloadPlan;
     error: Error;
+}
+export interface IPlan {
+    request: any;
+    rule: (err: Error, current: ICurrentCrawl | ICurrentDownload) => void;
+    pre: TPreOperation[];
+    info: any;
+}
+export interface IDownloadPlan {
+    handleError: THandleError;
+    handleFinish: THandleFinish;
+    path: string;
+    request: any;
+    use: any;
+    info: any;
 }
 export declare type IRule = (err: Error, current: ICurrentCrawl) => void | Promise<void>;
 export interface IPlanInput {
