@@ -47,10 +47,12 @@ export interface ICurrentCrawl extends ITask {
     response: any;
     body: string;
     error: Error;
+    [propName: string]: any;
 }
 export interface ICurrentDownload extends ITask {
     plan: IDownloadPlan;
     error: Error;
+    [propName: string]: any;
 }
 export declare type IRule = (err: Error, current: ICurrentCrawl) => void | Promise<void>;
 export declare type TPreOperation = (thisSpider: NodeSpider, current: ICurrentCrawl) => ICurrentCrawl | Promise<ICurrentCrawl>;

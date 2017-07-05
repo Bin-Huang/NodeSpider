@@ -314,22 +314,25 @@ function startDownload(self) {
 }
 function _asyncCrawling(task, self) {
     return __awaiter(this, void 0, void 0, function* () {
+        // 获得该任务指定的计划对象
         const plan = self._STATE.planStore.get(task.planKey);
         if (!plan) {
             return new Error("unknown plan");
         }
+        // 真正执行的爬取计划 = 任务指定的计划 + 该任务特别设置。由两者合并覆盖而成
+        const specialPlan = Object.assign(plan, task.special);
         // request
-        const requestOption = Object.assign(plan.request, task.special, { url: task.url });
+        const requestOption = Object.assign(specialPlan.request, { url: task.url });
         const { error, response, body } = yield requestAsync(requestOption);
-        let current = Object.assign({
+        let current = Object.assign(task, {
             response,
             plan,
             body,
             error,
-        }, task);
-        // 按顺序执行预处理函数，对current进行预处理
+        });
+        // 如果没有错误，按顺序执行预处理函数，对current进行预处理
         if (!error) {
-            for (const preFun of plan.pre) {
+            for (const preFun of specialPlan.pre) {
                 let result = preFun(self, current);
                 if (result instanceof Promise) {
                     result = yield result;
@@ -338,7 +341,7 @@ function _asyncCrawling(task, self) {
             }
         }
         // 根据开发者定义的抓取规则进行操作
-        const result = plan.rule(error, current);
+        const result = specialPlan.rule(error, current);
         if (result instanceof Promise) {
             yield result;
         }
@@ -346,18 +349,19 @@ function _asyncCrawling(task, self) {
         current = null;
     });
 }
+// TODO B current and test
 function _asyncDownload(task, self) {
     return new Promise((resolve, reject) => {
+        // 获得任务指定的计划对象
         const plan = self._STATE.dlPlanStore.get(task.planKey);
         if (!plan) {
             return new Error("unknown plan");
         }
         // request
-        const requestOpts = plan.request;
-        const specialOpts = task.special;
-        const item = Object.assign(requestOpts, specialOpts, { url: task.url });
+        const specialPlan = Object.assign(plan, task.special);
+        const requestOps = Object.assign(specialPlan.request, { url: task.url });
         let isError = false; // for whether need to call handleFinish when finish
-        let stream = request(item);
+        let stream = request(requestOps);
         stream.on("error", (error, current) => {
             isError = true;
             stream.close();

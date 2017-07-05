@@ -64,10 +64,12 @@ export interface ICurrentCrawl extends ITask {
     response: any;
     body: string;
     error: Error;
+    [propName: string]: any;
 }
 export interface ICurrentDownload extends ITask {
     plan: IDownloadPlan;
     error: Error;
+    [propName: string]: any;
 }
 
 // TODO C 重命名 use、rule、info？
@@ -95,7 +97,6 @@ export interface IDownloadPlanInput {
     request?: any;
     pre?: any[] ;
     info?: any;
-
 }
 export interface IDownloadPlan extends IDownloadPlanInput {
     handleError: THandleError;
