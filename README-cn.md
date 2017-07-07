@@ -1,10 +1,6 @@
 
 20 lines of code to create a web crawler as a geek.
 
-Easier and more efficient to crawl a website and extract data, NodeSpider can save your time.
-
-简单上手、方便使用、灵活、可扩展。NodeSpider提供了很多实用的方法，让你远离大量“无聊和繁琐”的开发流程，只需专注于爬取策略，从而节省你的宝贵时间
-
 # 预处理 preprocessing
 ## 使用
 ```javascript

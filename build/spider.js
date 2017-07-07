@@ -4,7 +4,7 @@
 // TODO: 使用 node 自带 stringdecode 代替 iconv-lite
 // mysql 插件
 // redis queue
-// TODO: 更好的模块接口
+// TODO B 注册pipe和queue可能存在异步操作，此时应该封装到promise或async函数。但依然存在问题：当还没注册好，就调动了queue或者save
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }

@@ -2,7 +2,7 @@
   "name": "nodespider",
   "version": "0.4.1",
   "description": "20 lines of code to bulid a web crawler as a geek",
-  "main": "index.js",
+  "main": "./build/index.js",
   "typings": "./build/spider.d.ts",
   "dependencies": {
     "apjson": "^1.0.6",
