@@ -1,8 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs-extra");
-//TODO C delete header
-// TODO C more useful jsonPipe
 class TxtTable {
     constructor(path, header) {
         if (typeof path !== "string") {
@@ -22,13 +20,6 @@ class TxtTable {
      */
     add(data) {
         // TODO: 参数检测
-        // // 如果表头为空，说明是第一次写入文档，将获得表头并初始化写入一些内容
-        // if (this.header === null) {
-        //     this.header = Object.keys(data);
-        //     let headerString = this.header.join("\t");
-        //     headerString += "\n";
-        //     this.stream.write(headerString);
-        // }
         let chunk = "";
         for (const item of this.header) {
             chunk += data[item] + "\t";

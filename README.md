@@ -1,25 +1,45 @@
 # Features
-- 简单高效，扩展性强
+- 简单，高效，扩展性强
+- 自动识别网页编码格式，并将返回正文转码为utf8（可设置）
+- 使用服务器端jQ选择器，轻松操作返回正文（可设置）
+- 更轻松地保存抓取的数据（`pipe`和`save`方法）
+- 轻松识别和过滤已经添加的链接（`isExist`和`filter`方法）
+- 必要时，轻松可靠地重试某次请求任务（`retry`方法）
+- 轻松设置请求间隔、异步任务数。
+- 独立管理不同的爬取策略与计划
 - 支持 async function 和 promise
 
+
 ```javascript
-const { Spider } = require("nodespider");
+const { Spider, jsonPipe } = require("nodespider");
 
 // 初始化一个爬虫
 const n = new Spider({
     rateLimit: 10
 });
 
+// 新建一个数据保存pipe
+const jsonFile = n.pipe(jsonPipe("path/to/my.json"));
+
 // 声明一个爬取计划
 const planA = n.plan(function (err, current) {
     if (err) {
+        // 如果出错，重试该任务，但最多3次
         return n.retry(current, 3);
     }
+    // 是的，你可以使用jQ
     const $ = current.$;
     console.log($("title").text());
+
+    // 保存从返回正文中提取的数据
+    n.save(jsonFile, {
+        user: $("#user").text(),
+        description: $("#desc").text(),
+        date: "2017-7-7",
+    })
 });
 
-// 添加链接到爬取队列，并指定爬取计划
+// 添加链接到爬取队列
 n.queue(planA, "https://www.nodejs.org");
 ```
 
@@ -106,7 +126,7 @@ n.queue(otherPlan, "https://www.example.com");
 - **hasRetried**    (可能不存在)当前任务已经重试的次数
 - **and more ...**  以及可能的更多成员属性
  
- **NOTE**   值得注意的是，当前任务的指定计划，或者是特定设置中的预处理函数，往往会修改`current`中的成员属性，甚至添加更多的成员属性，所以上面的清单不是`current`中所有的成员属性
+ **NOTE**   值得注意的是，当前任务的指定计划，或者是特定设置中的预处理函数，往往会修改`current`中的成员属性，甚至添加更多的成员属性。
 
 ## queue(planKey, url, special)
 
@@ -217,41 +237,7 @@ n.save(txtPipe, {
 });
 ```
 
-通过加载不同的pipe生成器，你可以方便地任意地保存数据。nodespider自带了两个pipe发生器: `txtPipe` 和 `jsonPipe`
-
-### NodeSpider.jsonPipe(path, space)
-返回一个将数据以json格式写入制定路径文件的pipeGenerator
-
-| 参数 | 说明 | 类型 |
-| --- | --- | --- |
-| path | 文件路径 | string |
-| space | （可选）排版的空格数量 | number |
-
-```javascript
-var jsonFile = n.pipe(jsonPipe("path/to/my.json"));
-
-n.save(jsonFile, {
-    title: "some",
-    desc: "data",
-});
-```
-
-### NodeSpider.txtPipe(path, header)
-
-返回一个将数据以txt表格形式写入制定路径文件的pipeGenerator
-
-| 参数 | 说明 | 类型 |
-| --- | --- | --- |
-| path | 文件路径 | string |
-| header | 表头关键字数组 | array |
-
-```javascript
-var txtFile = n.pipe(txtPipe("my.txt", ["name", "desc"]));
-n.save(txtFile, {
-    name: "NodeSpider",
-    desc: "a crawler package",
-});
-```
+nodespider 自带了两个pipe建立函数：`jsonPipe`和`txtPipe`，可以帮助开发者以json格式或txt表格形式来储存提取的数据，在下文中有更多介绍。
 
 ## save(pipeKey, data)
 
@@ -279,8 +265,12 @@ const planA = n.plan(function (err, current) {
 })
 ```
 
-# pipe
+# pipeGenerator
 nodespider自带了两个pipe发生器：`jsonPipe`和`txtPipe`，可以帮助开发者保存提取的数据到本地。
+
+```javascript
+const {Spider, jsonPipe, txtPipe} = require("nodespider");
+```
 
 ## jsonPipe(path, space)
 数据将以json形式保存到本地
@@ -292,7 +282,6 @@ nodespider自带了两个pipe发生器：`jsonPipe`和`txtPipe`，可以帮助�
 
 ```javascript
 const myJson = n.pipe(jsonPipe("path/to/my.json"));
-
 const myPlan(function (err, current) {
     const $ = current.$;
     n.save(myJson, {
@@ -310,12 +299,11 @@ const myPlan(function (err, current) {
 | header | array | 表头元素数组 |
 
 ```javascript
-const txt = n.pipe(txtPipe("path/to/my.txt", ["name", "age", "description"]));
+const txt = n.pipe(txtPipe("path/to/my.txt", ["name", "description"]));
 
 n.save(txt, {
-    name: "ben",
-    age: 20,
-    website: "example"
+    name: "some data",
+    description: "example"
 })
 ```
 
