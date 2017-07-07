@@ -4,7 +4,7 @@ const preToUtf8 = require("./build/preToUtf8");
 const preLoadJq = require("./build/preLoadJq");
 
 module.exports = {
-    NodeSpider,
+    Spider: NodeSpider,
     jsonPipe,
     txtPipe,
     preToUtf8,

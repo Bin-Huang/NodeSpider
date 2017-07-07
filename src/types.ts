@@ -64,11 +64,13 @@ export interface ICurrentCrawl extends ITask {
     response: any;
     body: string;
     error: Error;
+    info: any;
     [propName: string]: any;
 }
 export interface ICurrentDownload extends ITask {
     plan: IDownloadPlan;
     error: Error;
+    info: any;
     [propName: string]: any;
 }
 

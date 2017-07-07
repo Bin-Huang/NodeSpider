@@ -1,11 +1,9 @@
 // TODO: 更好的报错机制: 报错建议？以及去除多余的 console.error
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
 // TODO: 使用 node 自带 stringdecode 代替 iconv-lite
-// 简单上手的回掉函数 + 自由定制的事件驱动
 // mysql 插件
 // redis queue
 // TODO: 更好的模块接口
-// TODO B 完成 special
 
 import * as charset from "charset";
 import * as cheerio from "cheerio";
@@ -375,7 +373,7 @@ async function _asyncCrawling(task: ITask, self: NodeSpider) {
         }
     }
 
-    // 根据开发者定义的抓取规则进行操作
+    // 执行该计划的爬取策略函数，根据开发者定义的抓取规则进行操作
     const result = specialPlan.rule(error, current);
     if (result instanceof Promise) {
         await result;

@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs-extra");
+//TODO C delete header
+// TODO C more useful jsonPipe
 class TxtTable {
     constructor(path, header) {
         if (typeof path !== "string") {
