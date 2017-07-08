@@ -3,7 +3,7 @@
   "version": "0.4.2",
   "description": "20 lines of code to bulid a web crawler as a geek",
   "main": "./build/index.js",
-  "typings": "./build/spider.d.ts",
+  "typings": "./build/index.d.ts",
   "dependencies": {
     "apjson": "^1.0.6",
     "charset": "^1.0.0",
