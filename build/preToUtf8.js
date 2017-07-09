@@ -9,7 +9,7 @@ function preToUtf8() {
      * @param currentTask
      * @return currentTask
      */
-    return function decodeOperation(thisSpider, currentTask) {
+    return function decodeOperation(currentTask) {
         const encoding = charset(currentTask.response.headers, currentTask.response.body.toString());
         // 有些时候会无法获得当前网站的编码，原因往往是网站内容过于简单，比如最简单的404界面。此时无需转码
         // TODO: 有没有可能，在需要转码的网站无法获得 encoding？

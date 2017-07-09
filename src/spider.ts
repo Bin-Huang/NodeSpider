@@ -22,6 +22,7 @@ import {
     IDownloadPlanInput,
     IPipe,
     IPlanInput,
+    IPlan,
     IRule,
     IState,
     ITask,
@@ -306,7 +307,7 @@ function requestAsync(item) {
 }
 
 function startCrawl(self: NodeSpider) {
-    if (! self._STATE.queue.isCrawlCompleted()) {
+    if (self._STATE.queue.getWaitingTaskNum() !== 0) {
         const task = self._STATE.queue.nextCrawlTask();
         self._STATE.currentMultiTask ++;
         _asyncCrawling(task, self)
@@ -321,7 +322,7 @@ function startCrawl(self: NodeSpider) {
 }
 
 function startDownload(self: NodeSpider) {
-    if (! self._STATE.queue.isDownloadCompleted()) {
+    if (self._STATE.queue.getWaitingDownloadTaskNum() !== 0) {
         const task = self._STATE.queue.nextDownloadTask();
 
         self._STATE.currentMultiDownload ++;
@@ -348,7 +349,7 @@ async function _asyncCrawling(task: ITask, self: NodeSpider) {
     }
 
     // 真正执行的爬取计划 = 任务指定的计划 + 该任务特别设置。由两者合并覆盖而成
-    const specialPlan = Object.assign({}, plan, task.special);
+    const specialPlan: IPlan = Object.assign({}, plan, task.special);
 
     // request
     Object.assign(specialPlan.request, {url: task.url});
@@ -365,7 +366,7 @@ async function _asyncCrawling(task: ITask, self: NodeSpider) {
     // 如果没有错误，按顺序执行预处理函数，对current进行预处理
     if (! error) {
         for (const preFun of specialPlan.pre) {
-            let result = preFun(self, current);
+            let result = preFun(current);
             if (result instanceof Promise) {
                 result = await result;
             }

@@ -75,7 +75,7 @@ export interface ICurrentDownload extends ITask {
 
 // TODO C 重命名 use、rule、info？
 export type IRule = (err: Error, current: ICurrentCrawl) => void | Promise<void>;
-export type TPreOperation = (thisSpider: NodeSpider, current: ICurrentCrawl) => ICurrentCrawl | Promise<ICurrentCrawl>;
+export type TPreOperation = (current: ICurrentCrawl) => ICurrentCrawl | Promise<ICurrentCrawl>;
 export interface IPlanInput {
     rule: IRule;
     request?: any;

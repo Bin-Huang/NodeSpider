@@ -21,7 +21,7 @@ const myPlan = n.plan({
 
 ## 协议
 所有预处理函数执行后，返回的函数必须满足以下要求：
-- [接受参数thisSpider, currentTask]必须接受参数: [thisSpider, currentTask]
+- [接受参数currentTask]必须接受参数: [currentTask]
 - [返回参数currentTask]
 - [若有异步, 必须封装到promise并返回，并以resolve传递currentTask，并以reject传递可能的error]
 

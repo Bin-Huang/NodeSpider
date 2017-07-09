@@ -279,7 +279,7 @@ function requestAsync(item) {
     });
 }
 function startCrawl(self) {
-    if (!self._STATE.queue.isCrawlCompleted()) {
+    if (self._STATE.queue.getWaitingTaskNum() !== 0) {
         const task = self._STATE.queue.nextCrawlTask();
         self._STATE.currentMultiTask++;
         _asyncCrawling(task, self)
@@ -293,7 +293,7 @@ function startCrawl(self) {
     }
 }
 function startDownload(self) {
-    if (!self._STATE.queue.isDownloadCompleted()) {
+    if (self._STATE.queue.getWaitingDownloadTaskNum() !== 0) {
         const task = self._STATE.queue.nextDownloadTask();
         self._STATE.currentMultiDownload++;
         // 【【这里的错误处理思想】】
@@ -332,7 +332,7 @@ function _asyncCrawling(task, self) {
         // 如果没有错误，按顺序执行预处理函数，对current进行预处理
         if (!error) {
             for (const preFun of specialPlan.pre) {
-                let result = preFun(self, current);
+                let result = preFun(current);
                 if (result instanceof Promise) {
                     result = yield result;
                 }
