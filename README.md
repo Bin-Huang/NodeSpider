@@ -9,7 +9,6 @@
 - 独立管理不同的爬取策略与计划
 - 支持 async function 和 promise
 
-
 ```javascript
 const { Spider, jsonPipe } = require("nodespider");
 

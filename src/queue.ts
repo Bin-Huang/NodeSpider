@@ -107,7 +107,6 @@ class LinkedQueue {
 /**
  * 为NodeSpider量身定做的taskqueue
  */
-// tslint:disable-next-line:max-classes-per-file
 export default class Queue implements IQueue {
     protected urlPool: Set<string>;
     protected crawlQueue: LinkedQueue;
@@ -117,7 +116,7 @@ export default class Queue implements IQueue {
         this.crawlQueue = new LinkedQueue();
         this.downloadQueue = new LinkedQueue();
     }
-    public addCrawl(newTask: ITask) {
+    public addTask(newTask: ITask) {
         this.urlPool.add(newTask.url);
         this.crawlQueue.add(newTask);
     }
@@ -125,7 +124,7 @@ export default class Queue implements IQueue {
         this.urlPool.add(newTask.url);
         this.downloadQueue.add(newTask);
     }
-    public jumpCrawl(newTask: ITask) {
+    public jumpTask(newTask: ITask) {
         this.urlPool.add(newTask.url);
         this.crawlQueue.jump(newTask);
     }
@@ -136,35 +135,23 @@ export default class Queue implements IQueue {
     public check(url: string) {
         return this.urlPool.has(url);
     }
-    public crawlWaitingNum() {
+    public getWaitingTaskNum() {
         return this.crawlQueue.getLength();
     }
-    public downloadWaitingNum() {
+    public getWaitingDownloadTaskNum() {
         return this.downloadQueue.getLength();
     }
-    public totalWaitingNum() {
-        return this.crawlQueue.getLength() + this.downloadQueue.getLength();
-    }
-    public allUrlNum() {
+    public getTotalUrlsNum() {
         return this.urlPool.size;
     }
-    public isCrawlCompleted() {
-        return this.crawlQueue.isEmpty();
-    }
-    public isDownloadCompleted() {
-        return this.downloadQueue.isEmpty();
-    }
-    public isAllCompleted() {
-        return this.crawlQueue.isEmpty() && this.downloadQueue.isEmpty();
-    }
-    public getCrawlTask() {
+    public nextCrawlTask() {
         const result = this.crawlQueue.next();
         if (! result) {
             return null;
         }
         return result;
     }
-    public getDownloadTask() {
+    public nextDownloadTask() {
         const result = this.downloadQueue.next();
         if (! result) {
             return null;

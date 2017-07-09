@@ -3,20 +3,19 @@ import NodeSpider from "./spider";
 // TODO C 每一个类型都应该有注释
 
 export interface IQueue {
-    addCrawl: (newTask: ITask) => void;
+    addTask: (newTask: ITask) => void;
     addDownload: (newTask: ITask) => void;
-    jumpCrawl: (newTask: ITask) => void;
+    jumpTask: (newTask: ITask) => void;
     jumpDownload: (newTask: ITask) => void;
+
     check: (url: string) => boolean;
-    crawlWaitingNum: () => number;
-    downloadWaitingNum: () => number;
-    totalWaitingNum: () => number;
-    allUrlNum: () => number;
-    isCrawlCompleted: () => boolean;
-    isDownloadCompleted: () => boolean;
-    isAllCompleted: () => boolean;
-    getCrawlTask: () => ITask;
-    getDownloadTask: () => ITask;
+
+    getWaitingTaskNum: () => number;
+    getWaitingDownloadTaskNum: () => number;
+    getTotalUrlsNum: () => number;
+
+    nextCrawlTask: () => ITask;
+    nextDownloadTask: () => ITask;
 }
 
 export interface IPipe {

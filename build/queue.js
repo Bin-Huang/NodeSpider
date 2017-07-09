@@ -93,14 +93,13 @@ class LinkedQueue {
 /**
  * 为NodeSpider量身定做的taskqueue
  */
-// tslint:disable-next-line:max-classes-per-file
 class Queue {
     constructor() {
         this.urlPool = new Set();
         this.crawlQueue = new LinkedQueue();
         this.downloadQueue = new LinkedQueue();
     }
-    addCrawl(newTask) {
+    addTask(newTask) {
         this.urlPool.add(newTask.url);
         this.crawlQueue.add(newTask);
     }
@@ -108,7 +107,7 @@ class Queue {
         this.urlPool.add(newTask.url);
         this.downloadQueue.add(newTask);
     }
-    jumpCrawl(newTask) {
+    jumpTask(newTask) {
         this.urlPool.add(newTask.url);
         this.crawlQueue.jump(newTask);
     }
@@ -119,35 +118,23 @@ class Queue {
     check(url) {
         return this.urlPool.has(url);
     }
-    crawlWaitingNum() {
+    getWaitingTaskNum() {
         return this.crawlQueue.getLength();
     }
-    downloadWaitingNum() {
+    getWaitingDownloadTaskNum() {
         return this.downloadQueue.getLength();
     }
-    totalWaitingNum() {
-        return this.crawlQueue.getLength() + this.downloadQueue.getLength();
-    }
-    allUrlNum() {
+    getTotalUrlsNum() {
         return this.urlPool.size;
     }
-    isCrawlCompleted() {
-        return this.crawlQueue.isEmpty();
-    }
-    isDownloadCompleted() {
-        return this.downloadQueue.isEmpty();
-    }
-    isAllCompleted() {
-        return this.crawlQueue.isEmpty() && this.downloadQueue.isEmpty();
-    }
-    getCrawlTask() {
+    nextCrawlTask() {
         const result = this.crawlQueue.next();
         if (!result) {
             return null;
         }
         return result;
     }
-    getDownloadTask() {
+    nextDownloadTask() {
         const result = this.downloadQueue.next();
         if (!result) {
             return null;

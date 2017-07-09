@@ -127,7 +127,7 @@ class NodeSpider extends events_1.EventEmitter {
         // 判断是哪种任务，crawl or download?
         let jumpFun = null;
         if (this._STATE.planStore.has(task.planKey)) {
-            jumpFun = this._STATE.queue.jumpCrawl;
+            jumpFun = this._STATE.queue.jumpTask;
         }
         else if (this._STATE.dlPlanStore.has(task.planKey)) {
             jumpFun = this._STATE.queue.jumpDownload;
@@ -217,7 +217,7 @@ class NodeSpider extends events_1.EventEmitter {
         // TODO C 完善 special: 过滤掉其中不相干的成员？
         if (!Array.isArray(url)) {
             if (toCrawl) {
-                this._STATE.queue.addCrawl({ url, planKey, special });
+                this._STATE.queue.addTask({ url, planKey, special });
             }
             else {
                 this._STATE.queue.addDownload({ url, planKey, special });
@@ -229,7 +229,7 @@ class NodeSpider extends events_1.EventEmitter {
                     return new Error("url数组中存在非字符串成员");
                 }
                 if (toCrawl) {
-                    this._STATE.queue.addCrawl({ url: u, planKey });
+                    this._STATE.queue.addTask({ url: u, planKey });
                 }
                 else {
                     this._STATE.queue.addDownload({ url: u, planKey });
@@ -239,10 +239,10 @@ class NodeSpider extends events_1.EventEmitter {
         this._STATE.working = true;
         // this._fire();
         return [
-            this._STATE.queue.crawlWaitingNum(),
-            this._STATE.queue.downloadWaitingNum(),
-            this._STATE.queue.crawlWaitingNum(),
-            this._STATE.queue.allUrlNum(),
+            this._STATE.queue.getWaitingTaskNum(),
+            this._STATE.queue.getWaitingDownloadTaskNum(),
+            this._STATE.queue.getWaitingTaskNum(),
+            this._STATE.queue.getTotalUrlsNum(),
         ];
     }
     // 关于pipeGenerator
@@ -280,7 +280,7 @@ function requestAsync(item) {
 }
 function startCrawl(self) {
     if (!self._STATE.queue.isCrawlCompleted()) {
-        const task = self._STATE.queue.getCrawlTask();
+        const task = self._STATE.queue.nextCrawlTask();
         self._STATE.currentMultiTask++;
         _asyncCrawling(task, self)
             .then(() => {
@@ -294,7 +294,7 @@ function startCrawl(self) {
 }
 function startDownload(self) {
     if (!self._STATE.queue.isDownloadCompleted()) {
-        const task = self._STATE.queue.getDownloadTask();
+        const task = self._STATE.queue.nextDownloadTask();
         self._STATE.currentMultiDownload++;
         // 【【这里的错误处理思想】】
         // 所有可能的错误，应该交给开发者编写的plan来处理
