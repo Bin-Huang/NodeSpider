@@ -337,3 +337,11 @@ const justPlan = n.plan({
     }
 });
 ```
+
+# 如何贡献？
+nodespider是一个开源爬虫package，主旨是让爬虫开发更简单、更灵活、模块化、更具扩展性。为了变得更好，nodespider需要更多人的贡献，包括但不限于：
+- 在[github](https://github.com/Ben-Hwang/NodeSpider)上通过`Issues`提交bug或建议。
+- 在[github](https://github.com/Ben-Hwang/NodeSpider)上star
+- 向他人推荐这个package
+- 提交你的精心修改版本
+- 开源并分享你开发的nodespider预处理函数、queue、pipe（文档即将补全）

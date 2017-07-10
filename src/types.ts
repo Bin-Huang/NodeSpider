@@ -2,6 +2,7 @@ import NodeSpider from "./spider";
 
 // TODO C 每一个类型都应该有注释
 
+// nodespider's queue; 
 export interface IQueue {
     addTask: (newTask: ITask) => void;
     addDownload: (newTask: ITask) => void;
@@ -22,8 +23,6 @@ export interface IPipe {
     add: (data: any) => void;
     close: () => void;
 }
-
-// import TaskQueue from "./TaskQueue";
 
 // NodeSpider' state
 export interface IState {
@@ -58,6 +57,8 @@ export interface ITask {
     maxRetry?: number;
     hasRetried?: number;
 }
+
+// current crawl task; for `rule` function in the plan
 export interface ICurrentCrawl extends ITask {
     plan: IPlan;
     response: any;
