@@ -1,4 +1,5 @@
 import NodeSpider from "./spider";
+import * as fs from "fs";
 
 // TODO C 每一个类型都应该有注释
 
@@ -27,7 +28,7 @@ export interface IPipe {
 // NodeSpider' state
 export interface IState {
     queue: IQueue;
-    planStore: Map<symbol, IPlan>;
+    planStore: Map<symbol, IDefaultPlan>;
     dlPlanStore: Map<symbol, IDownloadPlan>;
     pipeStore: Map<symbol, IPipe>;
     option: IDefaultOption;
@@ -58,53 +59,85 @@ export interface ITask {
     hasRetried?: number;
 }
 
+
+// ====== request options ======
+
+export interface IRequestOpts {
+
+};
+
+
+// ====== default plan ======
+
+export type IDefaultCallback = (err: Error, current: IDefaultCurrent) => void | Promise<void>;
+export interface IDefaultPlanInput {
+    callback: IDefaultCallback;
+    request?: IRequestOpts;
+    pre?: IDefaultCallback[];
+    info?: any;
+}
+export interface IDefaultPlan extends IDefaultPlanInput {
+    request: IRequestOpts;
+    pre: IDefaultCallback[];
+    callback: IDefaultCallback;
+    info: any;
+}
 // current crawl task; for `rule` function in the plan
-export interface ICurrentCrawl extends ITask {
-    plan: IPlan;
+export interface IDefaultCurrent extends ITask {
+    plan: IDefaultPlan;
     response: any;
     body: string;
     error: Error;
     info: any;
     [propName: string]: any;
 }
-export interface ICurrentDownload extends ITask {
+
+
+// ====== download plan ======
+
+export type IDownloadCallback = (err: Error, current: IDownloadCurrent) => void | Promise<void>;
+export interface IDownloadPlanInput {
+    callback: IDownloadCallback;
+    path?: string;
+    use?: any;
+    request?: IRequestOpts;
+    info?: any;
+}
+export interface IDownloadPlan extends IDownloadPlanInput {
+    callback: IDownloadCallback;
+    path: string;
+    use?: any;
+    request: IRequestOpts;
+    info: any;
+}
+export interface IDownloadCurrent extends ITask {
     plan: IDownloadPlan;
     error: Error;
     info: any;
     [propName: string]: any;
 }
 
-// TODO C 重命名 use、rule、info？
-export type IRule = (err: Error, current: ICurrentCrawl) => void | Promise<void>;
-export type TPreOperation = (current: ICurrentCrawl) => ICurrentCrawl | Promise<ICurrentCrawl>;
-export interface IPlanInput {
-    rule: IRule;
-    request?: any;
-    pre?: TPreOperation[];
-    info?: any;
-}
-export interface IPlan extends IPlanInput {
-    request: any;
-    rule: IRule;
-    pre: TPreOperation[];
-    info: any;
-}
 
-export type THandleError = (err: Error, current: ICurrentDownload) => void | Promise<void>;
-export type THandleFinish = (current: ICurrentDownload) => void | Promise<void>;
-export interface IDownloadPlanInput {
-    handleError: THandleError;
-    handleFinish?: THandleFinish;
-    path?: string;
-    request?: any;
-    pre?: any[] ;
+// ====== pipe plan ======
+
+export type IPipeCallback = (err: Error, current: IPipeCurrent) => void | Promise<void>;
+export interface IPipePlanInput {
+    pipe: fs.WriteStream;
+    callback: IPipeCallback;
+    request?: IRequestOpts;
     info?: any;
+    use?: any;
 }
-export interface IDownloadPlan extends IDownloadPlanInput {
-    handleError: THandleError;
-    handleFinish: THandleFinish;
-    path: string;
-    request: any;
-    pre: any;
+export interface IPipePlan {
+    pipe: fs.WriteStream;
+    callback: IPipeCallback;
+    request: IRequestOpts;
     info: any;
+    use: any;
+}
+export interface IPipeCurrent extends ITask {
+    plan: IPipePlan;
+    error: Error;
+    info: any;
+    [propName: string]: any;
 }

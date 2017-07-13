@@ -1,4 +1,102 @@
+```javascript
+// --------------------------------------------------------------------
+const planA = n.plan((err, current) => {
+    if (err) {
+        console.log(err);
+        return n.retry(current, 3);
+    }
+    const $ = current.$;
+    console.log($("title").text());
+})
+const planA = n.plan((current) => {
+    const $ = current.$;
+    console.log($("title").text());
+}).catch((err, current) => {
+    console.log(err);
+    n.retry(current, 3);
+})
+// --------------------------------------------------------------------
+const planB = n.plan({
+    header: {
+        "xx-ksdfj": "klsdfjskdlj",
+    },
+    cookies: "klsjflksdjflsjfsjfklsjd",
+}).do(preToUtf8, preLoadJq, (current) => {
+    const $ = current.$;
+    console.log($("title").text());
+}).catch((e, current) => {
+    console.log(e);
+})
 
+const planB = n.plan({
+    request: {
+        cookies: "lkfjsd323kn43nmi29ehuduf",
+        header: {
+            "xxx-sdk": "kfjenvnvnnnnnn",
+        },
+    },
+    rule: [preToUtf8, preLoadJq, (err, current) => {
+        if (err) {
+            return n.retry(current, 3);
+        }
+        const $ = current.$;
+        console.log($("titile").text());
+    }],
+})
+
+// --------------------------------------------------------------------
+const planC = n.plan(requestOpts)
+    .do(preToUtf8, preLoadJq, myFun)
+    .catch(handleError);
+
+const planC = n.plan({
+    request: requestOpts,
+    rule: [preToUtf8, preLoadJq, myFun],
+    handleError: handleError,
+});
+// --------------------------------------------------------------------
+const planD = n.plan({
+    header: {
+        "klsdfjlksdj": "ksdjflksdjf"
+    }
+}).pipe(fs.createWriteStream("path/to/my.json"))
+.catch((err, current) => {
+    console.log(err);
+    n.retry(current, 3, () => {
+        console.log(current);
+    });
+});
+
+const planD = n.plan({
+    type: "pipe",
+    request: {
+        header: {
+            "slkdfjsklfjs": "fjlsjxmcnvierurh",
+        },
+    },
+    pipe: fs.createWriteStream("path/to/my.json"),
+    handleError: (err, current) => {
+        console.log(err);
+        n.retry(current, 3, () => {
+            console.log(current);
+        });
+    }
+})
+// --------------------------------------------------------------------
+const planE = n.plan()
+    .download("path/to/myFolder")
+    .catch((err, current) => {
+        console.log(err);
+    });
+
+const planE = n.plan({
+    type: "download",
+    path: "path/to/myFolder",
+    handleError: (err, current) => {
+        console.log(err);
+    }
+})
+```
 20 lines of code to create a web crawler as a geek.
 
 # 预处理 preprocessing
@@ -59,6 +157,60 @@ s.start('https://en.wikipedia.org/wiki/Main_Page', function (err, currentTask, $
     // And more interesting thing...
 });
 ```
+
+```javascript
+const plan1 = n.plan((err, current) => {
+    if (err) {
+        console.log(err);
+        return n.retry(err);
+    }
+    const $ = current.$;
+    console.log($("title").text());
+});
+
+const plan1 = n.plan({
+    request: {
+        cookies: "sdkfj-sdfklsj-sdfklsj",
+        header: {
+            "xxx-header": "ksdfjskld-sdkfjsl",
+        },
+    },
+    pre: [preToUtf8, preLoadJq],
+    callback: (err, current) => {
+        if (err) {
+            console.log(err);
+            return n.retry(err);
+        }
+        const $ = current.$;
+        console.log($("title").text());
+    },
+});
+
+
+const plan2 = n.downloadPlan("path/to/my.json", (err, current) => {
+    if (err) {
+        console.log(err);
+        return n.retry(current);
+    }
+    console.log(`[done] download task: ${current.url}`);
+});
+
+const plan2 = n.downloadPlan({
+    path: "path/to/myjson",
+    callback: (err, current) => {
+        if (err) {
+            console.log(err);
+            return n.retry(current);
+        }
+        console.log(`[done] download task: ${current.url}`);
+    },
+});
+
+const plan3 = n.pipePlan(inputStream, (err, current) => {
+    
+});
+```
+
 
 # Installation and import
 

@@ -143,13 +143,13 @@ class NodeSpider extends events_1.EventEmitter {
     plan(item) {
         // 当只传入一个rule函数，则包装成 IPlanInput 对象
         if (typeof item === "function") {
-            item = { rule: item };
+            item = { callback: item };
         }
         // 类型检测
         if (typeof item !== "object") {
             throw new Error("参数类型错误，只能是函数或则对象");
         }
-        if (!item.rule) {
+        if (!item.callback) {
             throw new Error("参数缺少rule成员");
         }
         // 默认值填充
@@ -157,38 +157,39 @@ class NodeSpider extends events_1.EventEmitter {
             preToUtf8_1.default(),
             preLoadJq_1.default(),
         ];
+        // TODO B 删掉默认的设置 encoding ?????
         const request = Object.assign({ encoding: null }, item.request);
         const info = item.info || {};
-        const rule = item.rule;
+        const callback = item.callback;
         // 在爬虫中注册plan并返回key
         const id = this._STATE.planStore.size + 1;
         const key = Symbol("plan" + id);
-        this._STATE.planStore.set(key, { request, pre, rule, info });
+        this._STATE.planStore.set(key, { request, pre, callback, info });
         return key;
     }
     downloadPlan(item) {
         // 如果参数是函数，包裹成 IDownloadPlanInput 对象
         if (typeof item === "function") {
-            item = { handleError: item };
+            item = { callback: item };
         }
         // 参数类型检测
         if (typeof item !== "object") {
             throw new Error("参数类型错误，只能是函数或则对象");
         }
-        if (!item.handleError) {
-            throw new Error("参数缺少handleError成员");
+        if (!item.callback) {
+            throw new Error("参数缺少callback成员");
         }
         // 默认值填充
-        const handleError = item.handleError;
-        const handleFinish = item.handleFinish || null;
+        const callback = item.callback;
         const path = item.path || "";
         const request = item.request || {};
-        const pre = item.pre || [];
+        const use = item.use || [];
         const info = item.info || {};
         // 在爬虫中注册并返回key
+        // TODO C uuid
         const id = this._STATE.dlPlanStore.size + 1;
         const key = Symbol("downloadPlan" + id);
-        this._STATE.dlPlanStore.set(key, { handleError, handleFinish, path, request, pre, info });
+        this._STATE.dlPlanStore.set(key, { callback, path, request, use, info });
         return key;
     }
     /**
@@ -198,7 +199,6 @@ class NodeSpider extends events_1.EventEmitter {
      * @param special （可选）针对当前链接的特别设置，将覆盖与plan重复的设置
      */
     queue(planKey, url, special) {
-        // TODO B special 应该更智能的覆盖 plan
         // 参数检验
         if (typeof planKey !== "symbol") {
             throw new TypeError("queue 参数错误");
@@ -238,7 +238,6 @@ class NodeSpider extends events_1.EventEmitter {
             });
         }
         this._STATE.working = true;
-        // this._fire();
         return [
             this._STATE.queue.getWaitingTaskNum(),
             this._STATE.queue.getWaitingDownloadTaskNum(),
@@ -333,15 +332,14 @@ function _asyncCrawling(task, self) {
         // 如果没有错误，按顺序执行预处理函数，对current进行预处理
         if (!error) {
             for (const preFun of specialPlan.pre) {
-                let result = preFun(current);
+                let result = preFun(error, current);
                 if (result instanceof Promise) {
                     result = yield result;
                 }
-                current = result;
             }
         }
         // 执行该计划的爬取策略函数，根据开发者定义的抓取规则进行操作
-        const result = specialPlan.rule(error, current);
+        const result = specialPlan.callback(error, current);
         if (result instanceof Promise) {
             yield result;
         }
@@ -362,24 +360,25 @@ function _asyncDownload(task, self) {
         let isError = false; // for whether need to call handleFinish when finish
         Object.assign(specialPlan.request, { url: task.url });
         let stream = request(specialPlan.request);
+        // TODO B 统一的事件发生器 emit， 不然current为空
         stream.on("error", (error, current) => {
             isError = true;
             stream.close();
             write.close();
-            plan.handleError(error, current);
+            plan.callback(error, current);
         });
         // 获得文件名
         const filename = task.url.slice(task.url.lastIndexOf("/") + 1);
         const write = fs.createWriteStream(plan.path + filename);
         // TODO B 灵感写法，未必正确
         // TODO C 错误处理
-        for (const pl of plan.pre) {
+        for (const pl of plan.use) {
             stream = stream.pipe(pl); // 灵感写法
             stream.on("error", (error, current) => {
                 isError = true;
                 stream.close();
                 write.close();
-                plan.handleError(error, current);
+                plan.callback(error, current);
             });
         }
         stream.pipe(write);
@@ -387,11 +386,11 @@ function _asyncDownload(task, self) {
             isError = true;
             stream.close();
             write.close();
-            plan.handleError(error, current);
+            plan.callback(error, current);
         });
-        write.on("finish", (current) => {
+        write.on("finish", (error, current) => {
             if (!isError) {
-                plan.handleFinish(current);
+                plan.callback(error, current);
             }
             resolve();
         });

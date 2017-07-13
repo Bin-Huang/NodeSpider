@@ -1,7 +1,7 @@
 import * as cheerio from "cheerio";
 import * as url from "url";
 import NodeSpider from "./spider";
-import {ICurrentCrawl, TPreOperation} from "./types";
+import {IDefaultCurrent, TPreOperation} from "./types";
 
 export default function preLoadJq(): TPreOperation {
     return loadJqOperation;
@@ -13,7 +13,7 @@ export default function preLoadJq(): TPreOperation {
  * @param currentTask
  * @return currentTask
  */
-function loadJqOperation(currentTask: ICurrentCrawl) {
+function loadJqOperation(currentTask: IDefaultCurrent) {
     const $ = cheerio.load(currentTask.body);
 
     // 扩展：添加 url 方法
