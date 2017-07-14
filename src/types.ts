@@ -59,7 +59,7 @@ export interface ITask {
     maxRetry?: number;
     hasRetried?: number;
 }
-
+// to plan.process's parma task;
 export interface IPlanProcessTaskInput extends ITask {
     specialOpts: IDefaultPlanOption;
 }

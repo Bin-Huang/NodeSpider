@@ -9,8 +9,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
 const request = require("request");
-const preLoadJq_1 = require("./preLoadJq");
-const preToUtf8_1 = require("./preToUtf8");
 const queue_1 = require("./queue");
 const plan_1 = require("./plan");
 const defaultOption = {
@@ -133,30 +131,14 @@ class NodeSpider extends events_1.EventEmitter {
         jumpFun(task);
     }
     plan(item) {
-        // 当只传入一个rule函数，则包装成 IPlanInput 对象
-        if (typeof item === "function") {
-            item = { callback: item };
-        }
-        // 类型检测
-        if (typeof item !== "object") {
-            throw new Error("参数类型错误，只能是函数或则对象");
-        }
-        if (!item.callback) {
-            throw new Error("参数缺少rule成员");
-        }
-        // 默认值填充
-        const pre = item.pre || [
-            preToUtf8_1.default(),
-            preLoadJq_1.default(),
-        ];
-        // TODO B 删掉默认的设置 encoding ?????
-        const request = Object.assign({ encoding: null }, item.request);
-        const info = item.info || {};
-        const callback = item.callback;
-        // 在爬虫中注册plan并返回key
         const id = this._STATE.planStore.size + 1;
         const key = Symbol("plan" + id);
-        this._STATE.planStore.set(key, plan_1.defaultPlan({ request, pre, callback, info }));
+        if (item instanceof plan_1.Plan) {
+            this._STATE.planStore.set(key, item);
+        }
+        else {
+            this._STATE.planStore.set(key, plan_1.defaultPlan(item));
+        }
         return key;
     }
     pipePlan(planOpts) {

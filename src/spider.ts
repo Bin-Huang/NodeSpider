@@ -13,8 +13,6 @@ import * as fs from "fs";
 import * as iconv from "iconv-lite";
 import * as request from "request";
 import * as url from "url";
-import preLoadJq from "./preLoadJq";
-import preToUtf8 from "./preToUtf8";
 import Queue from "./queue";
 import * as stream from "stream";
 import {
@@ -173,33 +171,14 @@ export default class NodeSpider extends EventEmitter {
         jumpFun(task);
     }
 
-    public plan(item: IDefaultCallback|IDefaultPlanOptionInput): symbol {
-        // 当只传入一个rule函数，则包装成 IPlanInput 对象
-        if (typeof item === "function") {
-            item = {callback: item};
-        }
-        // 类型检测
-        if (typeof item !== "object") {
-            throw new Error("参数类型错误，只能是函数或则对象");
-        }
-        if (! item.callback) {
-            throw new Error("参数缺少rule成员");
-        }
-
-        // 默认值填充
-        const pre = item.pre || [
-            preToUtf8(),
-            preLoadJq(),
-        ];
-        // TODO B 删掉默认的设置 encoding ?????
-        const request = Object.assign({encoding: null}, item.request);
-        const info = item.info || {};
-        const callback = item.callback;
-
-        // 在爬虫中注册plan并返回key
+    public plan(item: IDefaultCallback|IDefaultPlanOptionInput|Plan): symbol {
         const id = this._STATE.planStore.size + 1;
         const key = Symbol("plan" + id);
-        this._STATE.planStore.set(key, defaultPlan({request, pre, callback, info}));
+        if (item instanceof Plan) {
+            this._STATE.planStore.set(key, item);
+        } else {
+            this._STATE.planStore.set(key, defaultPlan(item));
+        }
         return key;
     }
 
