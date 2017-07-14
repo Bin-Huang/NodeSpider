@@ -1,13 +1,14 @@
-const NodeSpider = require("../build/spider");
+const { Spider } = require("../build/index.js");
 
-const s = NodeSpider.create();
-s.addTask({
-    url: "http://www.douban.com",
-    strategy: (err, currentTask, $) => {
-        if (err) {
-            console.log(err)
-        } else {
-            console.log($("title").text());
-        }
+const n = new Spider();
+
+const i = n.plan((err, current) => {
+    if (err) {
+        console.log(err);
     }
-})
+    console.log(current.url);
+
+    console.log(current);
+});
+
+n.queue(i, "http://www.baidu.com")

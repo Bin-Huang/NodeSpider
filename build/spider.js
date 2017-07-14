@@ -6,21 +6,13 @@
 // redis queue
 // TODO B 注册pipe和queue可能存在异步操作，此时应该封装到promise或async函数。但依然存在问题：当还没注册好，就调动了queue或者save
 // TODO C plan 和 pipe 返回的key应该是唯一的，由算法生成
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
-const fs = require("fs");
 const request = require("request");
 const preLoadJq_1 = require("./preLoadJq");
 const preToUtf8_1 = require("./preToUtf8");
 const queue_1 = require("./queue");
+const plan_1 = require("./plan");
 const defaultOption = {
     multiDownload: 2,
     multiTasking: 20,
@@ -164,7 +156,7 @@ class NodeSpider extends events_1.EventEmitter {
         // 在爬虫中注册plan并返回key
         const id = this._STATE.planStore.size + 1;
         const key = Symbol("plan" + id);
-        this._STATE.planStore.set(key, { request, pre, callback, info });
+        this._STATE.planStore.set(key, plan_1.defaultPlan({ request, pre, callback, info }));
         return key;
     }
     pipePlan(planOpts) {
@@ -284,13 +276,14 @@ function requestAsync(item) {
 }
 function startCrawl(self) {
     if (self._STATE.queue.getWaitingTaskNum() !== 0) {
-        const task = self._STATE.queue.nextCrawlTask();
+        let task = self._STATE.queue.nextCrawlTask();
         self._STATE.currentMultiTask++;
-        _asyncCrawling(task, self)
-            .then(() => {
+        const plan = self._STATE.planStore.get(task.planKey);
+        const specialOpts = Object.assign({}, plan.options, task.special);
+        const t = Object.assign({}, task, { specialOpts });
+        plan.process(t, self).then(() => {
             self._STATE.currentMultiTask--;
-        })
-            .catch((e) => {
+        }).catch((e) => {
             console.log(e);
             self._STATE.currentMultiTask--;
         });
@@ -313,90 +306,4 @@ function startDownload(self) {
             self._STATE.currentMultiDownload--;
         });
     }
-}
-function _asyncCrawling(task, self) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // 获得该任务指定的计划对象
-        const plan = self._STATE.planStore.get(task.planKey);
-        if (!plan) {
-            return new Error("unknown plan");
-        }
-        // 真正执行的爬取计划 = 任务指定的计划 + 该任务特别设置。由两者合并覆盖而成
-        const specialPlan = Object.assign({}, plan, task.special);
-        // request
-        Object.assign(specialPlan.request, { url: task.url });
-        const { error, response, body } = yield requestAsync(specialPlan.request);
-        let current = Object.assign(task, {
-            response,
-            plan,
-            body,
-            error,
-            info: specialPlan.info,
-        });
-        // 如果没有错误，按顺序执行预处理函数，对current进行预处理
-        if (!error) {
-            for (const preFun of specialPlan.pre) {
-                let result = preFun(error, current);
-                if (result instanceof Promise) {
-                    result = yield result;
-                }
-            }
-        }
-        // 执行该计划的爬取策略函数，根据开发者定义的抓取规则进行操作
-        const result = specialPlan.callback(error, current);
-        if (result instanceof Promise) {
-            yield result;
-        }
-        // 结尾的清理工作
-        current = null;
-    });
-}
-// TODO B current and test
-function _asyncDownload(task, self) {
-    return new Promise((resolve, reject) => {
-        // 获得任务指定的计划对象
-        const plan = self._STATE.dlPlanStore.get(task.planKey);
-        if (!plan) {
-            return new Error("unknown plan");
-        }
-        // request
-        const specialPlan = Object.assign({}, plan, task.special);
-        let isError = false; // for whether need to call handleFinish when finish
-        Object.assign(specialPlan.request, { url: task.url });
-        let stream = request(specialPlan.request);
-        // TODO B 统一的事件发生器 emit， 不然current为空
-        stream.on("error", (error, current) => {
-            isError = true;
-            stream.close();
-            write.close();
-            plan.callback(error, current);
-        });
-        // 获得文件名
-        const filename = task.url.slice(task.url.lastIndexOf("/") + 1);
-        const write = fs.createWriteStream(plan.path + filename);
-        // TODO B 灵感写法，未必正确
-        // TODO C 错误处理
-        for (const pl of plan.use) {
-            stream = stream.pipe(pl); // 灵感写法
-            stream.on("error", (error, current) => {
-                isError = true;
-                stream.close();
-                write.close();
-                plan.callback(error, current);
-            });
-        }
-        stream.pipe(write);
-        write.on("error", (error, current) => {
-            isError = true;
-            stream.close();
-            write.close();
-            plan.callback(error, current);
-        });
-        write.on("finish", (error, current) => {
-            if (!isError) {
-                plan.callback(error, current);
-            }
-            resolve();
-        });
-    });
 }

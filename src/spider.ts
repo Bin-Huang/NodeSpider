@@ -22,6 +22,7 @@ import {
     IPipe,
     IState,
     ITask,
+    IPlanProcessTaskInput,
 
     IDefaultCallback,
     IDefaultPlanInput,
@@ -38,6 +39,7 @@ import {
     IPipePlan,
     IPipeCurrent,
 } from "./types";
+import { Plan, defaultPlan } from "./plan";
 
 const defaultOption: IDefaultOption = {
     multiDownload: 2,
@@ -197,7 +199,7 @@ export default class NodeSpider extends EventEmitter {
         // 在爬虫中注册plan并返回key
         const id = this._STATE.planStore.size + 1;
         const key = Symbol("plan" + id);
-        this._STATE.planStore.set(key, {request, pre, callback, info});
+        this._STATE.planStore.set(key, defaultPlan({request, pre, callback, info}));
         return key;
     }
 
@@ -322,16 +324,24 @@ function requestAsync(item) {
 
 function startCrawl(self: NodeSpider) {
     if (self._STATE.queue.getWaitingTaskNum() !== 0) {
-        const task = self._STATE.queue.nextCrawlTask();
+        let task = self._STATE.queue.nextCrawlTask();
         self._STATE.currentMultiTask ++;
-        _asyncCrawling(task, self)
-            .then(() => {
-                self._STATE.currentMultiTask --;
-            })
-            .catch((e) => {
-                console.log(e);
-                self._STATE.currentMultiTask --;
-            });
+
+        const plan = self._STATE.planStore.get(task.planKey);
+        const specialOpts = Object.assign({}, plan.options, task.special);
+
+        const t: IPlanProcessTaskInput = {
+            ... task,
+            specialOpts,
+        };
+
+        plan.process(t, self).then(() => {
+            self._STATE.currentMultiTask --;
+        }).catch((e) => {
+            console.log(e);
+            self._STATE.currentMultiTask --;
+        });
+
     }
 }
 
@@ -355,102 +365,102 @@ function startDownload(self: NodeSpider) {
     }
 }
 
-async function _asyncCrawling(task: ITask, self: NodeSpider) {
-    // 获得该任务指定的计划对象
-    const plan = self._STATE.planStore.get(task.planKey);
-    if (! plan) {
-        return new Error("unknown plan");
-    }
+// async function _asyncCrawling(task: ITask, self: NodeSpider) {
+//     // 获得该任务指定的计划对象
+//     const plan = self._STATE.planStore.get(task.planKey);
+//     if (! plan) {
+//         return new Error("unknown plan");
+//     }
 
-    // 真正执行的爬取计划 = 任务指定的计划 + 该任务特别设置。由两者合并覆盖而成
-    const specialPlan: IDefaultPlan = Object.assign({}, plan, task.special);
+//     // 真正执行的爬取计划 = 任务指定的计划 + 该任务特别设置。由两者合并覆盖而成
+//     const specialPlan: IDefaultPlan = Object.assign({}, plan, task.special);
 
-    // request
-    Object.assign(specialPlan.request, {url: task.url});
-    const {error, response, body} = await requestAsync(specialPlan.request);
+//     // request
+//     Object.assign(specialPlan.request, {url: task.url});
+//     const {error, response, body} = await requestAsync(specialPlan.request);
 
-    let current: IDefaultCurrent = Object.assign(task, {
-        response,
-        plan,
-        body,
-        error,
-        info: specialPlan.info,
-    });
+//     let current: IDefaultCurrent = Object.assign(task, {
+//         response,
+//         plan,
+//         body,
+//         error,
+//         info: specialPlan.info,
+//     });
 
-    // 如果没有错误，按顺序执行预处理函数，对current进行预处理
-    if (! error) {
-        for (const preFun of specialPlan.pre) {
-            let result = preFun(error, current);
-            if (result instanceof Promise) {
-                result = await result;
-            }
-        }
-    }
+//     // 如果没有错误，按顺序执行预处理函数，对current进行预处理
+//     if (! error) {
+//         for (const preFun of specialPlan.pre) {
+//             let result = preFun(error, current);
+//             if (result instanceof Promise) {
+//                 result = await result;
+//             }
+//         }
+//     }
 
-    // 执行该计划的爬取策略函数，根据开发者定义的抓取规则进行操作
-    const result = specialPlan.callback(error, current);
-    if (result instanceof Promise) {
-        await result;
-    }
-    // 结尾的清理工作
-    current = null;
-}
+//     // 执行该计划的爬取策略函数，根据开发者定义的抓取规则进行操作
+//     const result = specialPlan.callback(error, current);
+//     if (result instanceof Promise) {
+//         await result;
+//     }
+//     // 结尾的清理工作
+//     current = null;
+// }
 
-// TODO B current and test
-function _asyncDownload(task: ITask, self: NodeSpider) {
-    return new Promise((resolve, reject) => {
-        // 获得任务指定的计划对象
-        const plan = self._STATE.dlPlanStore.get(task.planKey);
-        if (! plan) {
-            return new Error("unknown plan");
-        }
-        // request
-        const specialPlan = Object.assign({}, plan, task.special);
+// // TODO B current and test
+// function _asyncDownload(task: ITask, self: NodeSpider) {
+//     return new Promise((resolve, reject) => {
+//         // 获得任务指定的计划对象
+//         const plan = self._STATE.dlPlanStore.get(task.planKey);
+//         if (! plan) {
+//             return new Error("unknown plan");
+//         }
+//         // request
+//         const specialPlan = Object.assign({}, plan, task.special);
 
-        let isError = false;    // for whether need to call handleFinish when finish
+//         let isError = false;    // for whether need to call handleFinish when finish
 
-        Object.assign(specialPlan.request, {url: task.url});
-        let stream: fs.ReadStream = request(specialPlan.request);
-        // TODO B 统一的事件发生器 emit， 不然current为空
-        stream.on("error", (error, current) => {
-            isError = true;
-            stream.close();
-            write.close();
-            plan.callback(error, current);
-        });
+//         Object.assign(specialPlan.request, {url: task.url});
+//         let stream: fs.ReadStream = request(specialPlan.request);
+//         // TODO B 统一的事件发生器 emit， 不然current为空
+//         stream.on("error", (error, current) => {
+//             isError = true;
+//             stream.close();
+//             write.close();
+//             plan.callback(error, current);
+//         });
 
-        // 获得文件名
-        const filename = task.url.slice(task.url.lastIndexOf("/") + 1);
-        const write = fs.createWriteStream(plan.path + filename);
+//         // 获得文件名
+//         const filename = task.url.slice(task.url.lastIndexOf("/") + 1);
+//         const write = fs.createWriteStream(plan.path + filename);
 
-        // TODO B 灵感写法，未必正确
-        // TODO C 错误处理
-        for (const pl of plan.use) {
-            stream = stream.pipe(pl);   // 灵感写法
-            stream.on("error", (error, current) => {
-                isError = true;
-                stream.close();
-                write.close();
-                plan.callback(error, current);
-            });
-        }
-        stream.pipe(write);
+//         // TODO B 灵感写法，未必正确
+//         // TODO C 错误处理
+//         for (const pl of plan.use) {
+//             stream = stream.pipe(pl);   // 灵感写法
+//             stream.on("error", (error, current) => {
+//                 isError = true;
+//                 stream.close();
+//                 write.close();
+//                 plan.callback(error, current);
+//             });
+//         }
+//         stream.pipe(write);
 
-        write.on("error", (error, current) => {
-            isError = true;
-            stream.close();
-            write.close();
-            plan.callback(error, current);
-        });
-        write.on("finish", (error, current) => {
-            if (! isError) {
-                plan.callback(error, current);
-            }
-            resolve();
-        });
+//         write.on("error", (error, current) => {
+//             isError = true;
+//             stream.close();
+//             write.close();
+//             plan.callback(error, current);
+//         });
+//         write.on("finish", (error, current) => {
+//             if (! isError) {
+//                 plan.callback(error, current);
+//             }
+//             resolve();
+//         });
 
-    });
-}
+//     });
+// }
 
 type TPipePlanApi1 = (input: stream.Stream, callback: IPipeCallback) => symbol;
 type TPipePlanApi2 = (planOpts: IPipePlanInput) => symbol;

@@ -1,5 +1,6 @@
 import NodeSpider from "./spider";
 import * as fs from "fs";
+import { Plan } from "./plan";
 
 // TODO C 每一个类型都应该有注释
 
@@ -28,8 +29,8 @@ export interface IPipe {
 // NodeSpider' state
 export interface IState {
     queue: IQueue;
-    planStore: Map<symbol, IDefaultPlan>;
-    dlPlanStore: Map<symbol, IDownloadPlan>;
+    planStore: Map<symbol, Plan>;
+    dlPlanStore: Map<symbol, Plan>;
     pipeStore: Map<symbol, IPipe>;
     option: IDefaultOption;
     working: boolean;
@@ -59,6 +60,9 @@ export interface ITask {
     hasRetried?: number;
 }
 
+export interface IPlanProcessTaskInput extends ITask {
+    specialOpts: any;
+}
 
 // ====== request options ======
 
