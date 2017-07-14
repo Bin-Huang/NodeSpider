@@ -16,6 +16,7 @@ import * as url from "url";
 import preLoadJq from "./preLoadJq";
 import preToUtf8 from "./preToUtf8";
 import Queue from "./queue";
+import * as stream from "stream";
 import {
     IDefaultOption,
     IPipe,
@@ -198,6 +199,11 @@ export default class NodeSpider extends EventEmitter {
         const key = Symbol("plan" + id);
         this._STATE.planStore.set(key, {request, pre, callback, info});
         return key;
+    }
+
+    public pipePlan(planOpts: IPipePlanInput): symbol {
+        // 未完待续
+        return Symbol("sdklfjsl");
     }
 
     public downloadPlan(item: IDownloadCallback | IDownloadPlanInput): symbol {
@@ -445,3 +451,6 @@ function _asyncDownload(task: ITask, self: NodeSpider) {
 
     });
 }
+
+type TPipePlanApi1 = (input: stream.Stream, callback: IPipeCallback) => symbol;
+type TPipePlanApi2 = (planOpts: IPipePlanInput) => symbol;

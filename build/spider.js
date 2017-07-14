@@ -167,6 +167,10 @@ class NodeSpider extends events_1.EventEmitter {
         this._STATE.planStore.set(key, { request, pre, callback, info });
         return key;
     }
+    pipePlan(planOpts) {
+        // 未完待续
+        return Symbol("sdklfjsl");
+    }
     downloadPlan(item) {
         // 如果参数是函数，包裹成 IDownloadPlanInput 对象
         if (typeof item === "function") {

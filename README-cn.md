@@ -1,127 +1,91 @@
+# plan声明
+考虑过使用 【2】 形式来声明plan，然而更加复杂、混乱，甚至不能真正地获得好处：比如按步骤更加有条理（不，更混乱）、按步骤更加稳定安全（不，很难设置可靠的报错）
+
 ```javascript
-// --------------------------------------------------------------------
-const planA = n.plan((err, current) => {
-    if (err) {
-        console.log(err);
-        return n.retry(current, 3);
-    }
-    const $ = current.$;
-    console.log($("title").text());
-})
-const planA = n.plan((current) => {
-    const $ = current.$;
-    console.log($("title").text());
-}).catch((err, current) => {
-    console.log(err);
-    n.retry(current, 3);
-})
-// --------------------------------------------------------------------
-const planB = n.plan({
-    header: {
-        "xx-ksdfj": "klsdfjskdlj",
-    },
-    cookies: "klsjflksdjflsjfsjfklsjd",
-}).do(preToUtf8, preLoadJq, (current) => {
-    const $ = current.$;
-    console.log($("title").text());
-}).catch((e, current) => {
-    console.log(e);
-})
+// 1. 使用这个
+n.plan(planOpts);
+// 2. 而不是
+n.plan(requestOpts).do(callback).catch(handleError);
+```
 
-const planB = n.plan({
-    request: {
-        cookies: "lkfjsd323kn43nmi29ehuduf",
-        header: {
-            "xxx-sdk": "kfjenvnvnnnnnn",
-        },
-    },
-    rule: [preToUtf8, preLoadJq, (err, current) => {
-        if (err) {
-            return n.retry(current, 3);
-        }
-        const $ = current.$;
-        console.log($("titile").text());
-    }],
-})
+实际上，方法plan仅仅用于注册，具体设置的抓取计划需要自行设计，或者加载三方设计的计划包。比如
+```javascript
+n.plan(phantom({
+    // some opts
+}));
+```
+但在平时，则默认使用request计划
 
-// --------------------------------------------------------------------
-const planC = n.plan(requestOpts)
-    .do(preToUtf8, preLoadJq, myFun)
-    .catch(handleError);
-
-const planC = n.plan({
-    request: requestOpts,
-    rule: [preToUtf8, preLoadJq, myFun],
-    handleError: handleError,
-});
-// --------------------------------------------------------------------
-const planD = n.plan({
-    header: {
-        "klsdfjlksdj": "ksdjflksdjf"
-    }
-}).pipe(fs.createWriteStream("path/to/my.json"))
-.catch((err, current) => {
-    console.log(err);
-    n.retry(current, 3, () => {
-        console.log(current);
-    });
+```javascript
+n.plan((err, current) => {
+    // some rules
 });
 
-const planD = n.plan({
-    type: "pipe",
+n.plan({
     request: {
+        cookies: "kfsjlkfs-fklsjdflksjd-sdlfsjdkfl",
         header: {
-            "slkdfjsklfjs": "fjlsjxmcnvierurh",
+            "xxx-header": "kfjlksdj",
         },
     },
-    pipe: fs.createWriteStream("path/to/my.json"),
-    handleError: (err, current) => {
-        console.log(err);
-        n.retry(current, 3, () => {
-            console.log(current);
-        });
+    pre: [preToUtf8, preLoadJq],
+    input: inputStream; // input stream
+    callback: (err, current) => {
+        // some rules
+    },
+    info: {
+        // some info
     }
-})
-// --------------------------------------------------------------------
-const planE = n.plan()
-    .download("path/to/myFolder")
-    .catch((err, current) => {
-        console.log(err);
-    });
+});
 
-const planE = n.plan({
-    type: "download",
-    path: "path/to/myFolder",
-    handleError: (err, current) => {
-        console.log(err);
-    }
+const downloadPlan1 = n.plan({
+    request: {
+        // some request options
+    },
+    download: "path/to/save/folder",
+    callback: (err, current) => {
+        // some rules
+    },
 })
+
+n.queue(downloadPlan1, "http://www.source.com/23.exe", "23.exe");
 ```
-20 lines of code to create a web crawler as a geek.
 
-# 预处理 preprocessing
-## 使用
+## planOptions
 ```javascript
-const myPlan = n.plan({
-    use: [
-        NodeSpider.decode(),
-        NodeSpider.loadJQ(),
-        loadPlantForm({
-            // some opts;
-        }),
-    ],
-    rule: (err, current) => {
-        // ...
-    }
-})
+n.plan(callback);
+// 约等于
+n.plan({
+    request: {
+        // default opts ????????
+    },
+    pre: [preToUtf8, preLoadJq],
+    callback: callback,
+});
 ```
+
+```javascript
+n.plan(planOptions);
+// 约等于
+n.plan(defaultPlan(planOptions));
+```
+
+设置中有 download 或 input，则为pipe特殊任务，current不包含body和response？
+
+## pre
+实际上预处理函数，即使普通的callback函数，只不过仅对current进行常规性处理并封装起来，而不能对实例进行修改
+
+```
+(error, current) => void | Promise<void>
+```
+
+## callback
+不管是普通的抓取任务，还是pipe任务（input设置），或者下载任务（download设置），有必须有callback函数：
+**错误失败或完成**时执行callback
+
+current参数的成员参数不一定一样。
+
 预处理函数本质是一个返回函数的函数。声明plan时，可在use数组中按顺序执行预处理函数。
-
-## 协议
-所有预处理函数执行后，返回的函数必须满足以下要求：
-- [接受参数currentTask]必须接受参数: [currentTask]
-- [返回参数currentTask]
-- [若有异步, 必须封装到promise并返回，并以resolve传递currentTask，并以reject传递可能的error]
 
 # 错误处理的思想
 传给用户是为了让用户retry重试，或者在爬取策略中自行调试。
@@ -379,3 +343,32 @@ s.start('http://some_url_maybe_wrong', function(err, current, $) {
 **final_callback** type: {function}
 
 可选。设置达到最大重试次数后所需要执行的函数。默认等价于：`function (err) {this.save('log', err)}`
+
+
+```javascript
+n.plan(plantom({
+
+})).do(page => {
+
+}).catch(e => {
+    console.log(e);
+})
+
+n.plan(plantom({
+    callback: (err, page) => {
+        console.log(page);
+    }
+}));
+
+n.plan(download({
+    path: "sdjflsj",
+    callback: ()  => {
+
+    };
+}));
+
+n.plan(pipePlan({
+    
+}));
+
+```
