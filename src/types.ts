@@ -61,7 +61,7 @@ export interface ITask {
 }
 
 export interface IPlanProcessTaskInput extends ITask {
-    specialOpts: any;
+    specialOpts: IDefaultPlanOption;
 }
 
 // ====== request options ======
@@ -74,13 +74,13 @@ export interface IRequestOpts {
 // ====== default plan ======
 
 export type IDefaultCallback = (err: Error, current: IDefaultCurrent) => void | Promise<void>;
-export interface IDefaultPlanInput {
+export interface IDefaultPlanOptionInput {
     callback: IDefaultCallback;
     request?: IRequestOpts;
     pre?: IDefaultCallback[];
     info?: any;
 }
-export interface IDefaultPlan extends IDefaultPlanInput {
+export interface IDefaultPlanOption extends IDefaultPlanOptionInput {
     request: IRequestOpts;
     pre: IDefaultCallback[];
     callback: IDefaultCallback;
@@ -88,11 +88,12 @@ export interface IDefaultPlan extends IDefaultPlanInput {
 }
 // current crawl task; for `rule` function in the plan
 export interface IDefaultCurrent extends ITask {
-    plan: IDefaultPlan;
+    plan: Plan;
     response: any;
     body: string;
     error: Error;
     info: any;
+    specialOpts: IDefaultPlanOption;
     [propName: string]: any;
 }
 

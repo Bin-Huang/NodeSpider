@@ -12,7 +12,7 @@ exports.default = preLoadJq;
  * @param currentTask
  * @return currentTask
  */
-function loadJqOperation(currentTask) {
+function loadJqOperation(error, currentTask) {
     const $ = cheerio.load(currentTask.body);
     // 扩展：添加 url 方法
     // 返回当前节点（们）链接的的绝对路径(array)
@@ -56,5 +56,4 @@ function loadJqOperation(currentTask) {
         return result;
     };
     currentTask.$ = $;
-    return currentTask;
 }

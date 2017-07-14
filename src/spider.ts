@@ -25,8 +25,8 @@ import {
     IPlanProcessTaskInput,
 
     IDefaultCallback,
-    IDefaultPlanInput,
-    IDefaultPlan,
+    IDefaultPlanOptionInput,
+    IDefaultPlanOption,
     IDefaultCurrent,
 
     IDownloadCallback,
@@ -173,7 +173,7 @@ export default class NodeSpider extends EventEmitter {
         jumpFun(task);
     }
 
-    public plan(item: IDefaultCallback|IDefaultPlanInput): symbol {
+    public plan(item: IDefaultCallback|IDefaultPlanOptionInput): symbol {
         // 当只传入一个rule函数，则包装成 IPlanInput 对象
         if (typeof item === "function") {
             item = {callback: item};
