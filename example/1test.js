@@ -1,9 +1,9 @@
-const {NodeSpider} = require("../index");
+const {Spider} = require("../build/index");
 
-const n = new NodeSpider();
+const n = new Spider();
 
 const planA = n.plan({
-    rule: (err, current) => {
+    callback: (err, current) => {
         if (err) {
             return console.log(err);
         }

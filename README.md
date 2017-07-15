@@ -1,5 +1,5 @@
 # Features
-- 简单，高效，扩展性强
+- 简单高效，开箱即用
 - 自动识别网页编码格式，并将返回正文转码为utf8（可设置）
 - 使用服务器端jQ选择器，轻松操作返回正文（可设置）
 - 更轻松地保存抓取的数据（`pipe`和`save`方法）
@@ -90,7 +90,7 @@ const otherPlan = n.plan({
         // or more
     },
     pre: [],
-    rule: function (err, current) {
+    callback: function (err, current) {
         // your crawl rule
     },
 })
@@ -108,10 +108,11 @@ n.queue(otherPlan, "https://www.example.com");
 
 - **info (可选)** 对执行该计划的每一个任务附带信息对象。`info`将作为`current`成员(属性)传递给`rule`
 
-- **rule (必须)** 爬取规则函数，即对爬到的网页进行的操作。当网页信息爬取得到并预处理后，将调动`rule`函数，并传入两个参数`err`和`current`
+- **callback (必须)** 当报错或成功加载正文并预处理后，将调用callback。并传入两个参数`err`和`current`。
+你可以使用callback对爬到的网页进行的操作，比如提取信息、添加新的链接到排队列表……
 
 ### current
-`rule`函数在执行时将传入两个参数：`error`和`current`。其中`current`对象包含了很多当前任务的信息：
+`callback`函数在执行时将传入两个参数：`error`和`current`。其中`current`对象包含了很多当前任务的信息：
 
 - **url** 当前任务的链接
 - **planKey** 当前任务指定计划的key
@@ -344,4 +345,4 @@ nodespider是一个开源爬虫package，主旨是让爬虫开发更简单、更
 - 在[github](https://github.com/Ben-Hwang/NodeSpider)上star
 - 向他人推荐这个package
 - 提交你的精心修改版本
-- 开源并分享你开发的nodespider预处理函数、queue、pipe（文档即将补全）
+- 开源并分享你开发的nodespider预处理函数、queue、pipe以及plan发生器（文档即将补全）
