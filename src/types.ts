@@ -1,10 +1,10 @@
-import NodeSpider from "./spider";
 import * as fs from "fs";
-import { Plan } from "./plan";
+import Plan from "./plan";
+import NodeSpider from "./spider";
 
 // TODO C 每一个类型都应该有注释
 
-// nodespider's queue; 
+// nodespider's queue;
 export interface IQueue {
     addTask: (newTask: ITask) => void;
     addDownload: (newTask: ITask) => void;
@@ -68,35 +68,9 @@ export interface IPlanProcessTaskInput extends ITask {
 
 export interface IRequestOpts {
 
-};
-
+}
 
 // ====== default plan ======
-
-export type IDefaultCallback = (err: Error, current: IDefaultCurrent) => void | Promise<void>;
-export interface IDefaultPlanOptionInput {
-    callback: IDefaultCallback;
-    request?: IRequestOpts;
-    pre?: IDefaultCallback[];
-    info?: any;
-}
-export interface IDefaultPlanOption extends IDefaultPlanOptionInput {
-    request: IRequestOpts;
-    pre: IDefaultCallback[];
-    callback: IDefaultCallback;
-    info: any;
-}
-// current crawl task; for `rule` function in the plan
-export interface IDefaultCurrent extends ITask {
-    plan: Plan;
-    response: any;
-    body: string;
-    error: Error;
-    info: any;
-    specialOpts: IDefaultPlanOption;
-    [propName: string]: any;
-}
-
 
 // ====== download plan ======
 
@@ -121,7 +95,6 @@ export interface IDownloadCurrent extends ITask {
     info: any;
     [propName: string]: any;
 }
-
 
 // ====== pipe plan ======
 

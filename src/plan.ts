@@ -1,6 +1,6 @@
 import * as request from "request";
 import NodeSpider from "./spider";
-import { IDefaultCurrent, IPlanProcessTaskInput, ITask } from "./types";
+import { IPlanProcessTaskInput, ITask } from "./types";
 
 export default class Plan {
     public type: string;

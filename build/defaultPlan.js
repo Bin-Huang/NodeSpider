@@ -33,16 +33,20 @@ function defaultPlan(planOptionInput) {
     const info = planOptionInput.info || {};
     const callback = planOptionInput.callback;
     const planOption = { request, callback, pre, info };
-    return new plan_1.default("default", planOption, (task, self) => __awaiter(this, void 0, void 0, function* () {
+    return new plan_1.default("default", planOption, processFun);
+}
+exports.default = defaultPlan;
+function processFun(task, self) {
+    return __awaiter(this, void 0, void 0, function* () {
         const requestOpts = Object.assign({ url: task.url }, task.specialOpts.request);
         // TODO C input stream pipe support
         const { error, response, body } = yield requestAsync(requestOpts);
         let current = Object.assign(task, {
             response,
-            plan: self._STATE.planStore.get(task.planKey),
             body,
             error,
             info: task.specialOpts.info,
+            plan: self._STATE.planStore.get(task.planKey),
         });
         // 如果没有错误，按顺序执行预处理函数，对current进行预处理
         if (!error) {
@@ -60,9 +64,8 @@ function defaultPlan(planOptionInput) {
         }
         // 结尾的清理工作
         current = null;
-    }));
+    });
 }
-exports.default = defaultPlan;
 function requestAsync(opts) {
     return new Promise((resolve, reject) => {
         request(opts, (error, response, body) => {

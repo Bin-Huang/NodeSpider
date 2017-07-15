@@ -17,11 +17,7 @@ import * as url from "url";
 import defaultPlan from "./defaultPlan";
 import Queue from "./queue";
 import {
-    IDefaultCallback,
-    IDefaultCurrent,
     IDefaultOption,
-    IDefaultPlanOption,
-    IDefaultPlanOptionInput,
 
     IDownloadCallback,
     IDownloadCurrent,
