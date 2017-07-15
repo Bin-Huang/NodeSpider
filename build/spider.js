@@ -9,6 +9,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
 const request = require("request");
+const defaultPlan_1 = require("./defaultPlan");
 const queue_1 = require("./queue");
 const plan_1 = require("./plan");
 const defaultOption = {
@@ -133,11 +134,11 @@ class NodeSpider extends events_1.EventEmitter {
     plan(item) {
         const id = this._STATE.planStore.size + 1;
         const key = Symbol("plan" + id);
-        if (item instanceof plan_1.Plan) {
+        if (item instanceof plan_1.default) {
             this._STATE.planStore.set(key, item);
         }
         else {
-            this._STATE.planStore.set(key, plan_1.defaultPlan(item));
+            this._STATE.planStore.set(key, defaultPlan_1.default(item));
         }
         return key;
     }
@@ -258,7 +259,7 @@ function requestAsync(item) {
 }
 function startCrawl(self) {
     if (self._STATE.queue.getWaitingTaskNum() !== 0) {
-        let task = self._STATE.queue.nextCrawlTask();
+        const task = self._STATE.queue.nextCrawlTask();
         self._STATE.currentMultiTask++;
         const plan = self._STATE.planStore.get(task.planKey);
         const specialOpts = Object.assign({}, plan.options, task.special);

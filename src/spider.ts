@@ -12,32 +12,33 @@ import { EventEmitter } from "events";
 import * as fs from "fs";
 import * as iconv from "iconv-lite";
 import * as request from "request";
-import * as url from "url";
-import Queue from "./queue";
 import * as stream from "stream";
+import * as url from "url";
+import defaultPlan from "./defaultPlan";
+import Queue from "./queue";
 import {
-    IDefaultOption,
-    IPipe,
-    IState,
-    ITask,
-    IPlanProcessTaskInput,
-
     IDefaultCallback,
-    IDefaultPlanOptionInput,
-    IDefaultPlanOption,
     IDefaultCurrent,
+    IDefaultOption,
+    IDefaultPlanOption,
+    IDefaultPlanOptionInput,
 
     IDownloadCallback,
-    IDownloadPlanInput,
-    IDownloadPlan,
     IDownloadCurrent,
+    IDownloadPlan,
+    IDownloadPlanInput,
 
+    IPipe,
     IPipeCallback,
-    IPipePlanInput,
-    IPipePlan,
     IPipeCurrent,
+    IPipePlan,
+
+    IPipePlanInput,
+    IPlanProcessTaskInput,
+    IState,
+    ITask,
 } from "./types";
-import { Plan, defaultPlan } from "./plan";
+import Plan from "./plan";
 
 const defaultOption: IDefaultOption = {
     multiDownload: 2,
@@ -303,7 +304,7 @@ function requestAsync(item) {
 
 function startCrawl(self: NodeSpider) {
     if (self._STATE.queue.getWaitingTaskNum() !== 0) {
-        let task = self._STATE.queue.nextCrawlTask();
+        const task = self._STATE.queue.nextCrawlTask();
         self._STATE.currentMultiTask ++;
 
         const plan = self._STATE.planStore.get(task.planKey);

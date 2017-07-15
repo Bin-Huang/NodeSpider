@@ -372,3 +372,29 @@ n.plan(pipePlan({
 }));
 
 ```
+
+```javascript
+const plan1 = n.plan(downloadPlan, {
+
+});
+
+n.queue(plan1, "http://www.baidu.com");
+
+const myjson = n.pipe(mysqlPipe, {
+
+});
+
+n.save(myjson, {
+
+});
+```
+
+```javascript
+const plan1 = n.plan(downloadPlan({
+
+}));
+
+const plan3 = n.plan(downloadPlan("path/to/myfolder", () => {
+
+}));
+```
