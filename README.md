@@ -12,7 +12,6 @@
 ```javascript
 const { Spider, jsonPipe } = require("nodespider");
 
-// 初始化一个爬虫
 const n = new Spider({
     rateLimit: 10
 });
@@ -26,8 +25,7 @@ const planA = n.plan(function (err, current) {
         // 如果出错，重试该任务，但最多3次
         return n.retry(current, 3);
     }
-    // 是的，你可以使用jQ
-    const $ = current.$;
+    const $ = current.$;    // 用JQ提取正文信息
     console.log($("title").text());
 
     // 保存从返回正文中提取的数据
@@ -42,16 +40,22 @@ const planA = n.plan(function (err, current) {
 n.queue(planA, "https://www.nodejs.org");
 ```
 
-# 初始化
+# 下载及初始化
+
+```
+npm install nodespider --save
+```
 
 ```javascript
 const { Spider } = require("nodespider");
 
 const n = new Spider();
+
 // or
 const nn = new Spider({
-    rateLimit: 20,  // 每20毫秒爬取一次
-    // 以及更多设置
+    rateLimit: 20,
+    multiTasking: 30, 
+    // or more 
 })
 ```
 可选的设置：
@@ -70,7 +74,7 @@ const nn = new Spider({
 在开始爬取前，你应该告诉爬虫你的爬取计划。例如，如何操作并提取返回正文的信息、你的爬取策略、请求时的header等。使用 `plan` 方法声明一个爬取计划，你可以详细描述你的爬取策略、请求设置、以及对返回的预处理。
 
 | 参数 | 说明 | 类型 |
-| --- | --- | --- | --- |
+| --- | --- | --- |
 | item | 爬取策略函数或爬取策略 | function or object |
 
 
@@ -190,9 +194,13 @@ const anotherPlan = n.plan(function (err, current) {
 
 检查是否添加过某个链接
 
-url type: string
+| 参数 | 说明 | 类型 |
+| --- | --- | --- |
+| url | 需要检测是否存在的url | string |
 
-returns type: boolean
+| return | 说明 |
+| --- | --- |
+| boolean | 若该链接已经添加过，则返回`true`
 
 ```javascript
 n.queue(myPlan, "http://www.example.com");
@@ -202,7 +210,13 @@ n.isExist("http://www.example.com");    // True
 ## filter(urls)
 过滤掉一个数组中的重复链接，以及所有已被添加的链接，返回一个新数组
 
-urls    type: array
+| 参数 | 类型 |
+| --- | --- |
+| urls | array (of string) |
+
+| return |
+| --- |
+| array |
 
 return  type: array
 
@@ -312,6 +326,7 @@ nodespider 自带了两个预处理函数：`preToUtf8`, `preLoadJq`，可以帮
 
 ## preToUtf8()
 根据网页信息，自动将爬取正文转码为utf8格式。即将`current.body`修改为utf8格式。
+
 ```javascript
 const { Spider, preToUtf8 } = require("nodespider");
 const newPlan = n.plan({
@@ -326,6 +341,7 @@ const newPlan = n.plan({
 
 ## preLoadJq()
 解析`current.body`并加载服务器端jQ选择器（power by bycheerio），并添加`current.$`成员。利用选择器，你可以非常方便的从返回正文中提取信息
+
 ```javascript
 const justPlan = n.plan({
     pre: [
