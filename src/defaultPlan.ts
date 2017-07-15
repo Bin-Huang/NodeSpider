@@ -5,36 +5,36 @@ import preToUtf8 from "./preToUtf8";
 import NodeSpider from "./spider";
 import { IPlanProcessTaskInput, IRequestOpts, ITask } from "./types";
 
-export type ICallback = (err: Error, current: ICurrent) => void | Promise<void>;
-export interface IPlanOptionInput {
-    callback: ICallback;
+export type IDefaultPlanCallback = (err: Error, current: IDefaultPlanCurrent) => void | Promise<void>;
+export interface IDefaultPlanOptionInput {
+    callback: IDefaultPlanCallback;
     request?: IRequestOpts;
-    pre?: ICallback[];
+    pre?: IDefaultPlanCallback[];
     info?: any;
 }
-export interface IPlanOption extends IPlanOptionInput {
+export interface IDefaultPlanOption extends IDefaultPlanOptionInput {
     request: IRequestOpts;
-    pre: ICallback[];
-    callback: ICallback;
+    pre: IDefaultPlanCallback[];
+    callback: IDefaultPlanCallback;
     info: any;
 }
 // current crawl task; for `rule` function in the plan
-export interface ICurrent extends ITask {
+export interface IDefaultPlanCurrent extends ITask {
     plan: Plan;
     response: any;
     body: string;
     error: Error;
     info: any;
-    specialOpts: IPlanOption;
+    specialOpts: IDefaultPlanOption;
     [propName: string]: any;
 }
 interface IProcessTask extends IPlanProcessTaskInput {
-    specialOpts: IPlanOption;
+    specialOpts: IDefaultPlanOption;
 }
 
 // TODO C 考虑是否使用类继承的方式，代替type
 // TODO C 考虑是否支持，或者删除 special
-export default function defaultPlan(planOptionInput: ICallback|IPlanOptionInput) {
+export default function defaultPlan(planOptionInput: IDefaultPlanCallback|IDefaultPlanOptionInput) {
     // 当只传入一个rule函数，则包装成 IPlanInput 对象
     if (typeof planOptionInput === "function") {
         planOptionInput = {callback: planOptionInput};
@@ -61,7 +61,7 @@ async function processFun(task: IProcessTask, self: NodeSpider) {
     const requestOpts = Object.assign({url: task.url}, task.specialOpts.request);
     // TODO C input stream pipe support
     const {error, response, body}: any = await requestAsync(requestOpts);
-    let current: ICurrent = Object.assign(task, {
+    let current: IDefaultPlanCurrent = Object.assign(task, {
         response,
         body,
         error,

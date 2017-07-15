@@ -1,9 +1,9 @@
 import * as cheerio from "cheerio";
 import * as url from "url";
-import { ICallback, ICurrent } from "./defaultPlan";
+import { IDefaultPlanCallback, IDefaultPlanCurrent } from "./defaultPlan";
 import NodeSpider from "./spider";
 
-export default function preLoadJq(): ICallback {
+export default function preLoadJq(): IDefaultPlanCallback {
     return loadJqOperation;
 }
 
@@ -13,7 +13,7 @@ export default function preLoadJq(): ICallback {
  * @param currentTask
  * @return currentTask
  */
-function loadJqOperation(error: Error, currentTask: ICurrent) {
+function loadJqOperation(error: Error, currentTask: IDefaultPlanCurrent) {
     const $ = cheerio.load(currentTask.body);
 
     // 扩展：添加 url 方法

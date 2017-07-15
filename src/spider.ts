@@ -34,6 +34,11 @@ import {
     IState,
     ITask,
 } from "./types";
+import {
+    IDefaultPlanCallback,
+    IDefaultPlanCurrent,
+    IDefaultPlanOptionInput,
+} from "./defaultPlan";
 import Plan from "./plan";
 
 const defaultOption: IDefaultOption = {
@@ -127,9 +132,9 @@ export default class NodeSpider extends EventEmitter {
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
     public retry(
-        current: IDefaultCurrent|IDownloadCurrent,
+        current: IDefaultPlanCurrent|IDownloadCurrent,
         maxRetry = 1,
-        finalErrorCallback?: (current: IDefaultCurrent|IDownloadCurrent) => void,
+        finalErrorCallback?: (current: IDefaultPlanCurrent|IDownloadCurrent) => void,
     ) {
         const task = {
             hasRetried: current.hasRetried,
@@ -145,7 +150,7 @@ export default class NodeSpider extends EventEmitter {
             task.maxRetry = maxRetry;
         }
         if (! finalErrorCallback) {
-            finalErrorCallback = (currentTask: IDefaultCurrent | IDownloadCurrent) => {
+            finalErrorCallback = (currentTask: IDefaultPlanCurrent | IDownloadCurrent) => {
                 console.log("达到最大重试次数，但依旧错误");
             };
         }
@@ -168,7 +173,7 @@ export default class NodeSpider extends EventEmitter {
         jumpFun(task);
     }
 
-    public plan(item: IDefaultCallback|IDefaultPlanOptionInput|Plan): symbol {
+    public plan(item: Plan|IDefaultPlanCallback|IDefaultPlanOptionInput): symbol {
         const id = this._STATE.planStore.size + 1;
         const key = Symbol("plan" + id);
         if (item instanceof Plan) {
