@@ -33,7 +33,6 @@ interface IProcessTask extends IPlanProcessTaskInput {
 }
 
 // TODO C 考虑是否使用类继承的方式，代替type
-// TODO C 考虑是否支持，或者删除 special
 export default function defaultPlan(planOptionInput: IDefaultPlanCallback|IDefaultPlanOptionInput) {
     // 当只传入一个rule函数，则包装成 IPlanInput 对象
     if (typeof planOptionInput === "function") {
@@ -43,12 +42,14 @@ export default function defaultPlan(planOptionInput: IDefaultPlanCallback|IDefau
     if (typeof planOptionInput !== "object") {
         throw new Error("参数类型错误，只能是函数或则对象");
     }
+    if (typeof planOptionInput.callback !== "function") {
+        throw new Error("plan缺失callback成员");
+    }
     // 填充plan设置默认值
     const pre = planOptionInput.pre || [
         preToUtf8(),
         preLoadJq(),
     ];
-    // TODO B 删掉默认的设置 encoding ?????
     const request = Object.assign({encoding: null}, planOptionInput.request);
     const info = planOptionInput.info || {};
     const callback = planOptionInput.callback;
@@ -59,7 +60,6 @@ export default function defaultPlan(planOptionInput: IDefaultPlanCallback|IDefau
 
 async function processFun(task: IProcessTask, self: NodeSpider) {
     const requestOpts = Object.assign({url: task.url}, task.specialOpts.request);
-    // TODO C input stream pipe support
     const {error, response, body}: any = await requestAsync(requestOpts);
     let current: IDefaultPlanCurrent = Object.assign(task, {
         response,

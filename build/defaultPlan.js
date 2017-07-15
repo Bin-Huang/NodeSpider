@@ -13,7 +13,6 @@ const plan_1 = require("./plan");
 const preLoadJq_1 = require("./preLoadJq");
 const preToUtf8_1 = require("./preToUtf8");
 // TODO C 考虑是否使用类继承的方式，代替type
-// TODO C 考虑是否支持，或者删除 special
 function defaultPlan(planOptionInput) {
     // 当只传入一个rule函数，则包装成 IPlanInput 对象
     if (typeof planOptionInput === "function") {
@@ -23,12 +22,14 @@ function defaultPlan(planOptionInput) {
     if (typeof planOptionInput !== "object") {
         throw new Error("参数类型错误，只能是函数或则对象");
     }
+    if (typeof planOptionInput.callback !== "function") {
+        throw new Error("plan缺失callback成员");
+    }
     // 填充plan设置默认值
     const pre = planOptionInput.pre || [
         preToUtf8_1.default(),
         preLoadJq_1.default(),
     ];
-    // TODO B 删掉默认的设置 encoding ?????
     const request = Object.assign({ encoding: null }, planOptionInput.request);
     const info = planOptionInput.info || {};
     const callback = planOptionInput.callback;
@@ -39,7 +40,6 @@ exports.default = defaultPlan;
 function processFun(task, self) {
     return __awaiter(this, void 0, void 0, function* () {
         const requestOpts = Object.assign({ url: task.url }, task.specialOpts.request);
-        // TODO C input stream pipe support
         const { error, response, body } = yield requestAsync(requestOpts);
         let current = Object.assign(task, {
             response,
