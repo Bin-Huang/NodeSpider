@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as request from "request";
 import Plan from "./plan";
 import NodeSpider from "./spider";
-import { IPlanProcessTaskInput, ITask } from "./types";
+import { IPlanProcessTask, ITask } from "./types";
 
 export default function downloadPlan(opts) {
     // TODO B 参数检验与默认赋值

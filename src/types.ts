@@ -60,7 +60,7 @@ export interface ITask {
     hasRetried?: number;
 }
 // to plan.process's parma task;
-export interface IPlanProcessTaskInput extends ITask {
+export interface IPlanProcessTask extends ITask {
     specialOpts: IDefaultPlanOption;
 }
 

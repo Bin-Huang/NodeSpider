@@ -30,13 +30,13 @@ import {
     IPipePlan,
 
     IPipePlanInput,
-    IPlanProcessTaskInput,
+    IPlanProcessTask,
     IState,
     ITask,
 } from "./types";
 import {
-    IDefaultPlanCallback,
     IDefaultPlanCurrent,
+    IDefaultPlanOptionCallback,
     IDefaultPlanOptionInput,
 } from "./defaultPlan";
 import Plan from "./plan";
@@ -173,7 +173,7 @@ export default class NodeSpider extends EventEmitter {
         jumpFun(task);
     }
 
-    public plan(item: Plan|IDefaultPlanCallback|IDefaultPlanOptionInput): symbol {
+    public plan(item: Plan|IDefaultPlanOptionCallback|IDefaultPlanOptionInput): symbol {
         const id = this._STATE.planStore.size + 1;
         const key = Symbol("plan" + id);
         if (item instanceof Plan) {
@@ -311,7 +311,7 @@ function startCrawl(self: NodeSpider) {
         const plan = self._STATE.planStore.get(task.planKey);
         const specialOpts = Object.assign({}, plan.options, task.special);
 
-        const t: IPlanProcessTaskInput = {
+        const t: IPlanProcessTask = {
             ... task,
             specialOpts,
         };

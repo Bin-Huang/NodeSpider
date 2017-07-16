@@ -3,21 +3,30 @@ import Plan from "./plan";
 import preLoadJq from "./preLoadJq";
 import preToUtf8 from "./preToUtf8";
 import NodeSpider from "./spider";
-import { IPlanProcessTaskInput, IRequestOpts, ITask } from "./types";
+import { IPlanProcessTask, IRequestOpts, ITask } from "./types";
 
-export type IDefaultPlanCallback = (err: Error, current: IDefaultPlanCurrent) => void | Promise<void>;
+// for 函数defaultPlan的设置参数
 export interface IDefaultPlanOptionInput {
-    callback: IDefaultPlanCallback;
+    callback: IDefaultPlanOptionCallback;
     request?: IRequestOpts;
-    pre?: IDefaultPlanCallback[];
+    pre?: IDefaultPlanOptionCallback[];
     info?: any;
 }
+// for 传递给Plan真正的设置
 export interface IDefaultPlanOption extends IDefaultPlanOptionInput {
     request: IRequestOpts;
-    pre: IDefaultPlanCallback[];
-    callback: IDefaultPlanCallback;
+    pre: IDefaultPlanOptionCallback[];
+    callback: IDefaultPlanOptionCallback;
     info: any;
 }
+// for defaultPlan设置中的callback
+export type IDefaultPlanOptionCallback = (err: Error, current: IDefaultPlanCurrent) => void | Promise<void>;
+
+// for 传递给Plan的process的task参数
+interface IDefaultPlanTask extends IPlanProcessTask {
+    specialOpts: IDefaultPlanOption;
+}
+
 // current crawl task; for `rule` function in the plan
 export interface IDefaultPlanCurrent extends ITask {
     plan: Plan;
@@ -28,12 +37,9 @@ export interface IDefaultPlanCurrent extends ITask {
     specialOpts: IDefaultPlanOption;
     [propName: string]: any;
 }
-interface IProcessTask extends IPlanProcessTaskInput {
-    specialOpts: IDefaultPlanOption;
-}
 
 // TODO C 考虑是否使用类继承的方式，代替type
-export default function defaultPlan(planOptionInput: IDefaultPlanCallback|IDefaultPlanOptionInput) {
+export default function defaultPlan(planOptionInput: IDefaultPlanOptionCallback|IDefaultPlanOptionInput) {
     // 当只传入一个rule函数，则包装成 IPlanInput 对象
     if (typeof planOptionInput === "function") {
         planOptionInput = {callback: planOptionInput};
@@ -58,7 +64,7 @@ export default function defaultPlan(planOptionInput: IDefaultPlanCallback|IDefau
     return new Plan("default", planOption, processFun);
 }
 
-async function processFun(task: IProcessTask, self: NodeSpider) {
+async function processFun(task: IDefaultPlanTask, self: NodeSpider) {
     const requestOpts = Object.assign({url: task.url}, task.specialOpts.request);
     const {error, response, body}: any = await requestAsync(requestOpts);
     let current: IDefaultPlanCurrent = Object.assign(task, {
@@ -85,6 +91,7 @@ async function processFun(task: IProcessTask, self: NodeSpider) {
     }
     // 结尾的清理工作
     current = null;
+    // task = null;
 }
 
 function requestAsync(opts) {

@@ -1,9 +1,9 @@
 import * as cheerio from "cheerio";
 import * as url from "url";
-import { IDefaultPlanCallback, IDefaultPlanCurrent } from "./defaultPlan";
+import { IDefaultPlanCurrent, IDefaultPlanOptionCallback } from "./defaultPlan";
 import NodeSpider from "./spider";
 
-export default function preLoadJq(): IDefaultPlanCallback {
+export default function preLoadJq(): IDefaultPlanOptionCallback {
     return loadJqOperation;
 }
 

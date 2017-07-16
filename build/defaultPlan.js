@@ -64,6 +64,7 @@ function processFun(task, self) {
         }
         // 结尾的清理工作
         current = null;
+        // task = null;
     });
 }
 function requestAsync(opts) {

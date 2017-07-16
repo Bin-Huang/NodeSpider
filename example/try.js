@@ -1,8 +1,8 @@
-const NodeSpider = require("../index");
+const { Spider } = require("../build/index");
 const fs = require("fs");
 
-const n = new NodeSpider({
-    multiTasking: 100
+const n = new Spider ({
+    multiTasking: 100,
 });
 
 const w = fs.createWriteStream("m.txt");
@@ -20,7 +20,7 @@ const myPlan = n.plan((err, current) => {
     if (n._STATE.queue.crawlWaitingNum() < u) {
         n.queue(myPlan, $("a").url());
     }
-    console.log(text)
+    console.log(text);
     return w.write(text);
 });
 
