@@ -8,7 +8,6 @@
 // TODO C plan 和 pipe 返回的key应该是唯一的，由算法生成
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
-const request = require("request");
 const uuid = require("uuid");
 const defaultPlan_1 = require("./defaultPlan");
 const queue_1 = require("./queue");
@@ -142,31 +141,6 @@ class NodeSpider extends events_1.EventEmitter {
         }
         return key;
     }
-    downloadPlan(item) {
-        // 如果参数是函数，包裹成 IDownloadPlanInput 对象
-        if (typeof item === "function") {
-            item = { callback: item };
-        }
-        // 参数类型检测
-        if (typeof item !== "object") {
-            throw new Error("参数类型错误，只能是函数或则对象");
-        }
-        if (!item.callback) {
-            throw new Error("参数缺少callback成员");
-        }
-        // 默认值填充
-        const callback = item.callback;
-        const path = item.path || "";
-        const request = item.request || {};
-        const use = item.use || [];
-        const info = item.info || {};
-        // 在爬虫中注册并返回key
-        // TODO C uuid
-        const id = this._STATE.dlPlanStore.size + 1;
-        const key = Symbol("downloadPlan" + id);
-        this._STATE.dlPlanStore.set(key, { callback, path, request, use, info });
-        return key;
-    }
     /**
      * 添加待爬取链接到队列，并指定爬取计划。
      * @param planKey 指定的爬取计划
@@ -245,13 +219,6 @@ class NodeSpider extends events_1.EventEmitter {
 }
 NodeSpider.Queue = queue_1.default;
 exports.default = NodeSpider;
-function requestAsync(item) {
-    return new Promise((resolve, reject) => {
-        request(item, (error, response, body) => {
-            resolve({ error, response, body });
-        });
-    });
-}
 function startCrawl(self) {
     if (self._STATE.queue.getWaitingTaskNum() !== 0) {
         const task = self._STATE.queue.nextCrawlTask();
