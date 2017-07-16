@@ -51,7 +51,7 @@ export interface IDefaultOption {
     // preprocessing: any[];
 }
 
-// for task object in the queue;
+// for task object in the queue;在queue保存的task
 export interface ITask {
     url: string;
     planKey: symbol;
@@ -59,9 +59,9 @@ export interface ITask {
     maxRetry?: number;
     hasRetried?: number;
 }
-// to plan.process's parma task;
-export interface IPlanProcessTask extends ITask {
-    specialOpts: IDefaultPlanOption;
+// 传入plan执行操作的task
+export interface IPlanTask extends ITask {
+    specialOpts: any;
 }
 
 // ====== request options ======

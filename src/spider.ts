@@ -30,7 +30,7 @@ import {
     IPipePlan,
 
     IPipePlanInput,
-    IPlanProcessTask,
+    IPlanTask,
     IState,
     ITask,
 } from "./types";
@@ -272,7 +272,7 @@ function startCrawl(self: NodeSpider) {
         const plan = self._STATE.planStore.get(task.planKey);
         const specialOpts = Object.assign({}, plan.options, task.special);
 
-        const t: IPlanProcessTask = {
+        const t: IPlanTask = {
             ... task,
             specialOpts,
         };

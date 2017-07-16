@@ -3,7 +3,7 @@ import Plan from "./plan";
 import preLoadJq from "./preLoadJq";
 import preToUtf8 from "./preToUtf8";
 import NodeSpider from "./spider";
-import { IPlanProcessTask, IRequestOpts, ITask } from "./types";
+import { IPlanTask, IRequestOpts, ITask } from "./types";
 
 // for 函数defaultPlan的设置参数
 export interface IDefaultPlanOptionInput {
@@ -23,7 +23,7 @@ export interface IDefaultPlanOption extends IDefaultPlanOptionInput {
 export type IDefaultPlanOptionCallback = (err: Error, current: IDefaultPlanCurrent) => void | Promise<void>;
 
 // for 传递给Plan的process的task参数
-interface IDefaultPlanTask extends IPlanProcessTask {
+interface IDefaultPlanTask extends IPlanTask {
     specialOpts: IDefaultPlanOption;
 }
 
