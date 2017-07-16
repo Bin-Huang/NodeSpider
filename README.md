@@ -43,7 +43,9 @@ n.queue(planA, "https://www.nodejs.org");
 # 下载及初始化
 
 ```
+
 npm install nodespider --save
+
 ```
 
 ```javascript

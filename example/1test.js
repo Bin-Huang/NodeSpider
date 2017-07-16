@@ -13,7 +13,7 @@ const planA = n.plan({
     },
     info: {name: "infoinfo"},
 });
-
+console.log(planA);
 n.queue(planA, "http://www.baidu.com", {
     // rule: (err, current) => {
     //     console.log("special rule");

@@ -9,6 +9,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
 const request = require("request");
+const uuid = require("uuid");
 const defaultPlan_1 = require("./defaultPlan");
 const queue_1 = require("./queue");
 const plan_1 = require("./plan");
@@ -132,8 +133,7 @@ class NodeSpider extends events_1.EventEmitter {
         jumpFun(task);
     }
     plan(item) {
-        const id = this._STATE.planStore.size + 1;
-        const key = Symbol("plan" + id);
+        const key = Symbol("plan-" + uuid());
         if (item instanceof plan_1.default) {
             this._STATE.planStore.set(key, item);
         }
@@ -141,10 +141,6 @@ class NodeSpider extends events_1.EventEmitter {
             this._STATE.planStore.set(key, defaultPlan_1.default(item));
         }
         return key;
-    }
-    pipePlan(planOpts) {
-        // 未完待续
-        return Symbol("sdklfjsl");
     }
     downloadPlan(item) {
         // 如果参数是函数，包裹成 IDownloadPlanInput 对象
@@ -232,8 +228,7 @@ class NodeSpider extends events_1.EventEmitter {
         if (typeof pipeObject !== "object" || !pipeObject.add || !pipeObject.close) {
             throw new Error("不符合pipe");
         }
-        const id = this._STATE.pipeStore.size + 1;
-        const key = Symbol("pipe" + id);
+        const key = Symbol("pipe-" + uuid());
         this._STATE.pipeStore.set(key, pipeObject);
         return key;
     }

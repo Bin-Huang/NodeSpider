@@ -14,6 +14,7 @@ import * as iconv from "iconv-lite";
 import * as request from "request";
 import * as stream from "stream";
 import * as url from "url";
+import * as uuid from "uuid";
 import defaultPlan from "./defaultPlan";
 import Queue from "./queue";
 import {
@@ -174,19 +175,13 @@ export default class NodeSpider extends EventEmitter {
     }
 
     public plan(item: Plan|IDefaultPlanOptionCallback|IDefaultPlanOptionInput): symbol {
-        const id = this._STATE.planStore.size + 1;
-        const key = Symbol("plan" + id);
+        const key = Symbol("plan-" + uuid());
         if (item instanceof Plan) {
             this._STATE.planStore.set(key, item);
         } else {
             this._STATE.planStore.set(key, defaultPlan(item));
         }
         return key;
-    }
-
-    public pipePlan(planOpts: IPipePlanInput): symbol {
-        // 未完待续
-        return Symbol("sdklfjsl");
     }
 
     public downloadPlan(item: IDownloadCallback | IDownloadPlanInput): symbol {
@@ -276,8 +271,7 @@ export default class NodeSpider extends EventEmitter {
             throw new Error("不符合pipe");
         }
 
-        const id = this._STATE.pipeStore.size + 1;
-        const key = Symbol("pipe" + id);
+        const key = Symbol("pipe-" + uuid());
         this._STATE.pipeStore.set(key, pipeObject);
         return key;
     }
