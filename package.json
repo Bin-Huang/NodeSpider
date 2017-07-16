@@ -1,6 +1,6 @@
 {
   "name": "nodespider",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "20 lines of code to bulid a web crawler as a geek",
   "main": "./build/index.js",
   "typings": "./build/index.d.ts",
@@ -22,12 +22,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/Ben-Hwang/NodeSpider.git"
+    "url": "git+ssh://git@github.com/Bin-Huang/NodeSpider.git"
   },
   "author": "Ben Huang",
   "license": "LGPL",
   "bugs": {
-    "url": "https://github.com/Ben-Hwang/NodeSpider/issues"
+    "url": "https://github.com/Bin-Huang/NodeSpider/issues"
   },
-  "homepage": "https://github.com/Ben-Hwang/NodeSpider#readme"
+  "homepage": "https://github.com/Bin-Huang/NodeSpider#readme"
 }
