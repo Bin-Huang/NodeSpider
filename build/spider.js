@@ -5,7 +5,6 @@
 // mysql 插件
 // redis queue
 // TODO B 注册pipe和queue可能存在异步操作，此时应该封装到promise或async函数。但依然存在问题：当还没注册好，就调动了queue或者save
-// TODO C plan 和 pipe 返回的key应该是唯一的，由算法生成
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
 const uuid = require("uuid");
@@ -132,13 +131,15 @@ class NodeSpider extends events_1.EventEmitter {
         jumpFun(task);
     }
     plan(item) {
-        const key = Symbol("plan-" + uuid());
+        let newPlan = item;
         if (item instanceof plan_1.default) {
-            this._STATE.planStore.set(key, item);
+            newPlan = item;
         }
         else {
-            this._STATE.planStore.set(key, defaultPlan_1.default(item));
+            newPlan = defaultPlan_1.default(item);
         }
+        const key = Symbol(`${newPlan.type}-${uuid()}`);
+        this._STATE.planStore.set(key, newPlan);
         return key;
     }
     /**
