@@ -25,7 +25,7 @@ function streamPlan(opts) {
 exports.default = streamPlan;
 function process(task, self) {
     return new Promise((resolve, reject) => {
-        const requestOpts = Object.assign({ url: task.url }, task.specialOpts);
+        const requestOpts = Object.assign({ url: task.url }, task.specialOpts.request);
         const req = request(requestOpts);
         // 为什么不直接监听request的close事件以resolve？
         // 当req流关闭时，下游可能还有操作，此时不能直接resolve进入下一个任务

@@ -1,8 +1,7 @@
-/// <reference types="node" />
-import * as stream from "stream";
+import * as request from "request";
 import Plan from "./plan";
-import { ITask } from "./types";
-export declare type TStreamPlanOptionCallback = (req: stream.Readable, current: IStreamPlanOptionCallbackCurrent, end) => void;
+import { ICurrent } from "./types";
+export declare type TStreamPlanOptionCallback = (req: request.Request, current: ICurrent, end: () => void) => void;
 export interface IStreamPlanOptionInput {
     request?: any;
     callback: TStreamPlanOptionCallback;
@@ -12,11 +11,5 @@ export interface IStreamPlanOption extends IStreamPlanOptionInput {
     request: any;
     callback: TStreamPlanOptionCallback;
     info: any;
-}
-export interface IStreamPlanOptionCallbackCurrent extends ITask {
-    plan: Plan;
-    info: any;
-    specialOpts: IStreamPlanOption;
-    [propName: string]: any;
 }
 export default function streamPlan(opts: TStreamPlanOptionCallback | IStreamPlanOptionInput): Plan;

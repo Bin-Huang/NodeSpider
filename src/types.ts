@@ -59,8 +59,14 @@ export interface ITask {
     maxRetry?: number;
     hasRetried?: number;
 }
-// 传入plan执行操作的task
+// 传入plan执行process操作的task
 export interface IPlanTask extends ITask {
+    specialOpts: any;
+}
+// 传入plan的callback的current
+export interface ICurrent extends IPlanTask {
+    plan: Plan;
+    info: any;
     specialOpts: any;
 }
 

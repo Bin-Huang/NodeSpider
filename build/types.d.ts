@@ -43,6 +43,11 @@ export interface ITask {
 export interface IPlanTask extends ITask {
     specialOpts: any;
 }
+export interface ICurrent extends IPlanTask {
+    plan: Plan;
+    info: any;
+    specialOpts: any;
+}
 export interface IRequestOpts {
 }
 export declare type IDownloadCallback = (err: Error, current: IDownloadCurrent) => void | Promise<void>;

@@ -17,18 +17,19 @@ import * as uuid from "uuid";
 import defaultPlan from "./defaultPlan";
 import Queue from "./queue";
 import {
-    IDefaultOption,
+    ICurrent,
 
+    IDefaultOption,
     IDownloadCallback,
     IDownloadCurrent,
     IDownloadPlan,
-    IDownloadPlanInput,
 
+    IDownloadPlanInput,
     IPipe,
     IPipeCallback,
     IPipeCurrent,
-    IPipePlan,
 
+    IPipePlan,
     IPipePlanInput,
     IPlanTask,
     IState,
@@ -132,7 +133,7 @@ export default class NodeSpider extends EventEmitter {
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
     public retry(
-        current: IDefaultPlanCurrent|IDownloadCurrent,
+        current: ICurrent,
         maxRetry = 1,
         finalErrorCallback?: (current: IDefaultPlanCurrent|IDownloadCurrent) => void,
     ) {

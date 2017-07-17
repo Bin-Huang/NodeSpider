@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { EventEmitter } from "events";
 import Queue from "./queue";
-import { IDownloadCurrent, IPipe, IState } from "./types";
+import { ICurrent, IDownloadCurrent, IPipe, IState } from "./types";
 import { IDefaultPlanCurrent, IDefaultPlanOptionCallback, IDefaultPlanOptionInput } from "./defaultPlan";
 import Plan from "./plan";
 /**
@@ -34,7 +34,7 @@ export default class NodeSpider extends EventEmitter {
      * @param {number} maxRetry Maximum number of retries for this task
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
-    retry(current: IDefaultPlanCurrent | IDownloadCurrent, maxRetry?: number, finalErrorCallback?: (current: IDefaultPlanCurrent | IDownloadCurrent) => void): void | Error;
+    retry(current: ICurrent, maxRetry?: number, finalErrorCallback?: (current: IDefaultPlanCurrent | IDownloadCurrent) => void): any;
     plan(item: Plan | IDefaultPlanOptionCallback | IDefaultPlanOptionInput): symbol;
     /**
      * 添加待爬取链接到队列，并指定爬取计划。
