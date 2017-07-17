@@ -2,15 +2,15 @@ import { IQueue, ITask } from "./types";
 
 interface ILinkNode {
     value: any;
-    next: ILinkNode;
+    next: ILinkNode|null;
 }
 
 /**
  * 可遍历的链表类
  */
 class LinkedQueue {
-    protected _HEAD: ILinkNode;
-    protected _END: ILinkNode;
+    protected _HEAD: ILinkNode|null;
+    protected _END: ILinkNode|null;
     protected _LENGTH: number;
 
     constructor() {
@@ -29,8 +29,11 @@ class LinkedQueue {
             value,
             next: null,
         };
-        this._LENGTH++;
+        this._LENGTH ++;
         if (this._HEAD) {
+            if (! this._END) {
+                throw new Error("致命错误");
+            }
             this._END.next = newLinkNode;
             this._END = newLinkNode;
         } else {
@@ -49,7 +52,7 @@ class LinkedQueue {
         if (!current) {
             return null;
         } else {
-            this._HEAD = this._HEAD.next; // 丢弃头链环，回收已遍历链节的内存
+            this._HEAD = current.next; // 丢弃头链环，回收已遍历链节的内存
 
             // 当链表中无元素时，保证 _END 为 null
             if (! this._HEAD) {
@@ -66,7 +69,7 @@ class LinkedQueue {
      * @param {any} value
      * @memberOf LinkedQueue
      */
-    public jump(value) {
+    public jump(value: any) {
         const newLinkNode: ILinkNode = {
             value,
             next: null,
@@ -107,10 +110,11 @@ class LinkedQueue {
 /**
  * 为NodeSpider量身定做的taskqueue
  */
+// tslint:disable-next-line:max-classes-per-file
 export default class Queue implements IQueue {
     protected urlPool: Set<string>;
-    protected crawlQueue: LinkedQueue;
-    protected downloadQueue: LinkedQueue;
+    private crawlQueue: LinkedQueue;
+    private downloadQueue: LinkedQueue;
     constructor() {
         this.urlPool = new Set();
         this.crawlQueue = new LinkedQueue();

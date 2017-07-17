@@ -1,19 +1,17 @@
-import NodeSpider from "./spider";
+/// <reference types="node" />
+import * as fs from "fs";
+import Plan from "./plan";
 export interface IQueue {
-    addCrawl: (newTask: ITask) => void;
+    addTask: (newTask: ITask) => void;
     addDownload: (newTask: ITask) => void;
-    jumpCrawl: (newTask: ITask) => void;
+    jumpTask: (newTask: ITask) => void;
     jumpDownload: (newTask: ITask) => void;
     check: (url: string) => boolean;
-    crawlWaitingNum: () => number;
-    downloadWaitingNum: () => number;
-    totalWaitingNum: () => number;
-    allUrlNum: () => number;
-    isCrawlCompleted: () => boolean;
-    isDownloadCompleted: () => boolean;
-    isAllCompleted: () => boolean;
-    getCrawlTask: () => ITask;
-    getDownloadTask: () => ITask;
+    getWaitingTaskNum: () => number;
+    getWaitingDownloadTaskNum: () => number;
+    getTotalUrlsNum: () => number;
+    nextCrawlTask: () => ITask;
+    nextDownloadTask: () => ITask;
 }
 export interface IPipe {
     add: (data: any) => void;
@@ -21,8 +19,8 @@ export interface IPipe {
 }
 export interface IState {
     queue: IQueue;
-    planStore: Map<symbol, IPlan>;
-    dlPlanStore: Map<symbol, IDownloadPlan>;
+    planStore: Map<symbol, Plan>;
+    dlPlanStore: Map<symbol, Plan>;
     pipeStore: Map<symbol, IPipe>;
     option: IDefaultOption;
     working: boolean;
@@ -42,49 +40,50 @@ export interface ITask {
     maxRetry?: number;
     hasRetried?: number;
 }
-export interface ICurrentCrawl extends ITask {
-    plan: IPlan;
-    response: any;
-    body: string;
-    error: Error;
-    info: any;
-    [propName: string]: any;
+export interface IPlanTask extends ITask {
+    specialOpts: any;
 }
-export interface ICurrentDownload extends ITask {
+export interface IRequestOpts {
+}
+export declare type IDownloadCallback = (err: Error, current: IDownloadCurrent) => void | Promise<void>;
+export interface IDownloadPlanInput {
+    callback: IDownloadCallback;
+    path?: string;
+    use?: any;
+    request?: IRequestOpts;
+    info?: any;
+}
+export interface IDownloadPlan extends IDownloadPlanInput {
+    callback: IDownloadCallback;
+    path: string;
+    use?: any;
+    request: IRequestOpts;
+    info: any;
+}
+export interface IDownloadCurrent extends ITask {
     plan: IDownloadPlan;
     error: Error;
     info: any;
     [propName: string]: any;
 }
-export declare type IRule = (err: Error, current: ICurrentCrawl) => void | Promise<void>;
-export declare type TPreOperation = (thisSpider: NodeSpider, current: ICurrentCrawl) => ICurrentCrawl | Promise<ICurrentCrawl>;
-export interface IPlanInput {
-    rule: IRule;
-    request?: any;
-    pre?: TPreOperation[];
+export declare type IPipeCallback = (err: Error, current: IPipeCurrent) => void | Promise<void>;
+export interface IPipePlanInput {
+    pipe: fs.WriteStream;
+    callback: IPipeCallback;
+    request?: IRequestOpts;
     info?: any;
+    use?: any;
 }
-export interface IPlan extends IPlanInput {
-    request: any;
-    rule: IRule;
-    pre: TPreOperation[];
+export interface IPipePlan {
+    pipe: fs.WriteStream;
+    callback: IPipeCallback;
+    request: IRequestOpts;
     info: any;
+    use: any;
 }
-export declare type THandleError = (err: Error, current: ICurrentDownload) => void | Promise<void>;
-export declare type THandleFinish = (current: ICurrentDownload) => void | Promise<void>;
-export interface IDownloadPlanInput {
-    handleError: THandleError;
-    handleFinish?: THandleFinish;
-    path?: string;
-    request?: any;
-    pre?: any[];
-    info?: any;
-}
-export interface IDownloadPlan extends IDownloadPlanInput {
-    handleError: THandleError;
-    handleFinish: THandleFinish;
-    path: string;
-    request: any;
-    pre: any;
+export interface IPipeCurrent extends ITask {
+    plan: IPipePlan;
+    error: Error;
     info: any;
+    [propName: string]: any;
 }

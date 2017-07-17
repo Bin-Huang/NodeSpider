@@ -1,0 +1,10 @@
+{
+  "resolution": "main",
+  "tree": {
+    "src": "https://raw.githubusercontent.com/Volox/typed-cheerio/66bf518dec0e175fc5b08961304bdbf9bd29f8e5/typings.json",
+    "raw": "registry:npm/cheerio#0.20.0+20160422172414",
+    "main": "index.d.ts",
+    "version": "0.20.0",
+    "name": "cheerio"
+  }
+}

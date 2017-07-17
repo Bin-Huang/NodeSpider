@@ -211,11 +211,13 @@ class NodeSpider extends events_1.EventEmitter {
     // 如果是对象，则获得对象的 header 属性并对要保存路径进行检测。通过则调用对象 add 方法。
     // 每一个人都可以开发 table 对象的生成器。只需要提供 header 和 add 接口。其他由开发者考虑如何完成。
     save(pipeKey, data) {
-        if (!this._STATE.pipeStore.has(pipeKey)) {
+        const pipe = this._STATE.pipeStore.get(pipeKey);
+        if (pipe) {
+            pipe.add(data);
+        }
+        else {
             return new Error("unknowed pipe");
         }
-        const pipe = this._STATE.pipeStore.get(pipeKey);
-        pipe.add(data);
     }
 }
 NodeSpider.Queue = queue_1.default;
@@ -225,6 +227,9 @@ function startCrawl(self) {
         const task = self._STATE.queue.nextCrawlTask();
         self._STATE.currentMultiTask++;
         const plan = self._STATE.planStore.get(task.planKey);
+        if (!plan) {
+            throw new Error("planKey 对应的 plan 不存在");
+        }
         const specialOpts = Object.assign({}, plan.options, task.special);
         const t = Object.assign({}, task, { specialOpts });
         plan.process(t, self).then(() => {

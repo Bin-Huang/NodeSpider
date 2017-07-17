@@ -21,6 +21,9 @@ class LinkedQueue {
         };
         this._LENGTH++;
         if (this._HEAD) {
+            if (!this._END) {
+                throw new Error("致命错误");
+            }
             this._END.next = newLinkNode;
             this._END = newLinkNode;
         }
@@ -40,7 +43,7 @@ class LinkedQueue {
             return null;
         }
         else {
-            this._HEAD = this._HEAD.next; // 丢弃头链环，回收已遍历链节的内存
+            this._HEAD = current.next; // 丢弃头链环，回收已遍历链节的内存
             // 当链表中无元素时，保证 _END 为 null
             if (!this._HEAD) {
                 this._END = null;
@@ -93,6 +96,7 @@ class LinkedQueue {
 /**
  * 为NodeSpider量身定做的taskqueue
  */
+// tslint:disable-next-line:max-classes-per-file
 class Queue {
     constructor() {
         this.urlPool = new Set();

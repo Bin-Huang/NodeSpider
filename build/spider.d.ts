@@ -1,7 +1,9 @@
 /// <reference types="node" />
 import { EventEmitter } from "events";
 import Queue from "./queue";
-import { ICurrentCrawl, ICurrentDownload, IDownloadPlanInput, IPipe, IPlanInput, IRule, IState, THandleError } from "./types";
+import { IDownloadCurrent, IPipe, IState } from "./types";
+import { IDefaultPlanCurrent, IDefaultPlanOptionCallback, IDefaultPlanOptionInput } from "./defaultPlan";
+import Plan from "./plan";
 /**
  * class of NodeSpider
  * @class NodeSpider
@@ -25,16 +27,15 @@ export default class NodeSpider extends EventEmitter {
      * @param urlArray {array}
      * @returns {array}
      */
-    filter(urlArray: string[]): any[];
+    filter(urlArray: string[]): string[];
     /**
      * Retry the task within the maximum number of retries
      * @param {ITask} task The task which want to retry
      * @param {number} maxRetry Maximum number of retries for this task
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
-    retry(current: ICurrentCrawl | ICurrentDownload, maxRetry?: number, finalErrorCallback?: (current: ICurrentCrawl | ICurrentDownload) => void): void | Error;
-    plan(item: IRule | IPlanInput): symbol;
-    downloadPlan(item: THandleError | IDownloadPlanInput): symbol;
+    retry(current: IDefaultPlanCurrent | IDownloadCurrent, maxRetry?: number, finalErrorCallback?: (current: IDefaultPlanCurrent | IDownloadCurrent) => void): void | Error;
+    plan(item: Plan | IDefaultPlanOptionCallback | IDefaultPlanOptionInput): symbol;
     /**
      * 添加待爬取链接到队列，并指定爬取计划。
      * @param planKey 指定的爬取计划
@@ -43,5 +44,5 @@ export default class NodeSpider extends EventEmitter {
      */
     queue(planKey: symbol, url: string | string[], special?: any): number[];
     pipe(pipeObject: IPipe): symbol;
-    save(pipeKey: symbol, data: any): Error;
+    save(pipeKey: symbol, data: any): Error | undefined;
 }

@@ -6,13 +6,13 @@ class TxtTable {
         if (typeof path !== "string") {
             throw new Error('the string-typed parameter "path" is required');
         }
-        fs.ensureFileSync(path, (err) => {
+        fs.ensureFile(path, (err) => {
             if (err) {
                 throw err;
             }
+            this.header = header;
+            this.stream = fs.createWriteStream(path);
         });
-        this.header = header;
-        this.stream = fs.createWriteStream(path);
     }
     /**
      * 根据表头写入新数据
@@ -39,20 +39,20 @@ class JsonTable {
         if (typeof path !== "string") {
             throw new Error('the string-typed parameter "path" is required');
         }
-        fs.ensureFileSync(path, (err) => {
+        fs.ensureFile(path, (err) => {
             if (err) {
                 throw err;
             }
+            this.stream = fs.createWriteStream(path);
+            this.space = "";
+            while (space > 0) {
+                space--;
+                this.space += " ";
+            }
+            this.stream.write("[");
+            this.closeSign = false;
+            this.first = true;
         });
-        this.stream = fs.createWriteStream(path);
-        this.space = "";
-        while (space > 0) {
-            space--;
-            this.space += " ";
-        }
-        this.stream.write("[");
-        this.closeSign = false;
-        this.first = true;
     }
     add(data) {
         if (this.closeSign) {
