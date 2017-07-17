@@ -1,5 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const defaultPlan_1 = require("./defaultPlan");
+exports.defaultPlan = defaultPlan_1.default;
 const pipe_1 = require("./pipe");
 exports.jsonPipe = pipe_1.jsonPipe;
 exports.txtPipe = pipe_1.txtPipe;
@@ -9,3 +11,5 @@ const preToUtf8_1 = require("./preToUtf8");
 exports.preToUtf8 = preToUtf8_1.default;
 const spider_1 = require("./spider");
 exports.Spider = spider_1.default;
+const streamPlan_1 = require("./streamPlan");
+exports.streamPlan = streamPlan_1.default;
