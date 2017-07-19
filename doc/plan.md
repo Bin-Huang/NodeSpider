@@ -1,6 +1,17 @@
-# defaultPlan
+# Plan
 
-## 用法
+在开始爬取前，你应该告诉爬虫你的爬取计划——如何发送请求、如何处理回应。
+
+例如，如何操作并提取返回正文的信息、你的爬取策略、请求时的header等。使用 `plan` 方法声明一个爬取计划，你可以详细描述你的爬取策略、请求设置、以及对返回的预处理。
+
+nodespider 自带三种常用的爬取方案，可以帮助你解决绝大部分问题：
+- **defaultPlan**   默认、常见的方案。发送请求并获得响应（response），然后对返回正文进行操作，比如提取内容或数据、收集需要的链接……
+- **downloadPlan**  专门下载文件的方案
+- **streamPlan**    如果你想直接操作返回的流，这正是你需要的。与`defaultPlan`不同，`streamPlan`不等待返回加载完全，而是直接将流直接暴露给开发者。
+
+## defaultPlan
+
+### 用法
 
 `defaultPlan`是 nodespider 的默认 plan 发生器，所以你可以直接传递设置对象到plan方法，甚至直接传递 callback 作为参数。
 
@@ -26,7 +37,7 @@ const mydefaultPlan3 = n.plan(defaultPlan({
 ```
 **NOTE**:   当你直接传递callback函数作为plan参数时，将默认加载两个预处理函数：`preToUtf8`和`preLoadJq`。
 
-## 设置
+### 设置
 
 ```javascript
 const myPlan = n.plan({
@@ -37,25 +48,25 @@ const myPlan = n.plan({
 });
 ```
 
-### request
+#### request
  (可选). 即该爬取计划的网络请求设置，将决定执行该计划时爬虫如何发出网络请求。通过设置你可以伪造ip、模拟登录、设置cookies、伪造浏览器标示等。具体设置可见 [request文档](https://www.npmjs.com/package/request#requestoptions-callback)
 
-### pre
+#### pre
 (可选). 该爬取计划的预处理列表。当成功请求到网页信息后，将对网页信息进行预处理。nodespider自带两个实用预处理函数：`preToUtf8` 将网页内容自动转码为utf8格式，`preLoadJq` 对该网页内容加载JQ选择器(power by cheerio)
 
 本质上，pre就是普通的callback函数。所以你可以提取callback中通用部分，作为预处理函数，实现代码复用及模块化开发。
 
-### info
+#### info
 (可选). 对执行该计划的每一个任务附带信息对象。`info`将作为`current`成员(属性)传递给`rule`
 
-### callback
+#### callback
 (必须). 当报错或成功加载正文并预处理后，将调用callback。并传入两个参数`err`和`current`。
 
 你可以使用callback对爬到的网页进行的操作，比如提取信息、添加新的链接到排队列表……
 
 下面介绍一下 `current`。
 
-#### current
+##### current
 
 `callback`函数在执行时将传入两个参数：`error`和`current`。其中`current`对象包含了很多当前任务的信息：
 
@@ -82,9 +93,9 @@ const planA = n.plan({
  **NOTE**   值得注意的是，当前任务的指定计划，或者是特定设置中的预处理函数，往往会修改`current`中的成员属性，甚至添加更多的成员属性。
 
 
-# streamPlan
+## streamPlan
 
-## 用法
+### 用法
 
 ```javascript
 // demo
@@ -111,21 +122,21 @@ const myStreamPlan = s.plan(streamPlan({
 }));
 ```
 
-## 设置
+### 设置
 
-### request
+#### request
  (可选). 即该爬取计划的网络请求设置，将决定执行该计划时爬虫如何发出网络请求。通过设置你可以伪造ip、模拟登录、设置cookies、伪造浏览器标示等。具体设置可见 [request文档](https://www.npmjs.com/package/request#requestoptions-callback)
 
 本质上，pre就是普通的callback函数。所以你可以提取callback中通用部分，作为预处理函数，实现代码复用及模块化开发。
 
-### info
+#### info
 (可选). 对执行该计划的每一个任务附带信息对象。`info`将作为`current`成员(属性)传递给`rule`
 
-### callback
+#### callback
 (必须). 当建立请求流后立即调用 callback 并传入两个参数：`req` 和 `current`。
 通过 `req` 你可以直接操作流，通过 `current` 你可以获得当前任务的信息。
 
-#### req
+##### req
 request 返回的流对象。power by request
 ```
     readable: boolean;
@@ -169,7 +180,7 @@ request 返回的流对象。power by request
     toJSON(): Object;
 ```
 
-#### current
+##### current
 以下属性：
 - **url** 当前任务的链接
 - **planKey** 当前任务指定计划的key

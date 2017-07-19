@@ -4,6 +4,8 @@
 // mysql 插件
 // redis queue
 // TODO B 注册pipe和queue可能存在异步操作，此时应该封装到promise或async函数。但依然存在问题：当还没注册好，就调动了queue或者save
+// TODO C 兼容新 plan 系统的 queue
+// TODO C 更良好的报错提示
 
 import * as charset from "charset";
 import * as cheerio from "cheerio";

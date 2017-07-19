@@ -91,7 +91,7 @@ const otherPlan = n.plan({
     request: {
         method: "POST",
         header: {
-
+            // some configs
         }
         // or more
     },
