@@ -2,7 +2,7 @@ import * as request from "request";
 import NodeSpider from "./spider";
 import { IPlanTask, ITask } from "./types";
 
-export type TProcess = (task: IPlanTask, self: NodeSpider) => Promise<void>|Promise<{}>;
+export type TProcess = (task: IPlanTask, self: NodeSpider) => Promise<{}>;
 
 export default class Plan {
     public type: string;

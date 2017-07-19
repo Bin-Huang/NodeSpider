@@ -22,4 +22,4 @@ export interface IDefaultPlanCurrent extends ITask {
     specialOpts: IDefaultPlanOption;
     [propName: string]: any;
 }
-export default function defaultPlan(planOptionInput: IDefaultPlanOptionCallback | IDefaultPlanOptionInput): Plan;
+export default function defaultPlan(planOptionInput: IDefaultPlanOptionCallback | IDefaultPlanOptionInput): any;

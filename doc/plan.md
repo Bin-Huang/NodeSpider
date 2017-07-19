@@ -69,14 +69,113 @@ const planA = n.plan({
 - **url** 当前任务的链接
 - **planKey** 当前任务指定计划的key
 - **plan** 当前任务的指定计划
+- **special** (可能不存在)当前任务的特定计划设置;
+- **specialOpts**   实际执行的计划设置（即special覆盖plan设置）
 - **response**    请求回应
 - **body**    返回正文
 - **error**   任务执行中的错误（等价于rule函数error参数）
 - **info**  当前任务附带的信息
-- **special** (可能不存在)当前任务的特定计划设置;
 - **maxRetry** (可能不存在)当前任务的最大重试次数限制
 - **hasRetried**    (可能不存在)当前任务已经重试的次数
 - and more ...  以及可能的更多成员属性
  
  **NOTE**   值得注意的是，当前任务的指定计划，或者是特定设置中的预处理函数，往往会修改`current`中的成员属性，甚至添加更多的成员属性。
 
+
+# streamPlan
+
+## 用法
+
+```javascript
+// demo
+const { Spider, streamPlan } = require("nodespider");
+const s = new Spider();
+
+const myStreamPlan = s.plan(streamPlan({
+    request: {
+        // ...
+    },
+    callback: (req, current) => {
+        req.on("error", () => {
+            s.retry(current, 3);
+        });
+        req.on("data", (chunk) => {
+            //...
+        });
+        req.pipe(otherStream);
+        // ...
+    },
+    info: {
+        // ...
+    },
+}));
+```
+
+## 设置
+
+### request
+ (可选). 即该爬取计划的网络请求设置，将决定执行该计划时爬虫如何发出网络请求。通过设置你可以伪造ip、模拟登录、设置cookies、伪造浏览器标示等。具体设置可见 [request文档](https://www.npmjs.com/package/request#requestoptions-callback)
+
+本质上，pre就是普通的callback函数。所以你可以提取callback中通用部分，作为预处理函数，实现代码复用及模块化开发。
+
+### info
+(可选). 对执行该计划的每一个任务附带信息对象。`info`将作为`current`成员(属性)传递给`rule`
+
+### callback
+(必须). 当建立请求流后立即调用 callback 并传入两个参数：`req` 和 `current`。
+通过 `req` 你可以直接操作流，通过 `current` 你可以获得当前任务的信息。
+
+#### req
+request 返回的流对象。power by request
+```
+    readable: boolean;
+    writable: boolean;
+
+    getAgent(): Agent;
+    // start(): void;
+    // abort(): void;
+    pipeDest(dest: any): void;
+    setHeader(name: string, value: string, clobber?: boolean): Request;
+    setHeaders(headers: Headers): Request;
+    qs(q: Object, clobber?: boolean): Request;
+    form(): FormData;
+    form(form: any): Request;
+    multipart(multipart: RequestPart[]): Request;
+    json(val: any): Request;
+    aws(opts: AWSOptions, now?: boolean): Request;
+    auth(username: string, password: string, sendInmediately?: boolean, bearer?: string): Request;
+    oauth(oauth: OAuthOptions): Request;
+    jar(jar: CookieJar): Request;
+
+    on(event: string, listener: Function): this;
+    on(event: 'request', listener: (req: ClientRequest) => void): this;
+    on(event: 'response', listener: (resp: IncomingMessage) => void): this;
+    on(event: 'data', listener: (data: Buffer | string) => void): this;
+    on(event: 'error', listener: (e: Error) => void): this;
+    on(event: 'complete', listener: (resp: IncomingMessage, body?: string | Buffer) => void): this;
+
+    write(buffer: Buffer, cb?: Function): boolean;
+    write(str: string, cb?: Function): boolean;
+    write(str: string, encoding: string, cb?: Function): boolean;
+    write(str: string, encoding?: string, fd?: string): boolean;
+    end(): void;
+    end(chunk: Buffer, cb?: Function): void;
+    end(chunk: string, cb?: Function): void;
+    end(chunk: string, encoding: string, cb?: Function): void;
+    pause(): void;
+    resume(): void;
+    abort(): void;
+    destroy(): void;
+    toJSON(): Object;
+```
+
+#### current
+以下属性：
+- **url** 当前任务的链接
+- **planKey** 当前任务指定计划的key
+- **plan** 当前任务的指定计划
+- **special** (可能不存在)当前任务的特定计划设置;
+- **specialOpts**   实际执行的计划设置（即special覆盖plan设置）
+- **info**  当前任务附带的信息
+- **maxRetry** (可能不存在)当前任务的最大重试次数限制
+- **hasRetried**    (可能不存在)当前任务已经重试的次数

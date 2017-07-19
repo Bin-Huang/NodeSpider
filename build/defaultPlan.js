@@ -39,8 +39,7 @@ function defaultPlan(planOptionInput) {
 exports.default = defaultPlan;
 function processFun(task, self) {
     return __awaiter(this, void 0, void 0, function* () {
-        const requestOpts = Object.assign({ url: task.url }, task.specialOpts.request);
-        const { error, response, body } = yield requestAsync(requestOpts);
+        const { error, response, body } = yield requestAsync(Object.assign({}, task.specialOpts.request, { url: task.url }));
         let current = Object.assign(task, {
             response,
             body,

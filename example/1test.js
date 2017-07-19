@@ -7,16 +7,14 @@ const planA = n.plan({
         if (err) {
             return console.log(err);
         }
-        current.response = "response";
-        current.body = "body";
-        console.log(current);
+        const $ = current.$;
+        console.log($("title").text());
+        n.queue(planA, $("a").url());
     },
-    info: {name: "infoinfo"},
 });
 console.log(planA);
 n.queue(planA, "http://www.baidu.com", {
     // rule: (err, current) => {
     //     console.log("special rule");
     // }
-    info: {name: "kljfljfkl"},
 });

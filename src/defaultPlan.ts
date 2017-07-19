@@ -65,8 +65,10 @@ export default function defaultPlan(planOptionInput: IDefaultPlanOptionCallback|
 }
 
 async function processFun(task: IDefaultPlanTask, self: NodeSpider) {
-    const requestOpts = Object.assign({url: task.url}, task.specialOpts.request);
-    const {error, response, body}: any = await requestAsync(requestOpts);
+    const {error, response, body}: any = await requestAsync({
+        ...task.specialOpts.request,
+        url: task.url,
+    });
     let current: IDefaultPlanCurrent = Object.assign(task, {
         response,
         body,

@@ -1,6 +1,6 @@
 import NodeSpider from "./spider";
 import { IPlanTask } from "./types";
-export declare type TProcess = (task: IPlanTask, self: NodeSpider) => Promise<void> | Promise<{}>;
+export declare type TProcess = (task: IPlanTask, self: NodeSpider) => Promise<{}>;
 export default class Plan {
     type: string;
     options: any;
