@@ -36,6 +36,7 @@ export interface IState {
     working: boolean;
     currentMultiTask: number;
     currentMultiDownload: number;
+    timer: any;
 }
 
 // for parameter option, when initialize an instance  of NodeSpider.

@@ -74,6 +74,7 @@ export default class NodeSpider extends EventEmitter {
             pipeStore: new Map(),
             planStore: new Map(),
             queue: null,
+            timer: null,
             working: true,
         };
         this._STATE.queue = this._STATE.option.queue;
@@ -86,7 +87,7 @@ export default class NodeSpider extends EventEmitter {
             }
         });
 
-        setInterval(() => {
+        this._STATE.timer = setInterval(() => {
             if (this._STATE.currentMultiTask < this._STATE.option.multiTasking) {
                 startCrawl(this);
             }
@@ -94,6 +95,10 @@ export default class NodeSpider extends EventEmitter {
                 startDownload(this);
             }
         }, this._STATE.option.rateLimit);
+    }
+
+    public end() {
+        clearInterval(this._STATE.timer);
     }
 
     /**

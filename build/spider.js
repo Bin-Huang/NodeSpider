@@ -5,6 +5,8 @@
 // mysql 插件
 // redis queue
 // TODO B 注册pipe和queue可能存在异步操作，此时应该封装到promise或async函数。但依然存在问题：当还没注册好，就调动了queue或者save
+// TODO C 兼容新 plan 系统的 queue
+// TODO C 更良好的报错提示
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
 const uuid = require("uuid");
@@ -37,6 +39,7 @@ class NodeSpider extends events_1.EventEmitter {
             pipeStore: new Map(),
             planStore: new Map(),
             queue: null,
+            timer: null,
             working: true,
         };
         this._STATE.queue = this._STATE.option.queue;
@@ -47,7 +50,7 @@ class NodeSpider extends events_1.EventEmitter {
                 item.close();
             }
         });
-        setInterval(() => {
+        this._STATE.timer = setInterval(() => {
             if (this._STATE.currentMultiTask < this._STATE.option.multiTasking) {
                 startCrawl(this);
             }
@@ -55,6 +58,9 @@ class NodeSpider extends events_1.EventEmitter {
                 startDownload(this);
             }
         }, this._STATE.option.rateLimit);
+    }
+    end() {
+        clearInterval(this._STATE.timer);
     }
     /**
      * Check whether the url has been added

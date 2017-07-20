@@ -26,6 +26,7 @@ export interface IState {
     working: boolean;
     currentMultiTask: number;
     currentMultiDownload: number;
+    timer: any;
 }
 export interface IDefaultOption {
     multiTasking: number;
