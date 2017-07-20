@@ -67,7 +67,7 @@ const nn = new Spider({
 | multiDownload | 最大同时下载数 | number | 2 |
 | multiTasking | 最大同时抓取数 | number | 20 |
 | rateLimit | 限速，网络请求的时间间隔（毫秒） | number | 2(毫秒)
-| queue | 任务排队队列 | Object | NodeSpider.Queue
+| queue | 任务排队队列 | class | NodeSpider.Queue
 
 # 方法与属性
 
