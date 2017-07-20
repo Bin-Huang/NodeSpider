@@ -47,7 +47,7 @@ import Plan from "./plan";
 const defaultOption: IDefaultOption = {
     multiDownload: 2,
     multiTasking: 20,
-    queue: new Queue(),
+    queue: Queue,
     rateLimit: 2,
 };
 
@@ -66,18 +66,18 @@ export default class NodeSpider extends EventEmitter {
     constructor(opts = {}) {
         super();
         // TODO B opts 检测是否合法
+        const finalOption = Object.assign({}, defaultOption, opts);
         this._STATE = {
             currentMultiDownload: 0,   // 当前进行的下载的数量
             currentMultiTask: 0, // 当前正在进行的任务数量
             dlPlanStore: new Map(),
-            option: Object.assign({}, defaultOption, opts),
+            option: finalOption,
             pipeStore: new Map(),
             planStore: new Map(),
-            queue: null,
+            queue: new finalOption.queue(),
             timer: null,
             working: true,
         };
-        this._STATE.queue = this._STATE.option.queue;
 
         // 在爬虫的生命周期末尾，需要进行一些收尾工作，比如关闭table
         this.on("end", () => {

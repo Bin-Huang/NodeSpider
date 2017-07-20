@@ -28,11 +28,12 @@ export interface IState {
     currentMultiDownload: number;
     timer: any;
 }
+export declare type queueClass = new () => IQueue;
 export interface IDefaultOption {
     multiTasking: number;
     multiDownload: number;
     rateLimit: number;
-    queue: IQueue;
+    queue: queueClass;
 }
 export interface ITask {
     url: string;

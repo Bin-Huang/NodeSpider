@@ -39,6 +39,8 @@ export interface IState {
     timer: any;
 }
 
+export type queueClass = new () => IQueue;
+
 // for parameter option, when initialize an instance  of NodeSpider.
 export interface IDefaultOption {
     multiTasking: number;
@@ -47,7 +49,7 @@ export interface IDefaultOption {
     // defaultDownloadPath: string;
 
     rateLimit: number;
-    queue: IQueue;
+    queue: queueClass;
 
     // preprocessing: any[];
 }
