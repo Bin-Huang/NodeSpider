@@ -62,6 +62,7 @@ class NodeSpider extends events_1.EventEmitter {
         for (const pipe of this._STATE.pipeStore.values()) {
             pipe.close();
         }
+        // TODO C 更多，比如修改所有method来提醒开发者已经end
         // 触发事件，将信号传递出去
         this.emit("end");
     }
