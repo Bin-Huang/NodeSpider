@@ -79,12 +79,8 @@ export default class NodeSpider extends EventEmitter {
             working: true,
         };
 
-        // 在爬虫的生命周期末尾，需要进行一些收尾工作，比如关闭table
         this.on("end", () => {
-            const values = this._STATE.pipeStore.values();
-            for (const item of values) {
-                item.close();
-            }
+            // some code，如果没有需要，就删除
         });
 
         this._STATE.timer = setInterval(() => {
@@ -98,7 +94,15 @@ export default class NodeSpider extends EventEmitter {
     }
 
     public end() {
+        // 爬虫不再定时从任务队列获得新任务
         clearInterval(this._STATE.timer);
+        // 关闭注册的pipe
+        for (const pipe of this._STATE.pipeStore.values()) {
+            pipe.close();
+        }
+        // 触发事件，将信号传递出去
+        this.emit("end");
+
     }
 
     /**
