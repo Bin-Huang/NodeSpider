@@ -87,9 +87,9 @@ export default class NodeSpider extends EventEmitter {
             if (this._STATE.currentMultiTask < this._STATE.option.multiTasking) {
                 startCrawl(this);
             }
-            if (this._STATE.currentMultiDownload < this._STATE.option.multiDownload) {
-                startDownload(this);
-            }
+            // if (this._STATE.currentMultiDownload < this._STATE.option.multiDownload) {
+            //     startDownload(this);
+            // }
         }, this._STATE.option.rateLimit);
     }
 
@@ -301,26 +301,6 @@ function startCrawl(self: NodeSpider) {
             self._STATE.currentMultiTask --;
         });
 
-    }
-}
-
-function startDownload(self: NodeSpider) {
-    if (self._STATE.queue.getWaitingDownloadTaskNum() !== 0) {
-        const task = self._STATE.queue.nextDownloadTask();
-
-        self._STATE.currentMultiDownload ++;
-        // 【【这里的错误处理思想】】
-        // 所有可能的错误，应该交给开发者编写的plan来处理
-        // 比如在rule中处理错误，或者是在handleError中处理
-        // 所以此处catch的错误，必须要再额外处理，只需要触发终止当前任务的事件即可
-        _asyncDownload(task, self)
-            .then(() => {
-                self._STATE.currentMultiDownload --;
-            })
-            .catch((e) => {
-                console.log(e);
-                self._STATE.currentMultiDownload --;
-            });
     }
 }
 
