@@ -20,7 +20,8 @@ function streamPlan(opts) {
         info: opts.info || {},
         request: opts.request || {},
     };
-    return new plan_1.default("streamPlan", planOption, process);
+    const multi = opts.multi || 10;
+    return new plan_1.default("streamPlan", multi, planOption, process);
 }
 exports.default = streamPlan;
 function process(task, self) {

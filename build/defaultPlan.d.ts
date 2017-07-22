@@ -2,6 +2,7 @@ import Plan from "./plan";
 import { IRequestOpts, ITask } from "./types";
 export interface IDefaultPlanOptionInput {
     callback: IDefaultPlanOptionCallback;
+    multi?: number;
     request?: IRequestOpts;
     pre?: IDefaultPlanOptionCallback[];
     info?: any;
@@ -12,7 +13,7 @@ export interface IDefaultPlanOption extends IDefaultPlanOptionInput {
     callback: IDefaultPlanOptionCallback;
     info: any;
 }
-export declare type IDefaultPlanOptionCallback = (err: Error, current: IDefaultPlanCurrent) => void | Promise<void>;
+export declare type IDefaultPlanOptionCallback = (err: Error, current: IDefaultPlanCurrent) => any | Promise<any>;
 export interface IDefaultPlanCurrent extends ITask {
     plan: Plan;
     response: any;
@@ -22,4 +23,4 @@ export interface IDefaultPlanCurrent extends ITask {
     specialOpts: IDefaultPlanOption;
     [propName: string]: any;
 }
-export default function defaultPlan(planOptionInput: IDefaultPlanOptionCallback | IDefaultPlanOptionInput): any;
+export default function defaultPlan(planOptionInput: IDefaultPlanOptionCallback | IDefaultPlanOptionInput): Plan;

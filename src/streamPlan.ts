@@ -8,6 +8,7 @@ import { ICurrent, IPlanTask, IRequestOpts, ITask } from "./types";
 
 export type TStreamPlanOptionCallback = (req: request.Request, current: ICurrent) => void;
 export interface IStreamPlanOptionInput {
+    multi?: number;
     request?: any;
     callback: TStreamPlanOptionCallback;
     info?: any;
@@ -34,12 +35,14 @@ export default function streamPlan(opts: TStreamPlanOptionCallback|IStreamPlanOp
     }
 
     // 过滤掉opts中无关的成员
-    const planOption = {
+    const planOption: IStreamPlanOption = {
         callback: opts.callback,
         info: opts.info || {},
         request: opts.request || {},
     };
-    return new Plan("streamPlan", planOption, process);
+
+    const multi = opts.multi || 10;
+    return new Plan("streamPlan", multi, planOption, process);
 }
 
 function process(task: IStreamPlanTask, self: NodeSpider) {

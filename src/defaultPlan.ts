@@ -8,6 +8,7 @@ import { IPlanTask, IRequestOpts, ITask } from "./types";
 // for 函数defaultPlan的设置参数
 export interface IDefaultPlanOptionInput {
     callback: IDefaultPlanOptionCallback;
+    multi?: number;
     request?: IRequestOpts;
     pre?: IDefaultPlanOptionCallback[];
     info?: any;
@@ -20,7 +21,7 @@ export interface IDefaultPlanOption extends IDefaultPlanOptionInput {
     info: any;
 }
 // for defaultPlan设置中的callback
-export type IDefaultPlanOptionCallback = (err: Error, current: IDefaultPlanCurrent) => void | Promise<void>;
+export type IDefaultPlanOptionCallback = (err: Error, current: IDefaultPlanCurrent) => any|Promise<any>;
 
 // for 传递给Plan的process的task参数
 interface IDefaultPlanTask extends IPlanTask {
@@ -60,8 +61,10 @@ export default function defaultPlan(planOptionInput: IDefaultPlanOptionCallback|
     const info = planOptionInput.info || {};
     const callback = planOptionInput.callback;
 
-    const planOption = { request, callback, pre, info };
-    return new Plan("default", planOption, processFun);
+    const planOption: IDefaultPlanOption = { request, callback, pre, info };
+
+    const multi = planOptionInput.multi || 20;
+    return new Plan("default", multi, planOption, processFun);
 }
 
 async function processFun(task: IDefaultPlanTask, self: NodeSpider) {
@@ -96,9 +99,9 @@ async function processFun(task: IDefaultPlanTask, self: NodeSpider) {
     // task = null;
 }
 
-function requestAsync(opts) {
+function requestAsync(opts: IRequestOpts) {
     return new Promise((resolve, reject) => {
-        request(opts, (error, response, body) => {
+        request(opts, (error: Error, response: any, body: any) => {
             resolve({error, response, body});
         });
     });

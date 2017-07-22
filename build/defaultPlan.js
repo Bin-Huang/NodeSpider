@@ -34,7 +34,8 @@ function defaultPlan(planOptionInput) {
     const info = planOptionInput.info || {};
     const callback = planOptionInput.callback;
     const planOption = { request, callback, pre, info };
-    return new plan_1.default("default", planOption, processFun);
+    const multi = planOptionInput.multi || 20;
+    return new plan_1.default("default", multi, planOption, processFun);
 }
 exports.default = defaultPlan;
 function processFun(task, self) {
