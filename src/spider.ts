@@ -238,6 +238,13 @@ export default class NodeSpider extends EventEmitter {
         }
         const key = Symbol(`${newPlan.type}-${uuid()}`);
         this._STATE.planStore.set(key, newPlan);
+
+        // TODO C 单元测试
+        if (! this._STATE.currentConnections.has(newPlan.type)) {
+            this._STATE.currentConnections.set(newPlan.type, 0);
+            this._STATE.maxConnections.set(newPlan.type, newPlan.multi);
+        }
+
         return key;
     }
 
