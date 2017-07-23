@@ -194,47 +194,25 @@ class NodeSpider extends events_1.EventEmitter {
         if (typeof planKey !== "symbol") {
             throw new TypeError("queue 参数错误");
         }
-        // 确定添加到哪个队列(crawlQueue还是downloadQueue?)
-        let toCrawl = null; // True代表addCrawl，False代表addDownload
-        if (this._STATE.planStore.has(planKey)) {
-            toCrawl = true;
-        }
-        else if (this._STATE.dlPlanStore.has(planKey)) {
-            toCrawl = false;
-        }
-        else {
-            throw new RangeError("plan 不存在");
+        const plan = this._STATE.planStore.get(planKey);
+        if (!plan) {
+            throw new Error("指定plan不存在");
         }
         // 添加到队列
         // TODO C 完善 special: 过滤掉其中不相干的成员？
         if (!Array.isArray(url)) {
-            if (toCrawl) {
-                this._STATE.queue.addTask({ url, planKey, special });
-            }
-            else {
-                this._STATE.queue.addDownload({ url, planKey, special });
-            }
+            this._STATE.queue.addTask({ url, planKey, special }, plan.type);
         }
         else {
             url.map((u) => {
                 if (typeof u !== "string") {
                     return new Error("url数组中存在非字符串成员");
                 }
-                if (toCrawl) {
-                    this._STATE.queue.addTask({ url: u, planKey });
-                }
-                else {
-                    this._STATE.queue.addDownload({ url: u, planKey });
-                }
+                this._STATE.queue.addTask({ url: u, planKey, special }, plan.type);
             });
         }
         this._STATE.working = true;
-        return [
-            this._STATE.queue.getWaitingTaskNum(),
-            this._STATE.queue.getWaitingDownloadTaskNum(),
-            this._STATE.queue.getWaitingTaskNum(),
-            this._STATE.queue.getTotalUrlsNum(),
-        ];
+        return this._STATE.queue.getTotalUrlsNum();
     }
     // 关于pipeGenerator
     // 提供 add、close、init

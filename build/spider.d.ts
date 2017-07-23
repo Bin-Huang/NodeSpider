@@ -43,7 +43,7 @@ export default class NodeSpider extends EventEmitter {
      * @param url 待爬取的链接（们）
      * @param special （可选）针对当前链接的特别设置，将覆盖与plan重复的设置
      */
-    queue(planKey: symbol, url: string | string[], special?: any): number[];
+    queue(planKey: symbol, url: string | string[], special?: any): number;
     pipe(pipeObject: IPipe): symbol;
     save(pipeKey: symbol, data: any): Error | undefined;
 }
