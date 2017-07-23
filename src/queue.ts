@@ -155,7 +155,7 @@ export default class Queue implements IQueue {
      */
     public getWaitingTaskNum(type: string) {
         if (! this.typeQueue.has(type)) {
-            return null;    // 当type对应的队列不存在，返回null
+            throw new Error("the type is not existed in the queue");
         }
         const num = (this.typeQueue.get(type) as LinkedQueue).getLength();
         return num;

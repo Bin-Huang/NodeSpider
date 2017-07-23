@@ -139,7 +139,7 @@ class Queue {
      */
     getWaitingTaskNum(type) {
         if (!this.typeQueue.has(type)) {
-            return null; // 当type对应的队列不存在，返回null
+            throw new Error("the type is not existed in the queue");
         }
         const num = this.typeQueue.get(type).getLength();
         return num;

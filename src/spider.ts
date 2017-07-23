@@ -47,7 +47,7 @@ import {
 import Plan from "./plan";
 
 const defaultOption: IDefaultOption = {
-    multiTasking: 20,
+    maxTotalConnections: 20;
     queue: Queue,
     rateLimit: 2,
 };
@@ -88,17 +88,51 @@ export default class NodeSpider extends EventEmitter {
             if (this._STATE.currentTotalConnections >= this._STATE.option.maxTotalConnections) {
                 return ;    // 当全局连接数达到设置的最大连接数限制，则直接返回
             }
-            const planKeys = this._STATE.currentConnections.keys();
-            for (const key of planKeys) {
-                const current: any = this._STATE.currentConnections.get(key);
-                const max: any = this._STATE.maxConnections.get(key);
+
+            let targetType: string|null = null;
+            let newTask: ITask|null = null;
+            const planTypes = this._STATE.currentConnections.keys();
+            for (const type of planTypes) {
+                const current: any = this._STATE.currentConnections.get(type);
+                const max: any = this._STATE.maxConnections.get(type);
                 if (current < max) {
-                    // TODO A 计数
-                    // TODO C 修改 startCrawl 使指定plan的queue
-                    startCrawl(this);
+                    const task = this._STATE.queue.nextTask(type);
+                    if (task) {
+                        targetType = type;
+                        newTask = task;
+                    }
                     break;  // 每次定时器启动，只开始一个指定计划当前连接数未达到最大的新任务。
                 }
             }
+
+            if (targetType && newTask) {
+                const plan = this._STATE.planStore.get(newTask.planKey);
+                if (! plan) {
+                    console.log("不应该出现的错误。从queue中获得的task，根据key获得planStore中plan，plan却不存在");
+                    return ;
+                }
+                const specialOpts = Object.assign({}, plan.options, newTask.special);
+
+                const t: IPlanTask = {
+                    ... newTask,
+                    specialOpts,
+                };
+
+                const current = this._STATE.currentConnections.get(targetType);
+
+                this._STATE.currentConnections.set(targetType, (current as number) + 1);
+                this._STATE.currentTotalConnections ++;
+
+                plan.process(t, this).then(() => {
+                    this._STATE.currentConnections.set((targetType as string), (current as number) - 1);
+                    this._STATE.currentTotalConnections --;
+                }).catch((e: Error) => {
+                    console.log(e);
+                    this._STATE.currentConnections.set((targetType as string), (current as number) - 1);
+                    this._STATE.currentTotalConnections --;
+                });
+            }
+
         }, this._STATE.option.rateLimit);
     }
 
@@ -285,32 +319,6 @@ export default class NodeSpider extends EventEmitter {
         }
     }
 
-}
-
-function startCrawl(self: NodeSpider) {
-    if (self._STATE.queue.getWaitingTaskNum() !== 0) {
-        const task = self._STATE.queue.nextCrawlTask();
-        self._STATE.currentMultiTask ++;
-
-        const plan = self._STATE.planStore.get(task.planKey);
-        if (! plan) {
-            throw new Error("planKey 对应的 plan 不存在");
-        }
-        const specialOpts = Object.assign({}, plan.options, task.special);
-
-        const t: IPlanTask = {
-            ... task,
-            specialOpts,
-        };
-
-        plan.process(t, self).then(() => {
-            self._STATE.currentMultiTask --;
-        }).catch((e) => {
-            console.log(e);
-            self._STATE.currentMultiTask --;
-        });
-
-    }
 }
 
 type TPipePlanApi1 = (input: stream.Stream, callback: IPipeCallback) => symbol;

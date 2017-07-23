@@ -27,7 +27,7 @@ export default class Queue implements IQueue {
      * 获得指定type队列的排队任务数量
      * @param type
      */
-    getWaitingTaskNum(type: string): number | null;
+    getWaitingTaskNum(type: string): number;
     /**
      * 获得所有添加到排队的url数（不包含重复添加）
      */

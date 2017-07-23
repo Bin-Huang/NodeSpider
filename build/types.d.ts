@@ -5,7 +5,7 @@ export interface IQueue {
     addTask: (newTask: ITask, type: string) => void;
     jumpTask: (newTask: ITask, type: string) => void;
     check: (url: string) => boolean;
-    getWaitingTaskNum: (type: string) => number | null;
+    getWaitingTaskNum: (type: string) => number;
     getTotalUrlsNum: () => number;
     nextTask: (type: string) => ITask | null;
 }

@@ -11,7 +11,7 @@ export interface IQueue {
 
     check: (url: string) => boolean;
 
-    getWaitingTaskNum: (type: string) => number|null;
+    getWaitingTaskNum: (type: string) => number;
     getTotalUrlsNum: () => number;
 
     nextTask: (type: string) => ITask|null;
