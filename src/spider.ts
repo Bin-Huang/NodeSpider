@@ -187,10 +187,11 @@ export default class NodeSpider extends EventEmitter {
      * @param {number} maxRetry Maximum number of retries for this task
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
+    // TODO C current 应该能适应所有的plan
     public retry(
         current: ICurrent,
         maxRetry = 1,
-        finalErrorCallback?: (current: IDefaultPlanCurrent|IDownloadCurrent) => void,
+        finalErrorCallback?: (current: ICurrent) => void,
     ) {
         const task = {
             hasRetried: current.hasRetried,
@@ -206,7 +207,7 @@ export default class NodeSpider extends EventEmitter {
             task.maxRetry = maxRetry;
         }
         if (! finalErrorCallback) {
-            finalErrorCallback = (currentTask: IDefaultPlanCurrent | IDownloadCurrent) => {
+            finalErrorCallback = (currentTask: ICurrent) => {
                 console.log("达到最大重试次数，但依旧错误");
             };
         }
@@ -214,19 +215,9 @@ export default class NodeSpider extends EventEmitter {
             return finalErrorCallback(current);
         }
 
-        // 判断是哪种任务，crawl or download?
-        let jumpFun = null;
-        if (this._STATE.planStore.has(task.planKey)) {
-            jumpFun = this._STATE.queue.jumpTask;
-        } else if (this._STATE.dlPlanStore.has(task.planKey)) {
-            jumpFun = this._STATE.queue.jumpDownload;
-        } else {
-            return new Error("unknown plan");
-        }
-
-        // 重新添加到队列
+        const plan = current.plan;
         task.hasRetried ++;
-        jumpFun(task);
+        this._STATE.queue.jumpTask(task, plan.type);    // 插队到队列，重新等待执行
     }
 
     public plan(item: Plan|IDefaultPlanOptionCallback|IDefaultPlanOptionInput): symbol {

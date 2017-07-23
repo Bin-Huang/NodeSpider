@@ -134,6 +134,7 @@ class NodeSpider extends events_1.EventEmitter {
      * @param {number} maxRetry Maximum number of retries for this task
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
+    // TODO C current 应该能适应所有的plan
     retry(current, maxRetry = 1, finalErrorCallback) {
         const task = {
             hasRetried: current.hasRetried,
@@ -156,20 +157,9 @@ class NodeSpider extends events_1.EventEmitter {
         if (task.hasRetried >= task.maxRetry) {
             return finalErrorCallback(current);
         }
-        // 判断是哪种任务，crawl or download?
-        let jumpFun = null;
-        if (this._STATE.planStore.has(task.planKey)) {
-            jumpFun = this._STATE.queue.jumpTask;
-        }
-        else if (this._STATE.dlPlanStore.has(task.planKey)) {
-            jumpFun = this._STATE.queue.jumpDownload;
-        }
-        else {
-            return new Error("unknown plan");
-        }
-        // 重新添加到队列
+        const plan = current.plan;
         task.hasRetried++;
-        jumpFun(task);
+        this._STATE.queue.jumpTask(task, plan.type); // 插队到队列，重新等待执行
     }
     plan(item) {
         let newPlan = item;
