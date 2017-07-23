@@ -49,7 +49,7 @@ class LinkedQueue {
      */
     public next() {
         const current = this._HEAD;
-        if (!current) {
+        if (! current) {
             return null;
         } else {
             this._HEAD = current.next; // 丢弃头链环，回收已遍历链节的内存
@@ -113,50 +113,68 @@ class LinkedQueue {
 // tslint:disable-next-line:max-classes-per-file
 export default class Queue implements IQueue {
     protected urlPool: Set<string>;
-    private crawlQueue: LinkedQueue;
-    private downloadQueue: LinkedQueue;
+    private typeQueue: Map<string, LinkedQueue>;
     constructor() {
         this.urlPool = new Set();
-        this.crawlQueue = new LinkedQueue();
-        this.downloadQueue = new LinkedQueue();
+        this.typeQueue = new Map();
     }
-    public addTask(newTask: ITask) {
+    /**
+     * 添加新的任务到指定type队列末尾。如果type队列不存在则新建
+     * @param newTask
+     * @param type
+     */
+    public addTask(newTask: ITask, type: string) {
+        if (! this.typeQueue.has(type)) {
+            this.typeQueue.set(type, new LinkedQueue());    // 当type对应的任务队列不存在，则新建
+        }
         this.urlPool.add(newTask.url);
-        this.crawlQueue.add(newTask);
+        (this.typeQueue.get(type) as LinkedQueue).add(newTask);
     }
-    public addDownload(newTask: ITask) {
+    /**
+     * 将新的任务插队到指定type队列头部。如果type队列不存在则新建
+     * @param newTask
+     * @param type
+     */
+    public jumpTask(newTask: ITask, type: string) {
+        if (! this.typeQueue.has(type)) {
+            this.typeQueue.set(type, new LinkedQueue());    // 当type对应的任务队列不存在，则新建
+        }
         this.urlPool.add(newTask.url);
-        this.downloadQueue.add(newTask);
+        (this.typeQueue.get(type) as LinkedQueue).jump(newTask);
     }
-    public jumpTask(newTask: ITask) {
-        this.urlPool.add(newTask.url);
-        this.crawlQueue.jump(newTask);
-    }
-    public jumpDownload(newTask: ITask) {
-        this.urlPool.add(newTask.url);
-        this.downloadQueue.jump(newTask);
-    }
+    /**
+     * 检测一个url是否添加过，是则返回true
+     * @param url
+     */
     public check(url: string) {
         return this.urlPool.has(url);
     }
-    public getWaitingTaskNum() {
-        return this.crawlQueue.getLength();
+    /**
+     * 获得指定type队列的排队任务数量
+     * @param type
+     */
+    public getWaitingTaskNum(type: string) {
+        if (! this.typeQueue.has(type)) {
+            return null;    // 当type对应的队列不存在，返回null
+        }
+        const num = (this.typeQueue.get(type) as LinkedQueue).getLength();
+        return num;
     }
-    public getWaitingDownloadTaskNum() {
-        return this.downloadQueue.getLength();
-    }
+    /**
+     * 获得所有添加到排队的url数（不包含重复添加）
+     */
     public getTotalUrlsNum() {
         return this.urlPool.size;
     }
-    public nextCrawlTask() {
-        const result = this.crawlQueue.next();
-        if (! result) {
+    /**
+     * 返回下一个任务。如果type对应的排队不存在，或该排队没有新任务，都会返回 null
+     * @param type 任务类型type
+     */
+    public nextTask(type: string) {
+        if (! this.typeQueue.has(type)) {
             return null;
         }
-        return result;
-    }
-    public nextDownloadTask() {
-        const result = this.downloadQueue.next();
+        const result = (this.typeQueue.get(type) as LinkedQueue).next();
         if (! result) {
             return null;
         }

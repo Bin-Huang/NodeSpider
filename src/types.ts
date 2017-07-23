@@ -6,19 +6,15 @@ import NodeSpider from "./spider";
 
 // nodespider's queue;
 export interface IQueue {
-    addTask: (newTask: ITask) => void;
-    addDownload: (newTask: ITask) => void;
-    jumpTask: (newTask: ITask) => void;
-    jumpDownload: (newTask: ITask) => void;
+    addTask: (newTask: ITask, type: string) => void;
+    jumpTask: (newTask: ITask, type: string) => void;
 
     check: (url: string) => boolean;
 
-    getWaitingTaskNum: () => number;
-    getWaitingDownloadTaskNum: () => number;
+    getWaitingTaskNum: (type: string) => number|null;
     getTotalUrlsNum: () => number;
 
-    nextCrawlTask: () => ITask;
-    nextDownloadTask: () => ITask;
+    nextTask: (type: string) => ITask|null;
 }
 
 export interface IPipe {
@@ -30,23 +26,20 @@ export interface IPipe {
 export interface IState {
     queue: IQueue;
     planStore: Map<symbol, Plan>;
-    dlPlanStore: Map<symbol, Plan>;
     pipeStore: Map<symbol, IPipe>;
     option: IDefaultOption;
     working: boolean;
-    currentMultiTask: number;
-    currentMultiDownload: number;
-    timer: any;
+    timer: NodeJS.Timer;
+    currentConnections: Map<string, number>;
+    currentTotalConnections: number;
+    maxConnections: Map<string, number>;
 }
 
 export type queueClass = new () => IQueue;
 
 // for parameter option, when initialize an instance  of NodeSpider.
 export interface IDefaultOption {
-    multiTasking: number;
-    multiDownload: number;
-    // defaultRetry: number;
-    // defaultDownloadPath: string;
+    maxTotalConnections: number;
 
     rateLimit: number;
     queue: queueClass;

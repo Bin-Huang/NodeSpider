@@ -14,7 +14,6 @@ const defaultPlan_1 = require("./defaultPlan");
 const queue_1 = require("./queue");
 const plan_1 = require("./plan");
 const defaultOption = {
-    multiDownload: 2,
     multiTasking: 20,
     queue: queue_1.default,
     rateLimit: 2,
@@ -33,9 +32,9 @@ class NodeSpider extends events_1.EventEmitter {
         // TODO B opts 检测是否合法
         const finalOption = Object.assign({}, defaultOption, opts);
         this._STATE = {
-            currentMultiDownload: 0,
-            currentMultiTask: 0,
-            dlPlanStore: new Map(),
+            currentConnections: new Map(),
+            currentTotalConnections: 0,
+            maxConnections: new Map(),
             option: finalOption,
             pipeStore: new Map(),
             planStore: new Map(),
@@ -47,12 +46,20 @@ class NodeSpider extends events_1.EventEmitter {
             // some code，如果没有需要，就删除
         });
         this._STATE.timer = setInterval(() => {
-            if (this._STATE.currentMultiTask < this._STATE.option.multiTasking) {
-                startCrawl(this);
+            if (this._STATE.currentTotalConnections >= this._STATE.option.maxTotalConnections) {
+                return; // 当全局连接数达到设置的最大连接数限制，则直接返回
             }
-            // if (this._STATE.currentMultiDownload < this._STATE.option.multiDownload) {
-            //     startDownload(this);
-            // }
+            const planKeys = this._STATE.currentConnections.keys();
+            for (const key of planKeys) {
+                const current = this._STATE.currentConnections.get(key);
+                const max = this._STATE.maxConnections.get(key);
+                if (current < max) {
+                    // TODO A 计数
+                    // TODO C 修改 startCrawl 使指定plan的queue
+                    startCrawl(this);
+                    break; // 每次定时器启动，只开始一个指定计划当前连接数未达到最大的新任务。
+                }
+            }
         }, this._STATE.option.rateLimit);
     }
     end() {

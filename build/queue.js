@@ -100,46 +100,65 @@ class LinkedQueue {
 class Queue {
     constructor() {
         this.urlPool = new Set();
-        this.crawlQueue = new LinkedQueue();
-        this.downloadQueue = new LinkedQueue();
+        this.typeQueue = new Map();
     }
-    addTask(newTask) {
+    /**
+     * 添加新的任务到指定type队列末尾。如果type队列不存在则新建
+     * @param newTask
+     * @param type
+     */
+    addTask(newTask, type) {
+        if (!this.typeQueue.has(type)) {
+            this.typeQueue.set(type, new LinkedQueue()); // 当type对应的任务队列不存在，则新建
+        }
         this.urlPool.add(newTask.url);
-        this.crawlQueue.add(newTask);
+        this.typeQueue.get(type).add(newTask);
     }
-    addDownload(newTask) {
+    /**
+     * 将新的任务插队到指定type队列头部。如果type队列不存在则新建
+     * @param newTask
+     * @param type
+     */
+    jumpTask(newTask, type) {
+        if (!this.typeQueue.has(type)) {
+            this.typeQueue.set(type, new LinkedQueue()); // 当type对应的任务队列不存在，则新建
+        }
         this.urlPool.add(newTask.url);
-        this.downloadQueue.add(newTask);
+        this.typeQueue.get(type).jump(newTask);
     }
-    jumpTask(newTask) {
-        this.urlPool.add(newTask.url);
-        this.crawlQueue.jump(newTask);
-    }
-    jumpDownload(newTask) {
-        this.urlPool.add(newTask.url);
-        this.downloadQueue.jump(newTask);
-    }
+    /**
+     * 检测一个url是否添加过，是则返回true
+     * @param url
+     */
     check(url) {
         return this.urlPool.has(url);
     }
-    getWaitingTaskNum() {
-        return this.crawlQueue.getLength();
+    /**
+     * 获得指定type队列的排队任务数量
+     * @param type
+     */
+    getWaitingTaskNum(type) {
+        if (!this.typeQueue.has(type)) {
+            return null; // 当type对应的队列不存在，返回null
+        }
+        const num = this.typeQueue.get(type).getLength();
+        return num;
     }
-    getWaitingDownloadTaskNum() {
-        return this.downloadQueue.getLength();
-    }
+    /**
+     * 获得所有添加到排队的url数（不包含重复添加）
+     */
     getTotalUrlsNum() {
         return this.urlPool.size;
     }
-    nextCrawlTask() {
-        const result = this.crawlQueue.next();
-        if (!result) {
+    /**
+     * 返回下一个任务。如果type对应的排队不存在，或该排队没有新任务，都会返回 null
+     * @param type 任务类型type
+     */
+    nextTask(type) {
+        if (!this.typeQueue.has(type)) {
             return null;
         }
-        return result;
-    }
-    nextDownloadTask() {
-        const result = this.downloadQueue.next();
+        const result = this.typeQueue.get(type).next();
         if (!result) {
             return null;
         }

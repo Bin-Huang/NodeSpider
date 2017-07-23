@@ -4,17 +4,37 @@ import { IQueue, ITask } from "./types";
  */
 export default class Queue implements IQueue {
     protected urlPool: Set<string>;
-    private crawlQueue;
-    private downloadQueue;
+    private typeQueue;
     constructor();
-    addTask(newTask: ITask): void;
-    addDownload(newTask: ITask): void;
-    jumpTask(newTask: ITask): void;
-    jumpDownload(newTask: ITask): void;
+    /**
+     * 添加新的任务到指定type队列末尾。如果type队列不存在则新建
+     * @param newTask
+     * @param type
+     */
+    addTask(newTask: ITask, type: string): void;
+    /**
+     * 将新的任务插队到指定type队列头部。如果type队列不存在则新建
+     * @param newTask
+     * @param type
+     */
+    jumpTask(newTask: ITask, type: string): void;
+    /**
+     * 检测一个url是否添加过，是则返回true
+     * @param url
+     */
     check(url: string): boolean;
-    getWaitingTaskNum(): number;
-    getWaitingDownloadTaskNum(): number;
+    /**
+     * 获得指定type队列的排队任务数量
+     * @param type
+     */
+    getWaitingTaskNum(type: string): number | null;
+    /**
+     * 获得所有添加到排队的url数（不包含重复添加）
+     */
     getTotalUrlsNum(): number;
-    nextCrawlTask(): any;
-    nextDownloadTask(): any;
+    /**
+     * 返回下一个任务。如果type对应的排队不存在，或该排队没有新任务，都会返回 null
+     * @param type 任务类型type
+     */
+    nextTask(type: string): any;
 }

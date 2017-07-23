@@ -7,6 +7,8 @@
 // TODO C 兼容新 plan 系统的 queue
 // TODO C 更良好的报错提示
 
+// TODO: 修改spider的state、option、timer，以适应新的多任务系统
+
 import * as charset from "charset";
 import * as cheerio from "cheerio";
 import { EventEmitter } from "events";
@@ -45,7 +47,6 @@ import {
 import Plan from "./plan";
 
 const defaultOption: IDefaultOption = {
-    multiDownload: 2,
     multiTasking: 20,
     queue: Queue,
     rateLimit: 2,
@@ -68,9 +69,9 @@ export default class NodeSpider extends EventEmitter {
         // TODO B opts 检测是否合法
         const finalOption = Object.assign({}, defaultOption, opts);
         this._STATE = {
-            currentMultiDownload: 0,   // 当前进行的下载的数量
-            currentMultiTask: 0, // 当前正在进行的任务数量
-            dlPlanStore: new Map(),
+            currentConnections: new Map(),
+            currentTotalConnections: 0,
+            maxConnections: new Map(),
             option: finalOption,
             pipeStore: new Map(),
             planStore: new Map(),
@@ -84,12 +85,20 @@ export default class NodeSpider extends EventEmitter {
         });
 
         this._STATE.timer = setInterval(() => {
-            if (this._STATE.currentMultiTask < this._STATE.option.multiTasking) {
-                startCrawl(this);
+            if (this._STATE.currentTotalConnections >= this._STATE.option.maxTotalConnections) {
+                return ;    // 当全局连接数达到设置的最大连接数限制，则直接返回
             }
-            // if (this._STATE.currentMultiDownload < this._STATE.option.multiDownload) {
-            //     startDownload(this);
-            // }
+            const planKeys = this._STATE.currentConnections.keys();
+            for (const key of planKeys) {
+                const current: any = this._STATE.currentConnections.get(key);
+                const max: any = this._STATE.maxConnections.get(key);
+                if (current < max) {
+                    // TODO A 计数
+                    // TODO C 修改 startCrawl 使指定plan的queue
+                    startCrawl(this);
+                    break;  // 每次定时器启动，只开始一个指定计划当前连接数未达到最大的新任务。
+                }
+            }
         }, this._STATE.option.rateLimit);
     }
 

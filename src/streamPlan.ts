@@ -61,6 +61,7 @@ function process(task: IStreamPlanTask, self: NodeSpider) {
         };
         task.specialOpts.callback(req, current);
 
+        // 当请求流结束或错误，即应该认为这次任务是执行完全的
         req.on("complete", resolve);
         req.on("error", resolve);
     });

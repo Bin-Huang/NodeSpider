@@ -33,6 +33,7 @@ function process(task, self) {
         // 所以要把resovle当前任务的工作交给开发者自行决定
         const current = Object.assign({}, task, { info: task.specialOpts.info, plan: self._STATE.planStore.get(task.planKey), specialOpts: task.specialOpts });
         task.specialOpts.callback(req, current);
+        // 当请求流结束或错误，即应该认为这次任务是执行完全的
         req.on("complete", resolve);
         req.on("error", resolve);
     });
