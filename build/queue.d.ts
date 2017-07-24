@@ -24,7 +24,7 @@ export default class Queue implements IQueue {
      */
     check(url: string): boolean;
     /**
-     * 获得指定type队列的排队任务数量
+     * 获得指定type队列的排队任务数量。当type对应的队列不存在，返回0
      * @param type
      */
     getWaitingTaskNum(type: string): number;

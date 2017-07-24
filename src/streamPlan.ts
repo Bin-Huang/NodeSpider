@@ -5,6 +5,7 @@ import preLoadJq from "./preLoadJq";
 import preToUtf8 from "./preToUtf8";
 import NodeSpider from "./spider";
 import { ICurrent, IPlanTask, IRequestOpts, ITask } from "./types";
+// TODO A 修改 queue 的单元测试
 
 export type TStreamPlanOptionCallback = (req: request.Request, current: ICurrent) => void;
 export interface IStreamPlanOptionInput {

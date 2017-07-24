@@ -150,15 +150,15 @@ export default class Queue implements IQueue {
         return this.urlPool.has(url);
     }
     /**
-     * 获得指定type队列的排队任务数量
+     * 获得指定type队列的排队任务数量。当type对应的队列不存在，返回0
      * @param type
      */
     public getWaitingTaskNum(type: string) {
-        if (! this.typeQueue.has(type)) {
-            throw new Error("the type is not existed in the queue");
+        const queue = this.typeQueue.get(type);
+        if (! queue) {
+            return 0;
         }
-        const num = (this.typeQueue.get(type) as LinkedQueue).getLength();
-        return num;
+        return queue.getLength();
     }
     /**
      * 获得所有添加到排队的url数（不包含重复添加）
