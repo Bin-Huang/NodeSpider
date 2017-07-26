@@ -1,26 +1,28 @@
-import Plan from "./plan";
-import { IRequestOpts, ITask } from "./types";
+import { IPlan, IRequestOpts, ITask } from "./types";
 export interface IDefaultPlanOptionInput {
+    type?: string;
     callback: IDefaultPlanOptionCallback;
-    multi?: number;
     request?: IRequestOpts;
     pre?: IDefaultPlanOptionCallback[];
     info?: any;
 }
-export interface IDefaultPlanOption extends IDefaultPlanOptionInput {
+export interface IDefaultPlanOption {
     request: IRequestOpts;
     pre: IDefaultPlanOptionCallback[];
     callback: IDefaultPlanOptionCallback;
-    info: any;
 }
-export declare type IDefaultPlanOptionCallback = (err: Error, current: IDefaultPlanCurrent) => any | Promise<any>;
-export interface IDefaultPlanCurrent extends ITask {
-    plan: Plan;
+export declare type IDefaultPlanOptionCallback = (err: Error, current: ICurrent) => any | Promise<any>;
+export interface ICurrent extends ITask {
     response: any;
     body: string;
     error: Error;
-    info: any;
-    specialOpts: IDefaultPlanOption;
     [propName: string]: any;
 }
-export default function defaultPlan(planOptionInput: IDefaultPlanOptionCallback | IDefaultPlanOptionInput): Plan;
+export default function defaultPlan(planOptionInput: IDefaultPlanOptionCallback | IDefaultPlanOptionInput): IPlan;
+export declare class DefaultPlan implements IPlan {
+    option: IDefaultPlanOption;
+    type: string;
+    info: any;
+    constructor(type: string, option: IDefaultPlanOption, info: any);
+    process(task: ITask): Promise<void>;
+}

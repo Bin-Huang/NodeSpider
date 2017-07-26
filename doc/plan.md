@@ -6,7 +6,7 @@
 
 nodespider 自带三种常用的爬取方案，可以帮助你解决绝大部分问题：
 - **defaultPlan**   默认、常见的方案。发送请求并获得响应（response），然后对返回正文进行操作，比如提取内容或数据、收集需要的链接……
-- **downloadPlan**  专门下载文件的方案
+- **downloadPlan**  专门下载文件的方案(即将完成......)
 - **streamPlan**    如果你想直接操作返回的流，这正是你需要的。与`defaultPlan`不同，`streamPlan`不等待返回加载完全，而是直接将流直接暴露给开发者。
 
 ## defaultPlan
@@ -79,9 +79,6 @@ const planA = n.plan({
 ```
 - **url** 当前任务的链接
 - **planKey** 当前任务指定计划的key
-- **plan** 当前任务的指定计划
-- **special** (可能不存在)当前任务的特定计划设置;
-- **specialOpts**   实际执行的计划设置（即special覆盖plan设置）
 - **response**    请求回应
 - **body**    返回正文
 - **error**   任务执行中的错误（等价于rule函数error参数）
@@ -184,9 +181,6 @@ request 返回的流对象。power by request
 以下属性：
 - **url** 当前任务的链接
 - **planKey** 当前任务指定计划的key
-- **plan** 当前任务的指定计划
-- **special** (可能不存在)当前任务的特定计划设置;
-- **specialOpts**   实际执行的计划设置（即special覆盖plan设置）
 - **info**  当前任务附带的信息
 - **maxRetry** (可能不存在)当前任务的最大重试次数限制
 - **hasRetried**    (可能不存在)当前任务已经重试的次数

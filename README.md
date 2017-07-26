@@ -56,7 +56,7 @@ const n = new Spider();
 // or
 const nn = new Spider({
     rateLimit: 20,
-    multiTasking: 30, 
+    maxConnections: 20,
     // or more 
 })
 ```
@@ -64,10 +64,35 @@ const nn = new Spider({
 
 | 设置 | 说明 | 类型 | 默认值 |
 | --- | ---- | --- | --- |
-| multiDownload | 最大同时下载数 | number | 2 |
-| multiTasking | 最大同时抓取数 | number | 20 |
 | rateLimit | 限速，网络请求的时间间隔（毫秒） | number | 2(毫秒)
 | queue | 任务排队队列 | class | NodeSpider.Queue
+| maxConnections | 最大同时连接限制 | number|object | 20 |
+
+## maxConnections
+这个设置项用来设置爬虫的最大同时连接数，类型可以是`number`或者`object`。
+
+**当类型是`number`**
+
+此时表示，爬虫所有类型的同时连接的总数不能超过最大设置
+```javascript
+const n = new Spider({
+    maxConnections: 10, // 最多同时执行10个异步连接任务
+});
+```
+
+**当类型是`object`**
+
+此时，你可以指定各种类型的最大同时连接数
+```javascript
+const n = new Spider({
+    maxConnections: {
+        "download": 10, // 最多只能同时执行10个类型为"download"的异步连接任务
+        "crawl": 15,
+    }
+});
+```
+
+*NOTE:* 注意，这时如果使用`plan`新建一个type不存在于`maxConnections`的计划，将会报错
 
 # 方法与属性
 
@@ -78,7 +103,6 @@ const nn = new Spider({
 | 参数 | 说明 | 类型 |
 | --- | --- | --- |
 | item | 爬取策略函数或爬取策略 | function or object |
-
 
 对当前爬虫声明一个爬取计划，并返回该计划的唯一标识符key(symbol, 用于方法 queue)。
 
@@ -106,13 +130,15 @@ n.queue(otherPlan, "https://www.example.com");
 
 ### planObject
 
+nodespider自带两种plan： `defaultPlan`和`streamPlan`，具体文档可见[plan.md](./doc/plan.md).当你使用`plan`方法并传递对象作为参数时，将默认使用`defaultPlan`。
+
 传入`plan`的对象参数，对象成员有以下内容：
 
 - **request (可选)** 即该爬取计划的网络请求设置，将决定执行该计划时爬虫如何发出网络请求。通过设置你可以伪造ip、模拟登录、设置cookies、伪造浏览器标示等。具体设置可见 [request文档](https://www.npmjs.com/package/request#requestoptions-callback)
 
 - **pre (可选)** 该爬取计划的预处理列表。当成功请求到网页信息后，将对网页信息进行预处理。nodespider自带两个实用预处理函数：`preToUtf8` 将网页内容自动转码为utf8格式，`preLoadJq` 对该网页内容加载JQ选择器(power by cheerio)
 
-- **info (可选)** 对执行该计划的每一个任务附带信息对象。`info`将作为`current`成员(属性)传递给`rule`
+- **info (可选)** 对执行该计划的每一个任务附带信息对象。`info`将作为`current`成员
 
 - **callback (必须)** 当报错或成功加载正文并预处理后，将调用callback。并传入两个参数`err`和`current`。
 你可以使用callback对爬到的网页进行的操作，比如提取信息、添加新的链接到排队列表……
@@ -122,12 +148,10 @@ n.queue(otherPlan, "https://www.example.com");
 
 - **url** 当前任务的链接
 - **planKey** 当前任务指定计划的key
-- **plan** 当前任务的指定计划
 - **response**    请求回应
 - **body**    返回正文
 - **error**   任务执行中的错误（等价于rule函数error参数）
 - **info**  当前任务附带的信息
-- **special** (可能不存在)当前任务的特定计划设置;
 - **maxRetry** (可能不存在)当前任务的最大重试次数限制
 - **hasRetried**    (可能不存在)当前任务已经重试的次数
 - **and more ...**  以及可能的更多成员属性
@@ -361,6 +385,6 @@ const justPlan = n.plan({
 nodespider是一个开源爬虫package，主旨是让爬虫开发更简单、更灵活、模块化、更具扩展性。为了变得更好，nodespider需要更多人的贡献，包括但不限于：
 - 在[github](https://github.com/Ben-Hwang/NodeSpider)上通过`Issues`提交bug或建议。
 - 在[github](https://github.com/Ben-Hwang/NodeSpider)上star
+- fork 以及 pull request
 - 向他人推荐这个package
-- 提交你的精心修改版本
 - 开源并分享你开发的nodespider预处理函数、queue、pipe以及plan发生器（文档即将补全）

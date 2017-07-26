@@ -1,6 +1,11 @@
 /// <reference types="node" />
 import * as fs from "fs";
-import Plan from "./plan";
+export interface IPlan {
+    option: any;
+    type: string;
+    info: any;
+    process: (task: ITask) => Promise<{} | null | void>;
+}
 export interface IQueue {
     addTask: (newTask: ITask, type: string) => void;
     jumpTask: (newTask: ITask, type: string) => void;
@@ -15,18 +20,21 @@ export interface IPipe {
 }
 export interface IState {
     queue: IQueue;
-    planStore: Map<symbol, Plan>;
+    planStore: Map<symbol, IPlan>;
     pipeStore: Map<symbol, IPipe>;
     option: IDefaultOption;
     working: boolean;
-    timer: NodeJS.Timer;
-    currentConnections: Map<string, number>;
+    timer: NodeJS.Timer | null;
+    currentConnections: {
+        [key: string]: number;
+    };
     currentTotalConnections: number;
-    maxConnections: Map<string, number>;
 }
 export declare type queueClass = new () => IQueue;
 export interface IDefaultOption {
-    maxTotalConnections: number;
+    maxConnections: number | {
+        [key: string]: number;
+    };
     rateLimit: number;
     queue: queueClass;
 }
@@ -36,14 +44,7 @@ export interface ITask {
     special?: any;
     maxRetry?: number;
     hasRetried?: number;
-}
-export interface IPlanTask extends ITask {
-    specialOpts: any;
-}
-export interface ICurrent extends IPlanTask {
-    plan: Plan;
-    info: any;
-    specialOpts: any;
+    info?: any;
 }
 export interface IRequestOpts {
 }

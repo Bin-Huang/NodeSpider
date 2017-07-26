@@ -1,9 +1,8 @@
 /// <reference types="node" />
 import { EventEmitter } from "events";
 import Queue from "./queue";
-import { ICurrent, IPipe, IState } from "./types";
-import { IDefaultPlanOptionCallback, IDefaultPlanOptionInput } from "./defaultPlan";
-import Plan from "./plan";
+import { IPipe, IPlan, IState } from "./types";
+import { ICurrent, IDefaultPlanOptionCallback, IDefaultPlanOptionInput } from "./defaultPlan";
 /**
  * class of NodeSpider
  * @class NodeSpider
@@ -36,7 +35,7 @@ export default class NodeSpider extends EventEmitter {
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
     retry(current: ICurrent, maxRetry?: number, finalErrorCallback?: (current: ICurrent) => void): void;
-    plan(item: Plan | IDefaultPlanOptionCallback | IDefaultPlanOptionInput): symbol;
+    plan(item: IPlan | IDefaultPlanOptionInput | IDefaultPlanOptionCallback): symbol;
     /**
      * 添加待爬取链接到队列，并指定爬取计划。
      * @param planKey 指定的爬取计划

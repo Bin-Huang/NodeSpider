@@ -12,7 +12,6 @@ const planA = n.plan({
         n.queue(planA, $("a").url());
     },
 });
-console.log(planA);
 n.queue(planA, "http://www.baidu.com", {
     // rule: (err, current) => {
     //     console.log("special rule");

@@ -1,46 +1,36 @@
 import * as request from "request";
-import Plan from "./plan";
 import preLoadJq from "./preLoadJq";
 import preToUtf8 from "./preToUtf8";
 import NodeSpider from "./spider";
-import { IPlanTask, IRequestOpts, ITask } from "./types";
+import { IPlan, IRequestOpts, ITask } from "./types";
 
 // for 函数defaultPlan的设置参数
 export interface IDefaultPlanOptionInput {
+    type?: string;
     callback: IDefaultPlanOptionCallback;
-    multi?: number;
     request?: IRequestOpts;
     pre?: IDefaultPlanOptionCallback[];
     info?: any;
 }
 // for 传递给Plan真正的设置
-export interface IDefaultPlanOption extends IDefaultPlanOptionInput {
+export interface IDefaultPlanOption {
     request: IRequestOpts;
     pre: IDefaultPlanOptionCallback[];
     callback: IDefaultPlanOptionCallback;
-    info: any;
 }
 // for defaultPlan设置中的callback
-export type IDefaultPlanOptionCallback = (err: Error, current: IDefaultPlanCurrent) => any|Promise<any>;
-
-// for 传递给Plan的process的task参数
-interface IDefaultPlanTask extends IPlanTask {
-    specialOpts: IDefaultPlanOption;
-}
+export type IDefaultPlanOptionCallback = (err: Error, current: ICurrent) => any|Promise<any>;
 
 // current crawl task; for `rule` function in the plan
-export interface IDefaultPlanCurrent extends ITask {
-    plan: Plan;
+export interface ICurrent extends ITask {
     response: any;
     body: string;
     error: Error;
-    info: any;
-    specialOpts: IDefaultPlanOption;
     [propName: string]: any;
 }
 
 // TODO C 考虑是否使用类继承的方式，代替type
-export default function defaultPlan(planOptionInput: IDefaultPlanOptionCallback|IDefaultPlanOptionInput) {
+export default function defaultPlan(planOptionInput: IDefaultPlanOptionCallback|IDefaultPlanOptionInput): IPlan {
     // 当只传入一个rule函数，则包装成 IPlanInput 对象
     if (typeof planOptionInput === "function") {
         planOptionInput = {callback: planOptionInput};
@@ -58,45 +48,56 @@ export default function defaultPlan(planOptionInput: IDefaultPlanOptionCallback|
         preLoadJq(),
     ];
     const request = Object.assign({encoding: null}, planOptionInput.request);
-    const info = planOptionInput.info || {};
     const callback = planOptionInput.callback;
+    const planOption: IDefaultPlanOption = { request, callback, pre };
 
-    const planOption: IDefaultPlanOption = { request, callback, pre, info };
+    if (typeof planOptionInput.info === "undefined") {
+        planOptionInput.info = {};
+    }
 
-    const multi = planOptionInput.multi || 20;
-    return new Plan("default", multi, planOption, processFun);
+    const type = planOptionInput.type || "default";
+
+    return new DefaultPlan(type, planOption, planOptionInput.info);
 }
 
-async function processFun(task: IDefaultPlanTask, self: NodeSpider) {
-    const {error, response, body}: any = await requestAsync({
-        ...task.specialOpts.request,
-        url: task.url,
-    });
-    let current: IDefaultPlanCurrent = Object.assign(task, {
-        response,
-        body,
-        error,
-        info: task.specialOpts.info,
-        plan: self._STATE.planStore.get(task.planKey),
-    });
-    // 如果没有错误，按顺序执行预处理函数，对current进行预处理
-    if (! error) {
-        for (const preFun of task.specialOpts.pre) {
-            const result = preFun(error, current);
-            if (result instanceof Promise) {
-                await result;
+export class DefaultPlan implements IPlan {
+    public option: IDefaultPlanOption;
+    public type: string;
+    public info: any;
+    constructor(type: string, option: IDefaultPlanOption, info: any) {
+        this.option = option;
+        this.type = type;
+        this.info = info;
+    }
+    public async process(task: ITask) {
+        const {error, response, body}: any = await requestAsync({
+            ...this.option.request,
+            url: task.url,
+        });
+        let current: ICurrent = Object.assign(task, {
+            response,
+            body,
+            error,
+        });
+        // 如果没有错误，按顺序执行预处理函数，对current进行预处理
+        if (! error) {
+            for (const preFun of this.option.pre) {
+                const result = preFun(error, current);
+                if (result instanceof Promise) {
+                    await result;
+                }
             }
         }
-    }
 
-    // 执行该计划的爬取策略函数，根据开发者定义的抓取规则进行操作
-    const result = task.specialOpts.callback(error, current);
-    if (result instanceof Promise) {
-        await result;
+        // 执行该计划的爬取策略函数，根据开发者定义的抓取规则进行操作
+        const result = this.option.callback(error, current);
+        if (result instanceof Promise) {
+            await result;
+        }
+        // 结尾的清理工作
+        current = null;
+        // task = null;
     }
-    // 结尾的清理工作
-    current = null;
-    // task = null;
 }
 
 function requestAsync(opts: IRequestOpts) {

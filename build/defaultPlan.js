@@ -9,7 +9,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const request = require("request");
-const plan_1 = require("./plan");
 const preLoadJq_1 = require("./preLoadJq");
 const preToUtf8_1 = require("./preToUtf8");
 // TODO C 考虑是否使用类继承的方式，代替type
@@ -31,42 +30,50 @@ function defaultPlan(planOptionInput) {
         preLoadJq_1.default(),
     ];
     const request = Object.assign({ encoding: null }, planOptionInput.request);
-    const info = planOptionInput.info || {};
     const callback = planOptionInput.callback;
-    const planOption = { request, callback, pre, info };
-    const multi = planOptionInput.multi || 20;
-    return new plan_1.default("default", multi, planOption, processFun);
+    const planOption = { request, callback, pre };
+    if (typeof planOptionInput.info === "undefined") {
+        planOptionInput.info = {};
+    }
+    const type = planOptionInput.type || "default";
+    return new DefaultPlan(type, planOption, planOptionInput.info);
 }
 exports.default = defaultPlan;
-function processFun(task, self) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const { error, response, body } = yield requestAsync(Object.assign({}, task.specialOpts.request, { url: task.url }));
-        let current = Object.assign(task, {
-            response,
-            body,
-            error,
-            info: task.specialOpts.info,
-            plan: self._STATE.planStore.get(task.planKey),
-        });
-        // 如果没有错误，按顺序执行预处理函数，对current进行预处理
-        if (!error) {
-            for (const preFun of task.specialOpts.pre) {
-                const result = preFun(error, current);
-                if (result instanceof Promise) {
-                    yield result;
+class DefaultPlan {
+    constructor(type, option, info) {
+        this.option = option;
+        this.type = type;
+        this.info = info;
+    }
+    process(task) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { error, response, body } = yield requestAsync(Object.assign({}, this.option.request, { url: task.url }));
+            let current = Object.assign(task, {
+                response,
+                body,
+                error,
+            });
+            // 如果没有错误，按顺序执行预处理函数，对current进行预处理
+            if (!error) {
+                for (const preFun of this.option.pre) {
+                    const result = preFun(error, current);
+                    if (result instanceof Promise) {
+                        yield result;
+                    }
                 }
             }
-        }
-        // 执行该计划的爬取策略函数，根据开发者定义的抓取规则进行操作
-        const result = task.specialOpts.callback(error, current);
-        if (result instanceof Promise) {
-            yield result;
-        }
-        // 结尾的清理工作
-        current = null;
-        // task = null;
-    });
+            // 执行该计划的爬取策略函数，根据开发者定义的抓取规则进行操作
+            const result = this.option.callback(error, current);
+            if (result instanceof Promise) {
+                yield result;
+            }
+            // 结尾的清理工作
+            current = null;
+            // task = null;
+        });
+    }
 }
+exports.DefaultPlan = DefaultPlan;
 function requestAsync(opts) {
     return new Promise((resolve, reject) => {
         request(opts, (error, response, body) => {

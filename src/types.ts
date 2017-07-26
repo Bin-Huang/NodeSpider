@@ -1,8 +1,14 @@
 import * as fs from "fs";
-import Plan from "./plan";
 import NodeSpider from "./spider";
 
 // TODO C 每一个类型都应该有注释
+
+export interface IPlan {
+    option: any;
+    type: string;
+    info: any;
+    process: (task: ITask) => Promise<{}|null|void>;
+}
 
 // nodespider's queue;
 export interface IQueue {
@@ -25,26 +31,23 @@ export interface IPipe {
 // NodeSpider' state
 export interface IState {
     queue: IQueue;
-    planStore: Map<symbol, Plan>;
+    planStore: Map<symbol, IPlan>;
     pipeStore: Map<symbol, IPipe>;
     option: IDefaultOption;
     working: boolean;
-    timer: NodeJS.Timer;
-    currentConnections: Map<string, number>;
+    timer: NodeJS.Timer|null;
+    currentConnections: {[key: string]: number};
     currentTotalConnections: number;
-    maxConnections: Map<string, number>;
 }
 
 export type queueClass = new () => IQueue;
 
 // for parameter option, when initialize an instance  of NodeSpider.
 export interface IDefaultOption {
-    maxTotalConnections: number;
+    maxConnections: number|{[key: string]: number};
 
     rateLimit: number;
     queue: queueClass;
-
-    // preprocessing: any[];
 }
 
 // for task object in the queue;在queue保存的task
@@ -54,16 +57,7 @@ export interface ITask {
     special?: any;
     maxRetry?: number;
     hasRetried?: number;
-}
-// 传入plan执行process操作的task
-export interface IPlanTask extends ITask {
-    specialOpts: any;
-}
-// 传入plan的callback的current
-export interface ICurrent extends IPlanTask {
-    plan: Plan;
-    info: any;
-    specialOpts: any;
+    info?: any;
 }
 
 // ====== request options ======

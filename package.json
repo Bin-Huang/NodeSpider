@@ -1,6 +1,6 @@
 {
   "name": "nodespider",
-  "version": "0.5.7",
+  "version": "0.6.0",
   "description": "20 lines of code to bulid a web crawler as a geek",
   "main": "./build/index.js",
   "typings": "./build/index.d.ts",
@@ -17,6 +17,7 @@
   "devDependencies": {
     "@types/cheerio": "^0.22.2",
     "@types/node": "^7.0.8",
+    "@types/uuid": "^3.4.0",
     "jest": "^19.0.2"
   },
   "scripts": {

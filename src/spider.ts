@@ -21,7 +21,6 @@ import * as uuid from "uuid";
 import defaultPlan from "./defaultPlan";
 import Queue from "./queue";
 import {
-    ICurrent,
 
     IDefaultOption,
     IDownloadCallback,
@@ -35,19 +34,20 @@ import {
 
     IPipePlan,
     IPipePlanInput,
-    IPlanTask,
+
+    IPlan,
+    IQueue,
     IState,
     ITask,
 } from "./types";
 import {
-    IDefaultPlanCurrent,
+    ICurrent,
     IDefaultPlanOptionCallback,
     IDefaultPlanOptionInput,
 } from "./defaultPlan";
-import Plan from "./plan";
 
 const defaultOption: IDefaultOption = {
-    maxTotalConnections: 20;
+    maxConnections: 20,
     queue: Queue,
     rateLimit: 2,
 };
@@ -69,9 +69,8 @@ export default class NodeSpider extends EventEmitter {
         // TODO B opts 检测是否合法
         const finalOption = Object.assign({}, defaultOption, opts);
         this._STATE = {
-            currentConnections: new Map(),
+            currentConnections: {},
             currentTotalConnections: 0,
-            maxConnections: new Map(),
             option: finalOption,
             pipeStore: new Map(),
             planStore: new Map(),
@@ -84,61 +83,23 @@ export default class NodeSpider extends EventEmitter {
             // some code，如果没有需要，就删除
         });
 
-        this._STATE.timer = setInterval(() => {
-            if (this._STATE.currentTotalConnections >= this._STATE.option.maxTotalConnections) {
-                return ;    // 当全局连接数达到设置的最大连接数限制，则直接返回
-            }
+        if (typeof this._STATE.option.maxConnections === "number") {
+            this._STATE.timer = setInterval(() => {
+                timerCallbackWhenMaxIsNumber(this);
+            }, this._STATE.option.rateLimit);
+        } else {
+            this._STATE.timer = setInterval(() => {
+                timerCallbackWhenMaxIsObject(this);
+            }, this._STATE.option.rateLimit);
+        }
 
-            let targetType: string|null = null;
-            let newTask: ITask|null = null;
-            const planTypes = this._STATE.currentConnections.keys();
-            for (const type of planTypes) {
-                const current: any = this._STATE.currentConnections.get(type);
-                const max: any = this._STATE.maxConnections.get(type);
-                if (current < max) {
-                    const task = this._STATE.queue.nextTask(type);
-                    if (task) {
-                        targetType = type;
-                        newTask = task;
-                    }
-                    break;  // 每次定时器启动，只开始一个指定计划当前连接数未达到最大的新任务。
-                }
-            }
-
-            if (targetType && newTask) {
-                const plan = this._STATE.planStore.get(newTask.planKey);
-                if (! plan) {
-                    console.log("不应该出现的错误。从queue中获得的task，根据key获得planStore中plan，plan却不存在");
-                    return ;
-                }
-                const specialOpts = Object.assign({}, plan.options, newTask.special);
-
-                const t: IPlanTask = {
-                    ... newTask,
-                    specialOpts,
-                };
-
-                const current = this._STATE.currentConnections.get(targetType);
-
-                this._STATE.currentConnections.set(targetType, (current as number) + 1);
-                this._STATE.currentTotalConnections ++;
-
-                plan.process(t, this).then(() => {
-                    this._STATE.currentConnections.set((targetType as string), (current as number) - 1);
-                    this._STATE.currentTotalConnections --;
-                }).catch((e: Error) => {
-                    console.log(e);
-                    this._STATE.currentConnections.set((targetType as string), (current as number) - 1);
-                    this._STATE.currentTotalConnections --;
-                });
-            }
-
-        }, this._STATE.option.rateLimit);
     }
 
     public end() {
         // 爬虫不再定时从任务队列获得新任务
-        clearInterval(this._STATE.timer);
+        if (this._STATE.timer) {
+            clearInterval(this._STATE.timer);
+        }
         // 关闭注册的pipe
         for (const pipe of this._STATE.pipeStore.values()) {
             pipe.close();
@@ -220,21 +181,26 @@ export default class NodeSpider extends EventEmitter {
         this._STATE.queue.jumpTask(task, plan.type);    // 插队到队列，重新等待执行
     }
 
-    public plan(item: Plan|IDefaultPlanOptionCallback|IDefaultPlanOptionInput): symbol {
-        let newPlan = item;
-        if (item instanceof Plan) {
-            newPlan = item;
+    public plan(item: IPlan|IDefaultPlanOptionInput|IDefaultPlanOptionCallback): symbol {
+        let newPlan: IPlan;
+        if (typeof (item as IPlan).process === "function") {
+            newPlan = (item as IPlan);
         } else {
-            newPlan = defaultPlan(item);
+            newPlan = defaultPlan(item as IDefaultPlanOptionInput|IDefaultPlanOptionCallback);
         }
+
+        if (typeof this._STATE.option.maxConnections === "object") {
+            if (typeof this._STATE.option.maxConnections[newPlan.type] === "undefined") {
+                throw new Error("计划type不存在于设置项maxConnections");
+            }
+        }
+
+        if (typeof this._STATE.currentConnections[newPlan.type] === "undefined") {
+            this._STATE.currentConnections[newPlan.type] = 0;
+        }
+
         const key = Symbol(`${newPlan.type}-${uuid()}`);
         this._STATE.planStore.set(key, newPlan);
-
-        // TODO C 单元测试
-        if (! this._STATE.currentConnections.has(newPlan.type)) {
-            this._STATE.currentConnections.set(newPlan.type, 0);
-            this._STATE.maxConnections.set(newPlan.type, newPlan.multi);
-        }
 
         return key;
     }
@@ -300,5 +266,111 @@ export default class NodeSpider extends EventEmitter {
 
 }
 
-type TPipePlanApi1 = (input: stream.Stream, callback: IPipeCallback) => symbol;
-type TPipePlanApi2 = (planOpts: IPipePlanInput) => symbol;
+/**
+ * 尝试从queue获得一个task，使其对应的type存在于规定的type数组。如果存在满足的任务，则返回[type, task]，否则[null, null]
+ * @param types 规定的type数组
+ * @param queue nodespider的queue
+ */
+function getTaskByTypes(types: string[], queue: IQueue): [string, ITask]|[null, null] {
+    let newTask: ITask|null = null;
+    let newTaskType: string|null = null;
+    for (const type of types) {
+        const t = queue.nextTask(type);
+        if (t) {
+            newTask = t;
+            newTaskType = type;
+            break;
+        }
+    }
+    return [newTaskType, newTask] as [string, ITask]|[null, null];
+}
+
+/**
+ * 执行新任务，并记录连接数（执行时+1，执行后-1)
+ * @param type task 对应plan的type
+ * @param task 需要执行的任务
+ * @param self nodespider实例（this）
+ */
+function startTask(type: string, task: ITask, self: NodeSpider) {
+    const plan = self._STATE.planStore.get(task.planKey) as IPlan;
+
+    // task可以携带info，此时将覆盖plan设置中的info。如果task没有info，则使用plan中的
+    const info = task.info;
+    if (typeof info === "undefined" || info === null) {
+        task.info = plan.option.info;
+    }
+
+    self._STATE.currentConnections[type] ++;
+    self._STATE.currentTotalConnections ++;
+    plan.process(task).then(() => {
+        self._STATE.currentConnections[type] --;
+        self._STATE.currentTotalConnections --;
+    }).catch((e: Error) => {
+        console.log(e);
+        self._STATE.currentConnections[type] --;
+        self._STATE.currentTotalConnections --;
+    });
+}
+
+/**
+ * 注意，使用时需要将this指向nodespider实例 bind(this)
+ */
+function timerCallbackWhenMaxIsNumber(self: NodeSpider) {
+    // 检查是否达到最大连接限制，是则终止接下来的操作
+    if (self._STATE.option.maxConnections as number <= self._STATE.currentTotalConnections) {
+        return ;
+    }
+
+    // 获得所有 type 组成的数组
+    const types = [];
+    for (const type in self._STATE.currentConnections) {
+        if (self._STATE.currentConnections.hasOwnProperty(type)) {
+            types.push(type);
+        }
+    }
+
+    // 尝试获得新任务
+    const [type, task] = getTaskByTypes(types, self._STATE.queue);
+
+    // 如果成功获得新任务，则执行。否则，则说明queue中没有新的任务需要执行
+    if (type && task) {
+        startTask(type, task, self);
+    } else {
+        if (self._STATE.currentTotalConnections === 0) {
+            // TODO C 爬虫工作全部完成
+            // 当所有连接已经结束，将开始执行结束
+        }
+    }
+}
+
+function timerCallbackWhenMaxIsObject(self: NodeSpider) {
+    // 获得连接数未达到最大限制的 type 组成的数组
+    const types = [];
+    for (const type in self._STATE.currentConnections) {
+        if (self._STATE.currentConnections.hasOwnProperty(type)) {
+            const current = self._STATE.currentConnections[type];
+            const max = (self._STATE.option.maxConnections as {[key: string]: number})[type];
+            if (current < max) {
+                types.push(type);
+            }
+        }
+    }
+
+    // 如果所有type对应的连接数均已达到最大限制，则终止后面的操作
+    if (types.length === 0) {
+        return ;
+    }
+
+    // 尝试获得新任务
+    const [type, task] = getTaskByTypes(types, self._STATE.queue);
+
+    // 如果成功获得新任务，则执行。否则，则说明queue中没有新的任务需要执行
+    if (type && task) {
+        startTask(type, task, self);
+    } else {
+        if (self._STATE.currentTotalConnections === 0) {
+            // TODO C 爬虫工作全部完成
+            // 当所有连接已经结束，将开始执行结束
+        }
+    }
+}

@@ -1,16 +1,21 @@
 import * as request from "request";
-import Plan from "./plan";
-import { ICurrent } from "./types";
-export declare type TStreamPlanOptionCallback = (req: request.Request, current: ICurrent) => void;
+import { IPlan, ITask } from "./types";
+export declare type TStreamPlanOptionCallback = (req: request.Request, current: ITask) => void;
 export interface IStreamPlanOptionInput {
-    multi?: number;
+    type?: string;
     request?: any;
     callback: TStreamPlanOptionCallback;
     info?: any;
 }
-export interface IStreamPlanOption extends IStreamPlanOptionInput {
+export interface IStreamPlanOption {
     request: any;
     callback: TStreamPlanOptionCallback;
-    info: any;
 }
-export default function streamPlan(opts: TStreamPlanOptionCallback | IStreamPlanOptionInput): Plan;
+export default function streamPlan(opts: TStreamPlanOptionCallback | IStreamPlanOptionInput): StreamPlan;
+export declare class StreamPlan implements IPlan {
+    option: IStreamPlanOption;
+    type: string;
+    info: any;
+    constructor(type: string, option: IStreamPlanOption, info: any);
+    process(task: ITask): Promise<{}>;
+}
