@@ -1,3 +1,5 @@
+**NOTE**    The package nodespider is still under development. It is not suggested to using it in your project.
+
 # Features
 - 简单高效，开箱即用
 - 自动识别网页编码格式，并将返回正文转码为utf8（可设置）
