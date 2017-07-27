@@ -18,6 +18,10 @@ export interface ICurrent extends ITask {
     error: Error;
     [propName: string]: any;
 }
+/**
+ * 默认值 type: "default", info: {}, option: {request: {encoding: null}, pre: [preToUtf8(), preLoadJq()], callback }
+ * @param planOptionInput
+ */
 export default function defaultPlan(planOptionInput: IDefaultPlanOptionCallback | IDefaultPlanOptionInput): IPlan;
 export declare class DefaultPlan implements IPlan {
     option: IDefaultPlanOption;

@@ -29,6 +29,10 @@ export interface ICurrent extends ITask {
     [propName: string]: any;
 }
 
+/**
+ * 默认值 type: "default", info: {}, option: {request: {encoding: null}, pre: [preToUtf8(), preLoadJq()], callback }
+ * @param planOptionInput
+ */
 // TODO C 考虑是否使用类继承的方式，代替type
 export default function defaultPlan(planOptionInput: IDefaultPlanOptionCallback|IDefaultPlanOptionInput): IPlan {
     // 当只传入一个rule函数，则包装成 IPlanInput 对象
@@ -37,10 +41,10 @@ export default function defaultPlan(planOptionInput: IDefaultPlanOptionCallback|
     }
     // 类型检测
     if (typeof planOptionInput !== "object") {
-        throw new Error("参数类型错误，只能是函数或则对象");
+        throw new TypeError("参数类型错误，只能是函数或则对象");
     }
     if (typeof planOptionInput.callback !== "function") {
-        throw new Error("plan缺失callback成员");
+        throw new TypeError("plan缺失callback成员");
     }
     // 填充plan设置默认值
     const pre = planOptionInput.pre || [

@@ -11,6 +11,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const request = require("request");
 const preLoadJq_1 = require("./preLoadJq");
 const preToUtf8_1 = require("./preToUtf8");
+/**
+ * 默认值 type: "default", info: {}, option: {request: {encoding: null}, pre: [preToUtf8(), preLoadJq()], callback }
+ * @param planOptionInput
+ */
 // TODO C 考虑是否使用类继承的方式，代替type
 function defaultPlan(planOptionInput) {
     // 当只传入一个rule函数，则包装成 IPlanInput 对象
@@ -19,10 +23,10 @@ function defaultPlan(planOptionInput) {
     }
     // 类型检测
     if (typeof planOptionInput !== "object") {
-        throw new Error("参数类型错误，只能是函数或则对象");
+        throw new TypeError("参数类型错误，只能是函数或则对象");
     }
     if (typeof planOptionInput.callback !== "function") {
-        throw new Error("plan缺失callback成员");
+        throw new TypeError("plan缺失callback成员");
     }
     // 填充plan设置默认值
     const pre = planOptionInput.pre || [
