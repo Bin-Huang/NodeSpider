@@ -235,7 +235,7 @@ function startTask(type, task, self) {
     // task可以携带info，此时将覆盖plan设置中的info。如果task没有info，则使用plan中的
     const info = task.info;
     if (typeof info === "undefined" || info === null) {
-        task.info = plan.option.info;
+        task.info = plan.info;
     }
     self._STATE.currentConnections[type]++;
     self._STATE.currentTotalConnections++;
