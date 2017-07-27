@@ -1,8 +1,8 @@
 /// <reference types="node" />
 import { EventEmitter } from "events";
 import Queue from "./queue";
-import { IPipe, IPlan, IState } from "./types";
-import { ICurrent, IDefaultPlanOptionCallback, IDefaultPlanOptionInput } from "./defaultPlan";
+import { IPipe, IPlan, IState, ITask } from "./types";
+import { IDefaultPlanOptionCallback, IDefaultPlanOptionInput } from "./defaultPlan";
 /**
  * class of NodeSpider
  * @class NodeSpider
@@ -34,7 +34,7 @@ export default class NodeSpider extends EventEmitter {
      * @param {number} maxRetry Maximum number of retries for this task
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
-    retry(current: ICurrent, maxRetry?: number, finalErrorCallback?: (current: ICurrent) => void): void;
+    retry(current: ITask, maxRetry?: number, finalErrorCallback?: (current: ITask) => void): void;
     plan(item: IPlan | IDefaultPlanOptionInput | IDefaultPlanOptionCallback): symbol;
     /**
      * 添加待爬取链接到队列，并指定爬取计划。
@@ -42,7 +42,7 @@ export default class NodeSpider extends EventEmitter {
      * @param url 待爬取的链接（们）
      * @param special （可选）针对当前链接的特别设置，将覆盖与plan重复的设置
      */
-    queue(planKey: symbol, url: string | string[], special?: any): number;
+    queue(planKey: symbol, url: string | string[], info?: any): number;
     pipe(pipeObject: IPipe): symbol;
     save(pipeKey: symbol, data: any): Error | undefined;
 }

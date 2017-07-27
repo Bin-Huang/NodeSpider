@@ -1,13 +1,9 @@
-// TODO: 更好的报错机制: 报错建议？以及去除多余的 console.error
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
 // TODO: 使用 node 自带 stringdecode 代替 iconv-lite
 // mysql 插件
 // redis queue
 // TODO B 注册pipe和queue可能存在异步操作，此时应该封装到promise或async函数。但依然存在问题：当还没注册好，就调动了queue或者save
-// TODO C 兼容新 plan 系统的 queue
 // TODO C 更良好的报错提示
-
-// TODO: 修改spider的state、option、timer，以适应新的多任务系统
 
 import * as charset from "charset";
 import * as cheerio from "cheerio";
@@ -17,7 +13,7 @@ import * as iconv from "iconv-lite";
 import * as request from "request";
 import * as stream from "stream";
 import * as url from "url";
-import * as uuid from "uuid";
+import * as uuid from "uuid/v1";
 import defaultPlan from "./defaultPlan";
 import Queue from "./queue";
 import {
@@ -150,15 +146,15 @@ export default class NodeSpider extends EventEmitter {
      */
     // TODO C current 应该能适应所有的plan
     public retry(
-        current: ICurrent,
+        current: ITask,
         maxRetry = 1,
-        finalErrorCallback?: (current: ICurrent) => void,
+        finalErrorCallback?: (current: ITask) => void,
     ) {
         const task = {
             hasRetried: current.hasRetried,
+            info: current.info,
             maxRetry: current.maxRetry,
             planKey: current.planKey,
-            special: current.special,
             url: current.url,
         };
         if (! task.hasRetried) {
@@ -168,7 +164,7 @@ export default class NodeSpider extends EventEmitter {
             task.maxRetry = maxRetry;
         }
         if (! finalErrorCallback) {
-            finalErrorCallback = (currentTask: ICurrent) => {
+            finalErrorCallback = (currentTask: ITask) => {
                 console.log("达到最大重试次数，但依旧错误");
             };
         }
@@ -176,7 +172,7 @@ export default class NodeSpider extends EventEmitter {
             return finalErrorCallback(current);
         }
 
-        const plan = current.plan;
+        const plan = this._STATE.planStore.get(task.planKey) as IPlan;
         task.hasRetried ++;
         this._STATE.queue.jumpTask(task, plan.type);    // 插队到队列，重新等待执行
     }
@@ -211,7 +207,7 @@ export default class NodeSpider extends EventEmitter {
      * @param url 待爬取的链接（们）
      * @param special （可选）针对当前链接的特别设置，将覆盖与plan重复的设置
      */
-    public queue(planKey: symbol, url: string | string[], special?: any): number {
+    public queue(planKey: symbol, url: string | string[], info?: any): number {
         // 参数检验
         if (typeof planKey !== "symbol") {
             throw new TypeError("queue 参数错误");
@@ -222,15 +218,14 @@ export default class NodeSpider extends EventEmitter {
         }
 
         // 添加到队列
-        // TODO C 完善 special: 过滤掉其中不相干的成员？
         if (! Array.isArray(url)) {
-            this._STATE.queue.addTask({url, planKey, special}, plan.type);
+            this._STATE.queue.addTask({url, planKey, info}, plan.type);
         } else {
             url.map((u) => {
                 if (typeof u !== "string") {
                     return new Error("url数组中存在非字符串成员");
                 }
-                this._STATE.queue.addTask({url: u, planKey, special}, plan.type);
+                this._STATE.queue.addTask({url: u, planKey, info}, plan.type);
             });
         }
 
@@ -306,9 +301,9 @@ function startTask(type: string, task: ITask, self: NodeSpider) {
         self._STATE.currentConnections[type] --;
         self._STATE.currentTotalConnections --;
     }).catch((e: Error) => {
-        console.log(e);
         self._STATE.currentConnections[type] --;
         self._STATE.currentTotalConnections --;
+        throw e;
     });
 }
 

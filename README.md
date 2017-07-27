@@ -1,4 +1,4 @@
-**NOTE**    The package nodespider is still under development. It is not suggested to using it in your project.
+**NOTE**    The package nodespider is still under development. That means frequent changes and potential bug. So it is not suggested to using it in your project.
 
 # Features
 - 简单高效，开箱即用

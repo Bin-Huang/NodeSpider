@@ -1,15 +1,13 @@
 "use strict";
-// TODO: 更好的报错机制: 报错建议？以及去除多余的 console.error
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
 // TODO: 使用 node 自带 stringdecode 代替 iconv-lite
 // mysql 插件
 // redis queue
 // TODO B 注册pipe和queue可能存在异步操作，此时应该封装到promise或async函数。但依然存在问题：当还没注册好，就调动了queue或者save
-// TODO C 兼容新 plan 系统的 queue
 // TODO C 更良好的报错提示
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
-const uuid = require("uuid");
+const uuid = require("uuid/v1");
 const defaultPlan_1 = require("./defaultPlan");
 const queue_1 = require("./queue");
 const defaultOption = {
@@ -108,9 +106,9 @@ class NodeSpider extends events_1.EventEmitter {
     retry(current, maxRetry = 1, finalErrorCallback) {
         const task = {
             hasRetried: current.hasRetried,
+            info: current.info,
             maxRetry: current.maxRetry,
             planKey: current.planKey,
-            special: current.special,
             url: current.url,
         };
         if (!task.hasRetried) {
@@ -127,7 +125,7 @@ class NodeSpider extends events_1.EventEmitter {
         if (task.hasRetried >= task.maxRetry) {
             return finalErrorCallback(current);
         }
-        const plan = current.plan;
+        const plan = this._STATE.planStore.get(task.planKey);
         task.hasRetried++;
         this._STATE.queue.jumpTask(task, plan.type); // 插队到队列，重新等待执行
     }
@@ -157,7 +155,7 @@ class NodeSpider extends events_1.EventEmitter {
      * @param url 待爬取的链接（们）
      * @param special （可选）针对当前链接的特别设置，将覆盖与plan重复的设置
      */
-    queue(planKey, url, special) {
+    queue(planKey, url, info) {
         // 参数检验
         if (typeof planKey !== "symbol") {
             throw new TypeError("queue 参数错误");
@@ -167,16 +165,15 @@ class NodeSpider extends events_1.EventEmitter {
             throw new Error("指定plan不存在");
         }
         // 添加到队列
-        // TODO C 完善 special: 过滤掉其中不相干的成员？
         if (!Array.isArray(url)) {
-            this._STATE.queue.addTask({ url, planKey, special }, plan.type);
+            this._STATE.queue.addTask({ url, planKey, info }, plan.type);
         }
         else {
             url.map((u) => {
                 if (typeof u !== "string") {
                     return new Error("url数组中存在非字符串成员");
                 }
-                this._STATE.queue.addTask({ url: u, planKey, special }, plan.type);
+                this._STATE.queue.addTask({ url: u, planKey, info }, plan.type);
             });
         }
         this._STATE.working = true;
@@ -246,9 +243,9 @@ function startTask(type, task, self) {
         self._STATE.currentConnections[type]--;
         self._STATE.currentTotalConnections--;
     }).catch((e) => {
-        console.log(e);
         self._STATE.currentConnections[type]--;
         self._STATE.currentTotalConnections--;
+        throw e;
     });
 }
 /**
