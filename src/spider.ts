@@ -103,7 +103,6 @@ export default class NodeSpider extends EventEmitter {
         // TODO C 更多，比如修改所有method来提醒开发者已经end
         // 触发事件，将信号传递出去
         this.emit("end");
-
     }
 
     /**
@@ -113,7 +112,7 @@ export default class NodeSpider extends EventEmitter {
      */
     public isExist(url: string) {
         if (typeof url !== "string") {
-            throw new Error("method check need a string-typed param");
+            throw new TypeError("method isExist need a string-typed param!");
         }
         return this._STATE.queue.check(url);
     }
@@ -125,12 +124,15 @@ export default class NodeSpider extends EventEmitter {
      */
     public filter(urlArray: string[]) {
         if (! Array.isArray(urlArray)) {
-            throw new Error("method filter need a array-typed param");
+            throw new TypeError("method filter need a array-typed param");
         } else {
             const s = new Set(urlArray);
             const result = [];
             for (const url of s) {
-                if (! this.isExist) {
+                if (typeof url !== "string") {
+                    throw new TypeError("method filter parameter should be a array of string");
+                }
+                if (! this.isExist(url)) {
                     result.push(url);
                 }
             }

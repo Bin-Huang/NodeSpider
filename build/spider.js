@@ -72,7 +72,7 @@ class NodeSpider extends events_1.EventEmitter {
      */
     isExist(url) {
         if (typeof url !== "string") {
-            throw new Error("method check need a string-typed param");
+            throw new TypeError("method isExist need a string-typed param!");
         }
         return this._STATE.queue.check(url);
     }
@@ -83,13 +83,16 @@ class NodeSpider extends events_1.EventEmitter {
      */
     filter(urlArray) {
         if (!Array.isArray(urlArray)) {
-            throw new Error("method filter need a array-typed param");
+            throw new TypeError("method filter need a array-typed param");
         }
         else {
             const s = new Set(urlArray);
             const result = [];
             for (const url of s) {
-                if (!this.isExist) {
+                if (typeof url !== "string") {
+                    throw new TypeError("method filter parameter should be a array of string");
+                }
+                if (!this.isExist(url)) {
                     result.push(url);
                 }
             }
