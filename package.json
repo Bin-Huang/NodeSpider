@@ -1,7 +1,7 @@
 {
   "name": "nodespider",
-  "version": "0.6.2",
-  "description": "20 lines of code to bulid a web crawler as a geek",
+  "version": "0.6.3",
+  "description": "Simple, flexible, delightful web crawler/spider package",
   "main": "./build/index.js",
   "typings": "./build/index.d.ts",
   "dependencies": {

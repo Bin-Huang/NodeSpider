@@ -1,6 +1,5 @@
 /// <reference types="node" />
 import { EventEmitter } from "events";
-import Queue from "./queue";
 import { IPipe, IPlan, IState, ITask } from "./types";
 import { IDefaultPlanOptionCallback, IDefaultPlanOptionInput } from "./defaultPlan";
 /**
@@ -8,7 +7,6 @@ import { IDefaultPlanOptionCallback, IDefaultPlanOptionInput } from "./defaultPl
  * @class NodeSpider
  */
 export default class NodeSpider extends EventEmitter {
-    static Queue: typeof Queue;
     _STATE: IState;
     /**
      * create an instance of NodeSpider

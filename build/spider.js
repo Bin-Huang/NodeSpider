@@ -26,7 +26,7 @@ class NodeSpider extends events_1.EventEmitter {
      */
     constructor(opts = {}) {
         super();
-        // TODO B opts 检测是否合法
+        ParameterOptsCheck(opts);
         const finalOption = Object.assign({}, defaultOption, opts);
         this._STATE = {
             currentConnections: {},
@@ -105,7 +105,6 @@ class NodeSpider extends events_1.EventEmitter {
      * @param {number} maxRetry Maximum number of retries for this task
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
-    // TODO C current 应该能适应所有的plan
     retry(current, maxRetry = 1, finalErrorCallback) {
         const task = {
             hasRetried: current.hasRetried,
@@ -207,7 +206,6 @@ class NodeSpider extends events_1.EventEmitter {
         }
     }
 }
-NodeSpider.Queue = queue_1.default;
 exports.default = NodeSpider;
 /**
  * 尝试从queue获得一个task，使其对应的type存在于规定的type数组。如果存在满足的任务，则返回[type, task]，否则[null, null]
@@ -307,4 +305,47 @@ function timerCallbackWhenMaxIsObject(self) {
             // 当所有连接已经结束，将开始执行结束
         }
     }
+}
+/**
+ * to check whether the parameter option is legal to initialize a spider, if not return the error
+ * @param opts the option object
+ */
+function ParameterOptsCheck(opts) {
+    // check type of parameter opts
+    // TODO C 需要考虑数组、promise
+    if (typeof opts !== "object") {
+        throw new TypeError(`Paramter option is no required, and it should be a object.
+            But ${opts} as you passed, it is a ${typeof opts}.
+        `);
+    }
+    // check property maxConnection
+    const maxConnections = opts.maxConnections;
+    if (maxConnections && typeof maxConnections !== "number" && typeof maxConnections !== "object") {
+        throw new TypeError(`option.maxConnections is no required, but it must be a number.
+            { maxConnections: ${opts.maxConnections} }
+        `);
+    }
+    if (maxConnections && typeof maxConnections === "object") {
+        for (const key in opts.maxConnections) {
+            if (opts.maxConnections.hasOwnProperty(key)) {
+                const max = opts.maxConnections[key];
+                if (typeof max !== "number") {
+                    throw new TypeError(`all of option.maxConnection's property's value should be number.
+                        But in you option, it is that: { maxConnections: {..., {${key}: ${max}},...} }
+                    `);
+                }
+            }
+        }
+    }
+    // check property rateLimit
+    if (opts.rateLimit && typeof opts.rateLimit !== "number") {
+        throw new TypeError(`option.rateLimit is no required, but it must be a number.
+            { rateLimit: ${opts.rateLimit} }
+        `);
+    }
+    // check property queue
+    // TODO C how to check the queue? queue should be a class, and maybe need parameter to init?
+    if (opts.queue) {
+    }
+    return null;
 }
