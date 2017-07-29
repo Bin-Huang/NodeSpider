@@ -42,5 +42,5 @@ export default class NodeSpider extends EventEmitter {
      */
     queue(planKey: symbol, url: string | string[], info?: any): number;
     pipe(pipeObject: IPipe): symbol;
-    save(pipeKey: symbol, data: any): Error | undefined;
+    save(pipeKey: symbol, data: any): TypeError | undefined;
 }

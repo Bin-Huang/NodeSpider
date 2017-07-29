@@ -4,6 +4,7 @@
 // redis queue
 // TODO B 注册pipe和queue可能存在异步操作，此时应该封装到promise或async函数。但依然存在问题：当还没注册好，就调动了queue或者save
 // TODO C 更良好的报错提示
+// TODO C handleError
 
 import * as charset from "charset";
 import * as cheerio from "cheerio";
@@ -109,7 +110,7 @@ export default class NodeSpider extends EventEmitter {
      */
     public isExist(url: string) {
         if (typeof url !== "string") {
-            throw new TypeError("method isExist need a string-typed param!");
+            throw new TypeError(`the parameter of method isExist should be a string`);
         }
         return this._STATE.queue.check(url);
     }
@@ -181,7 +182,9 @@ export default class NodeSpider extends EventEmitter {
 
         if (typeof this._STATE.option.maxConnections === "object") {
             if (typeof this._STATE.option.maxConnections[newPlan.type] === "undefined") {
-                throw new Error("计划type不存在于设置项maxConnections");
+                throw new Error(`
+                    The plan's type ${newPlan.type} don't exist in the option maxConnections.
+                `);
             }
         }
 
@@ -204,11 +207,18 @@ export default class NodeSpider extends EventEmitter {
     public queue(planKey: symbol, url: string | string[], info?: any): number {
         // 参数检验
         if (typeof planKey !== "symbol") {
-            throw new TypeError("queue 参数错误");
+            throw new TypeError(`
+                """queue(planKey, url, info?)"""
+                The parameter planKey should be a symbol returned from calling the method plan!
+            `);
         }
         const plan = this._STATE.planStore.get(planKey);
         if (! plan) {
-            throw new Error("指定plan不存在");
+            throw new Error(`
+                """queue(planKey, url, info?)"""
+                The planKey you passed map to nothing. No such planKey is linked to a defined plan.
+                The parameter planKey should be the return of the method plan
+            `);
         }
 
         // 添加到队列
@@ -217,7 +227,10 @@ export default class NodeSpider extends EventEmitter {
         } else {
             url.map((u) => {
                 if (typeof u !== "string") {
-                    return new Error("url数组中存在非字符串成员");
+                    return new TypeError(`
+                        """queue(planKey, url, info?)"""
+                        the parameter url should be a string or string array!
+                    `);
                 }
                 this._STATE.queue.addTask({url: u, planKey, info}, plan.type);
             });
@@ -245,11 +258,20 @@ export default class NodeSpider extends EventEmitter {
     // 如果是对象，则获得对象的 header 属性并对要保存路径进行检测。通过则调用对象 add 方法。
     // 每一个人都可以开发 table 对象的生成器。只需要提供 header 和 add 接口。其他由开发者考虑如何完成。
     public save(pipeKey: symbol, data: any) {
+        if (typeof pipeKey !== "symbol") {
+            throw new TypeError(`
+                """save(pipeKey, data)"""
+                The parameter pipeKey should be a symbol returned from calling the method pipe!
+            `);
+        }
         const pipe = this._STATE.pipeStore.get(pipeKey);
         if (pipe) {
             pipe.add(data);
         } else {
-            return new Error("unknowed pipe");
+            return new TypeError(`
+                The pipeKey you passed map to nothing. No such pipeKey is linked to a defined pipe.
+                The parameter pipeKey should be the return of the method pipe
+            `);
         }
     }
 
