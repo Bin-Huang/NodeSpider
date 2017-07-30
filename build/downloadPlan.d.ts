@@ -1,1 +1,15 @@
+import { IPlan, ITask } from "./types";
 export default function downloadPlan(opts: any): any;
+export interface IDownloadPlanOpion {
+    request: any;
+    saveFolder: string;
+    fileExt: string;
+    callback: (err: Error, current: ITask) => void;
+}
+export declare class DownloadPlan implements IPlan {
+    option: IDownloadPlanOpion;
+    type: string;
+    info: any;
+    constructor(type: string, option: IDownloadPlanOpion, info: any);
+    process(task: ITask): Promise<{}>;
+}
