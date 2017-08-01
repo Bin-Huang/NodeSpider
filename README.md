@@ -140,8 +140,6 @@ nodespider自带两种plan： `defaultPlan`和`streamPlan`，具体文档可见[
 
 - **pre (可选)** 该爬取计划的预处理列表。当成功请求到网页信息后，将对网页信息进行预处理。nodespider自带两个实用预处理函数：`preToUtf8` 将网页内容自动转码为utf8格式，`preLoadJq` 对该网页内容加载JQ选择器(power by cheerio)
 
-- **info (可选)** 对执行该计划的每一个任务附带信息对象。`info`将作为`current`成员
-
 - **callback (必须)** 当报错或成功加载正文并预处理后，将调用callback。并传入两个参数`err`和`current`。
 你可以使用callback对爬到的网页进行的操作，比如提取信息、添加新的链接到排队列表……
 
@@ -152,11 +150,9 @@ nodespider自带两种plan： `defaultPlan`和`streamPlan`，具体文档可见[
 - **planKey** 当前任务指定计划的key
 - **response**    请求回应
 - **body**    返回正文
-- **error**   任务执行中的错误（等价于rule函数error参数）
 - **info**  当前任务附带的信息
-- **maxRetry** (可能不存在)当前任务的最大重试次数限制
 - **hasRetried**    (可能不存在)当前任务已经重试的次数
-- **and more ...**  以及可能的更多成员属性
+- and more ...  以及可能的更多成员属性
  
  **NOTE**   值得注意的是，当前任务的指定计划，或者是特定设置中的预处理函数，往往会修改`current`中的成员属性，甚至添加更多的成员属性。
 
@@ -210,7 +206,7 @@ const otherPlan = n.plan(function (err, current) {
 const anotherPlan = n.plan(function (err, current) {
     if (err) {
         // 如果出现错误，重试当前任务，但最多不超过5次
-        return n.retry(current, 5, (current) => {
+        return n.retry(current, 5, () => {
             // 当重复次数达到五次时，调用回调函数
             console.log(current.url);
         })

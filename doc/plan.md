@@ -44,7 +44,6 @@ const myPlan = n.plan({
     request,
     pre,
     callback,
-    info,
 });
 ```
 
@@ -55,9 +54,6 @@ const myPlan = n.plan({
 (可选). 该爬取计划的预处理列表。当成功请求到网页信息后，将对网页信息进行预处理。nodespider自带两个实用预处理函数：`preToUtf8` 将网页内容自动转码为utf8格式，`preLoadJq` 对该网页内容加载JQ选择器(power by cheerio)
 
 本质上，pre就是普通的callback函数。所以你可以提取callback中通用部分，作为预处理函数，实现代码复用及模块化开发。
-
-#### info
-(可选). 对执行该计划的每一个任务附带信息对象。`info`将作为`current`成员(属性)传递给`rule`
 
 #### callback
 (必须). 当报错或成功加载正文并预处理后，将调用callback。并传入两个参数`err`和`current`。
@@ -81,9 +77,7 @@ const planA = n.plan({
 - **planKey** 当前任务指定计划的key
 - **response**    请求回应
 - **body**    返回正文
-- **error**   任务执行中的错误（等价于rule函数error参数）
 - **info**  当前任务附带的信息
-- **maxRetry** (可能不存在)当前任务的最大重试次数限制
 - **hasRetried**    (可能不存在)当前任务已经重试的次数
 - and more ...  以及可能的更多成员属性
  
@@ -113,9 +107,6 @@ const myStreamPlan = s.plan(streamPlan({
         req.pipe(otherStream);
         // ...
     },
-    info: {
-        // ...
-    },
 }));
 ```
 
@@ -125,9 +116,6 @@ const myStreamPlan = s.plan(streamPlan({
  (可选). 即该爬取计划的网络请求设置，将决定执行该计划时爬虫如何发出网络请求。通过设置你可以伪造ip、模拟登录、设置cookies、伪造浏览器标示等。具体设置可见 [request文档](https://www.npmjs.com/package/request#requestoptions-callback)
 
 本质上，pre就是普通的callback函数。所以你可以提取callback中通用部分，作为预处理函数，实现代码复用及模块化开发。
-
-#### info
-(可选). 对执行该计划的每一个任务附带信息对象。`info`将作为`current`成员(属性)传递给`rule`
 
 #### callback
 (必须). 当建立请求流后立即调用 callback 并传入两个参数：`req` 和 `current`。
@@ -182,5 +170,4 @@ request 返回的流对象。power by request
 - **url** 当前任务的链接
 - **planKey** 当前任务指定计划的key
 - **info**  当前任务附带的信息
-- **maxRetry** (可能不存在)当前任务的最大重试次数限制
 - **hasRetried**    (可能不存在)当前任务已经重试的次数

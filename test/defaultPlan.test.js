@@ -31,19 +31,16 @@ test("function defaultPlan parameter check", () => {
 test("function defaultPlan parameter default value", () => {
     const callback = () => "this is a callback function";
 
-    expect(defaultPlan(callback).info).toEqual({});
     expect(defaultPlan(callback).option.callback).toBe(callback);
     expect(defaultPlan(callback).option.request).toEqual({encoding: null});
 
-    const plan1 = defaultPlan({callback, info: "info"});
-    expect(plan1.info).toBe("info");
+    const plan1 = defaultPlan({callback});
     expect(plan1.option.callback).toBe(callback);
     expect(plan1.option.request).toEqual({encoding: null});
     expect(plan1.option.callback).toBe(callback);
     expect(plan1.type).toBe("default");
 
     const plan2 = defaultPlan({callback, type: "myType"});
-    expect(plan2.info).toEqual({});
     expect(plan2.option.callback).toBe(callback);
     expect(plan2.option.request).toEqual({encoding: null});
     expect(plan2.option.callback).toBe(callback);
