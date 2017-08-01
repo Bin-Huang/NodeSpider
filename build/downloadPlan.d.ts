@@ -4,7 +4,7 @@ export interface IDownloadPlanOpion {
     request: any;
     saveFolder: string;
     fileExt: string;
-    callback: (err: Error, current: ITask) => void;
+    callback: (err: Error | null, current: ITask) => void;
 }
 export declare class DownloadPlan implements IPlan {
     option: IDownloadPlanOpion;

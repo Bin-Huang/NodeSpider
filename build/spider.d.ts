@@ -32,7 +32,7 @@ export default class NodeSpider extends EventEmitter {
      * @param {number} maxRetry Maximum number of retries for this task
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
-    retry(current: ITask, maxRetry?: number, finalErrorCallback?: (current: ITask) => void): void;
+    retry(current: ITask, maxRetry?: number, finalErrorCallback?: () => void): void;
     plan(item: IPlan | IDefaultPlanOptionInput | IDefaultPlanOptionCallback): symbol;
     /**
      * 添加待爬取链接到队列，并指定爬取计划。

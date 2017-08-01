@@ -55,7 +55,6 @@ class DefaultPlan {
             let current = Object.assign(task, {
                 response,
                 body,
-                error,
             });
             // 如果没有错误，按顺序执行预处理函数，对current进行预处理
             if (!error) {

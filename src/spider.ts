@@ -144,31 +144,35 @@ export default class NodeSpider extends EventEmitter {
      * @param {number} maxRetry Maximum number of retries for this task
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
-    public retry(current: ITask, maxRetry = 1, finalErrorCallback?: (current: ITask) => void) {
+    public retry(current: ITask, maxRetry = 1, finalErrorCallback?: () => void) {
+        if (typeof current !== "object") {
+            throw new TypeError("method retry parameter current should be a object");
+        }
+        // 过滤出current重要的task基本信息
         const task = {
             hasRetried: current.hasRetried,
             info: current.info,
-            maxRetry: current.maxRetry,
             planKey: current.planKey,
             url: current.url,
         };
         if (! task.hasRetried) {
             task.hasRetried = 0;
         }
-        if (! task.maxRetry) {
-            task.maxRetry = maxRetry;
-        }
         if (! finalErrorCallback) {
-            finalErrorCallback = (currentTask: ITask) => {
-                console.log("达到最大重试次数，但依旧错误");
+            finalErrorCallback = () => {
+                throw new Error(`
+                    ${current.url}达到最大重试次数，但依然出错
+                `);
             };
         }
-        if (task.hasRetried >= task.maxRetry) {
-            return finalErrorCallback(current);
+
+        if (task.hasRetried >= maxRetry) {
+            return finalErrorCallback();
         }
 
-        const plan = this._STATE.planStore.get(task.planKey) as IPlan;
         task.hasRetried ++;
+
+        const plan = this._STATE.planStore.get(task.planKey) as IPlan;
         this._STATE.queue.jumpTask(task, plan.type);    // 插队到队列，重新等待执行
     }
 

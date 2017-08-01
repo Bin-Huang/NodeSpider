@@ -15,7 +15,6 @@ export declare type IDefaultPlanOptionCallback = (err: Error, current: ICurrent)
 export interface ICurrent extends ITask {
     response: any;
     body: string;
-    error: Error;
     [propName: string]: any;
 }
 /**

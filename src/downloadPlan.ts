@@ -4,6 +4,7 @@ import * as request from "request";
 import NodeSpider from "./spider";
 import { IPlan, ITask } from "./types";
 
+// TODO B
 export default function downloadPlan(opts) {
     // TODO B 参数检验与默认赋值
     const planOption = opts;

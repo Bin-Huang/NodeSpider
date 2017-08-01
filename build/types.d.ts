@@ -41,7 +41,6 @@ export interface IDefaultOption {
 export interface ITask {
     url: string;
     planKey: symbol;
-    maxRetry?: number;
     hasRetried?: number;
     info?: any;
 }
