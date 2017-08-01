@@ -10,7 +10,6 @@ export interface IStreamPlanOptionInput {
     type?: string;
     request?: any;
     callback: TStreamPlanOptionCallback;
-    info?: any;
 }
 export interface IStreamPlanOption {
     request: any;
@@ -33,18 +32,15 @@ export default function streamPlan(opts: TStreamPlanOptionCallback|IStreamPlanOp
         callback: opts.callback,
         request: opts.request || {},
     };
-    const info = opts.info || {};
 
-    return new StreamPlan(type, option, info);
+    return new StreamPlan(type, option);
 }
 
 export class StreamPlan implements IPlan {
     public option: IStreamPlanOption;
     public type: string;
-    public info: any;
-    constructor(type: string, option: IStreamPlanOption, info: any) {
+    constructor(type: string, option: IStreamPlanOption) {
         this.type = type;
-        this.info = info;
         this.option = option;
     }
     public process(task: ITask) {

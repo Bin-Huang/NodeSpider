@@ -3,7 +3,6 @@ import * as fs from "fs";
 export interface IPlan {
     option: any;
     type: string;
-    info: any;
     process: (task: ITask) => Promise<{} | null | void>;
 }
 export interface IQueue {

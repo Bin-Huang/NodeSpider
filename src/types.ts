@@ -6,7 +6,6 @@ import NodeSpider from "./spider";
 export interface IPlan {
     option: any;
     type: string;
-    info: any;
     process: (task: ITask) => Promise<{}|null|void>;
 }
 

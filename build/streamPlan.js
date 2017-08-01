@@ -18,14 +18,12 @@ function streamPlan(opts) {
         callback: opts.callback,
         request: opts.request || {},
     };
-    const info = opts.info || {};
-    return new StreamPlan(type, option, info);
+    return new StreamPlan(type, option);
 }
 exports.default = streamPlan;
 class StreamPlan {
-    constructor(type, option, info) {
+    constructor(type, option) {
         this.type = type;
-        this.info = info;
         this.option = option;
     }
     process(task) {

@@ -5,7 +5,6 @@ export interface IStreamPlanOptionInput {
     type?: string;
     request?: any;
     callback: TStreamPlanOptionCallback;
-    info?: any;
 }
 export interface IStreamPlanOption {
     request: any;
@@ -15,7 +14,6 @@ export default function streamPlan(opts: TStreamPlanOptionCallback | IStreamPlan
 export declare class StreamPlan implements IPlan {
     option: IStreamPlanOption;
     type: string;
-    info: any;
-    constructor(type: string, option: IStreamPlanOption, info: any);
+    constructor(type: string, option: IStreamPlanOption);
     process(task: ITask): Promise<{}>;
 }

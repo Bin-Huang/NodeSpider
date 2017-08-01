@@ -10,7 +10,6 @@ export interface IDefaultPlanOptionInput {
     callback: IDefaultPlanOptionCallback;
     request?: IRequestOpts;
     pre?: IDefaultPlanOptionCallback[];
-    info?: any;
 }
 // for 传递给Plan真正的设置
 export interface IDefaultPlanOption {
@@ -54,23 +53,17 @@ export default function defaultPlan(planOptionInput: IDefaultPlanOptionCallback|
     const callback = planOptionInput.callback;
     const planOption: IDefaultPlanOption = { request, callback, pre };
 
-    if (typeof planOptionInput.info === "undefined") {
-        planOptionInput.info = {};
-    }
-
     const type = planOptionInput.type || "default";
 
-    return new DefaultPlan(type, planOption, planOptionInput.info);
+    return new DefaultPlan(type, planOption);
 }
 
 export class DefaultPlan implements IPlan {
     public option: IDefaultPlanOption;
     public type: string;
-    public info: any;
-    constructor(type: string, option: IDefaultPlanOption, info: any) {
+    constructor(type: string, option: IDefaultPlanOption) {
         this.option = option;
         this.type = type;
-        this.info = info;
     }
     public async process(task: ITask) {
         const {error, response, body}: any = await requestAsync({

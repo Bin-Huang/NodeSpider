@@ -4,7 +4,6 @@ export interface IDefaultPlanOptionInput {
     callback: IDefaultPlanOptionCallback;
     request?: IRequestOpts;
     pre?: IDefaultPlanOptionCallback[];
-    info?: any;
 }
 export interface IDefaultPlanOption {
     request: IRequestOpts;
@@ -25,7 +24,6 @@ export default function defaultPlan(planOptionInput: IDefaultPlanOptionCallback 
 export declare class DefaultPlan implements IPlan {
     option: IDefaultPlanOption;
     type: string;
-    info: any;
-    constructor(type: string, option: IDefaultPlanOption, info: any);
+    constructor(type: string, option: IDefaultPlanOption);
     process(task: ITask): Promise<void>;
 }

@@ -36,18 +36,14 @@ function defaultPlan(planOptionInput) {
     const request = Object.assign({ encoding: null }, planOptionInput.request);
     const callback = planOptionInput.callback;
     const planOption = { request, callback, pre };
-    if (typeof planOptionInput.info === "undefined") {
-        planOptionInput.info = {};
-    }
     const type = planOptionInput.type || "default";
-    return new DefaultPlan(type, planOption, planOptionInput.info);
+    return new DefaultPlan(type, planOption);
 }
 exports.default = defaultPlan;
 class DefaultPlan {
-    constructor(type, option, info) {
+    constructor(type, option) {
         this.option = option;
         this.type = type;
-        this.info = info;
     }
     process(task) {
         return __awaiter(this, void 0, void 0, function* () {

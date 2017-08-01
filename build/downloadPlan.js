@@ -23,10 +23,9 @@ function downloadPlan(opts) {
 }
 exports.default = downloadPlan;
 class DownloadPlan {
-    constructor(type, option, info) {
+    constructor(type, option) {
         this.option = option;
         this.type = type;
-        this.info = info;
     }
     process(task) {
         return __awaiter(this, void 0, void 0, function* () {

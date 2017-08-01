@@ -9,7 +9,6 @@ export interface IDownloadPlanOpion {
 export declare class DownloadPlan implements IPlan {
     option: IDownloadPlanOpion;
     type: string;
-    info: any;
-    constructor(type: string, option: IDownloadPlanOpion, info: any);
+    constructor(type: string, option: IDownloadPlanOpion);
     process(task: ITask): Promise<{}>;
 }

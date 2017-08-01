@@ -25,11 +25,9 @@ export interface IDownloadPlanOpion {
 export class DownloadPlan implements IPlan {
     public option: IDownloadPlanOpion;
     public type: string;
-    public info: any;
-    constructor(type: string, option: IDownloadPlanOpion, info: any) {
+    constructor(type: string, option: IDownloadPlanOpion) {
         this.option = option;
         this.type = type;
-        this.info = info;
     }
     public async process(task: ITask) {
         return new Promise((resolve, reject) => {
@@ -70,7 +68,7 @@ export class DownloadPlan implements IPlan {
                     resolve();
                 }
             });
-            file.on("error", (e) => {
+            file.on("error", (e: Error) => {
                 if (firstCall) {
                     this.option.callback(e, task);
                     firstCall = false;
