@@ -11,7 +11,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs-extra");
 const path = require("path");
 const request = require("request");
-// TODO B
+// TODO B 完成pipe发生函数
 function downloadPlan(opts) {
     // TODO B 参数检验与默认赋值
     const planOption = opts;

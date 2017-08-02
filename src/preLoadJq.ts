@@ -21,7 +21,7 @@ function loadJqOperation(error: Error, currentTask: ICurrent) {
     // 自动处理了锚和 javascript: void(0)
     // TODO B 存在不合法链接的返回
     $.prototype.url = function() {
-        const result = [];
+        const result: string[] = [];
         $(this).each(function() {
             let newUrl = $(this).attr("href");
             // 如果为空，或是类似 'javascirpt: void(0)' 的 js 代码，直接跳过
@@ -47,7 +47,7 @@ function loadJqOperation(error: Error, currentTask: ICurrent) {
      * @returns {array}
      */
     $.prototype.src = function() {
-        const result = [];
+        const result: string[] = [];
         $(this).each(function() {
             let newUrl = $(this).attr("src");
             // 如果是相对路径，补全路径为绝对路径

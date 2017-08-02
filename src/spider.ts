@@ -4,7 +4,6 @@
 // redis queue
 // TODO B 注册pipe和queue可能存在异步操作，此时应该封装到promise或async函数。但依然存在问题：当还没注册好，就调动了queue或者save
 // TODO C 更良好的报错提示
-// TODO C handleError
 
 import * as charset from "charset";
 import * as cheerio from "cheerio";
@@ -354,8 +353,9 @@ function timerCallbackWhenMaxIsNumber(self: NodeSpider) {
         startTask(type, task, self);
     } else {
         if (self._STATE.currentTotalConnections === 0) {
-            // TODO C 爬虫工作全部完成
             // 当所有连接已经结束，将开始执行结束
+            // TODO C 更好的事件名
+            self.emit("done");   // 爬虫工作全部结束，进入 end 阶段
         }
     }
 }
@@ -386,8 +386,8 @@ function timerCallbackWhenMaxIsObject(self: NodeSpider) {
         startTask(type, task, self);
     } else {
         if (self._STATE.currentTotalConnections === 0) {
-            // TODO C 爬虫工作全部完成
-            // 当所有连接已经结束，将开始执行结束
+            // TODO C 更好的事件名
+            self.emit("done");   // 爬虫工作全部结束，进入 end 阶段
         }
     }
 }

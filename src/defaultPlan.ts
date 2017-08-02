@@ -31,7 +31,7 @@ export interface ICurrent extends ITask {
  * 默认值 type: "default", info: {}, option: {request: {encoding: null}, pre: [preToUtf8(), preLoadJq()], callback }
  * @param planOptionInput
  */
-// TODO C 考虑是否使用类继承的方式，代替type
+
 export default function defaultPlan(planOptionInput: IDefaultPlanOptionCallback|IDefaultPlanOptionInput): IPlan {
     // 当只传入一个rule函数，则包装成 IPlanInput 对象
     if (typeof planOptionInput === "function") {

@@ -38,8 +38,8 @@ class TxtTable {
      * @param {Object} data
      */
     public add(data: any) {
-        // TODO: 参数检测
         let chunk = "";
+        // 按顺序写入符合关键字段的数据，不存在于关键字列表的数据将被无视
         for (const item of this.header) {
             if (chunk !== "") {
                 chunk += "\t";
@@ -144,8 +144,7 @@ class CsvPipe {
      * @param {Object} data
      */
     public add(data: any) {
-        // TODO: 参数检测
-
+        // 按顺序写入符合关键字段的数据，不存在于关键字列表的数据将被无视
         let chunk = "";
         for (const item of this.header) {
             if (chunk !== "") {

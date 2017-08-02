@@ -58,7 +58,6 @@ export interface ITask {
 }
 
 // ====== request options ======
-
 export interface IRequestOpts {
 
 }

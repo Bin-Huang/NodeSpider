@@ -3,5 +3,5 @@
 - document in English
 - share package in some nodejs's bbs
 - website? www.nodespider.org
-
+- 设计考虑：plan管理中，使用class继承的方式替代type？对不同class的plan进行任务管理，往往就能解决不同种类任务的管理问题
 - 考虑使用 add 代替 pipe 和 plan
