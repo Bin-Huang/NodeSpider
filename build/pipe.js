@@ -12,6 +12,16 @@ class TxtTable {
             }
             this.header = header;
             this.stream = fs.createWriteStream(path);
+            // 写入表头字段
+            let chunk = "";
+            for (const item of this.header) {
+                if (chunk !== "") {
+                    chunk += "\t";
+                }
+                chunk += item;
+            }
+            chunk += "\n";
+            this.stream.write(chunk);
         });
     }
     /**
@@ -22,7 +32,10 @@ class TxtTable {
         // TODO: 参数检测
         let chunk = "";
         for (const item of this.header) {
-            chunk += data[item] + "\t";
+            if (chunk !== "") {
+                chunk += "\t";
+            }
+            chunk += data[item];
         }
         chunk += "\n";
         this.stream.write(chunk);
@@ -78,6 +91,52 @@ class JsonTable {
         this.closeSign = true;
     }
 }
+// tslint:disable-next-line:max-classes-per-file
+class CsvPipe {
+    constructor(path, header) {
+        if (typeof path !== "string") {
+            throw new Error('the string-typed parameter "path" is required');
+        }
+        fs.ensureFile(path, (err) => {
+            if (err) {
+                throw err;
+            }
+            this.header = header;
+            this.stream = fs.createWriteStream(path);
+            // 写入表头字段
+            let chunk = "";
+            for (const item of this.header) {
+                if (chunk !== "") {
+                    chunk += ",";
+                }
+                chunk += item;
+            }
+            chunk += "\n";
+            this.stream.write(chunk);
+        });
+    }
+    /**
+     * 根据表头写入新数据
+     * @param {Object} data
+     */
+    add(data) {
+        // TODO: 参数检测
+        let chunk = "";
+        for (const item of this.header) {
+            if (chunk !== "") {
+                chunk += ",";
+            }
+            chunk += data[item];
+        }
+        chunk += "\n";
+        this.stream.write(chunk);
+    }
+    // TODO: 调用 close 将关闭写入流，如果流中还有未写完的内容，将导致内容遗失。
+    // 解决思路：监听流的事件（如 drain）并记录为类的成员，close 中判断信号成员来决定何时关闭流
+    close() {
+        this.stream.close();
+    }
+}
 function txtPipe(path, header) {
     return new TxtTable(path, header);
 }
@@ -86,3 +145,7 @@ function jsonPipe(path, space) {
     return new JsonTable(path, space);
 }
 exports.jsonPipe = jsonPipe;
+function csvPipe(path, header) {
+    return new CsvPipe(path, header);
+}
+exports.csvPipe = csvPipe;

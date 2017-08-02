@@ -250,7 +250,7 @@ export default class NodeSpider extends EventEmitter {
     // 爬虫生命周期末尾，自动调用close清理工作
     public pipe(pipeObject: IPipe): symbol {
         if (typeof pipeObject !== "object" || ! pipeObject.add || !pipeObject.close) {
-            throw new Error("不符合pipe");
+            throw new TypeError("the parameter of method pipe should be a object implemented IPipe");
         }
 
         const key = Symbol("pipe-" + uuid());
@@ -266,6 +266,12 @@ export default class NodeSpider extends EventEmitter {
             throw new TypeError(`
                 """save(pipeKey, data)"""
                 The parameter pipeKey should be a symbol returned from calling the method pipe!
+            `);
+        }
+        if (typeof data !== "object") {
+            throw new TypeError(`
+                """save(pipeKey, data)"""
+                The parameter data should be a object!
             `);
         }
         const pipe = this._STATE.pipeStore.get(pipeKey);

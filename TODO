@@ -3,4 +3,5 @@
 - document in English
 - share package in some nodejs's bbs
 - website? www.nodespider.org
-- csvPipe
+
+- 考虑使用 add 代替 pipe 和 plan

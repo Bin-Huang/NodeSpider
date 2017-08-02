@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const defaultPlan_1 = require("./defaultPlan");
 exports.defaultPlan = defaultPlan_1.default;
 const pipe_1 = require("./pipe");
+exports.csvPipe = pipe_1.csvPipe;
 exports.jsonPipe = pipe_1.jsonPipe;
 exports.txtPipe = pipe_1.txtPipe;
 const preLoadJq_1 = require("./preLoadJq");
