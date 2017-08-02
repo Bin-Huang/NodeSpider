@@ -18,20 +18,20 @@ nodespider 自带三种常用的爬取方案，可以帮助你解决绝大部分
 下面新建的三个plan是等价的
 ```javascript
 const mydefaultPlan1 = n.plan((err, current) => {
-    // your code
+    // callback code
 });
-
+// same as
 const mydefaultPlan2 = n.plan({
     pre: [preToUtf8, preLoadJq],
     callback: (err, current) => {
-        // your code
+        // callback code
     }
 })
-
+// same as
 const mydefaultPlan3 = n.plan(defaultPlan({
     pre: [preToUtf8, preLoadJq],
     callback: (err, current) => {
-        // your code
+        // callback code
     }
 }))
 ```
@@ -51,9 +51,23 @@ const myPlan = n.plan({
  (可选). 即该爬取计划的网络请求设置，将决定执行该计划时爬虫如何发出网络请求。通过设置你可以伪造ip、模拟登录、设置cookies、伪造浏览器标示等。具体设置可见 [request文档](https://www.npmjs.com/package/request#requestoptions-callback)
 
 #### pre
-(可选). 该爬取计划的预处理列表。当成功请求到网页信息后，将对网页信息进行预处理。nodespider自带两个实用预处理函数：`preToUtf8` 将网页内容自动转码为utf8格式，`preLoadJq` 对该网页内容加载JQ选择器(power by cheerio)
+(可选) 该爬取计划的预处理列表。当成功请求到网页信息后，将对网页信息进行预处理。nodespider自带两个实用预处理函数：
+- **preToUtf8**   将网页内容自动转码为utf8格式
+- **preLoadJq**   对该网页内容加载JQ选择器(power by cheerio)
 
-本质上，pre就是普通的callback函数。所以你可以提取callback中通用部分，作为预处理函数，实现代码复用及模块化开发。
+当未设置`pre`时，其默认值是`[preToUtf8(), preLoadJq()]`，即下面两种情况是等价的：
+```javascript
+const myPlan = n.plan(defaultPlan({
+    callback: () => {}
+}));
+const myOtherPlan = n.plan(defaultPlan({
+    pre: [preToUtf8(), preLoadJq()],
+    callback: () => {}
+}));
+```
+也就是说，使用`defaultPlan`，默认情况下将预先自动转码网页内容为utf8格式，并加载jQ选择器。
+
+本质上，pre就是普通的callback函数。所以你可以提取callback中通用部分，将其作为预处理函数，实现代码复用及模块化开发。
 
 #### callback
 (必须). 当报错或成功加载正文并预处理后，将调用callback。并传入两个参数`err`和`current`。
