@@ -83,14 +83,14 @@ class NodeSpider extends events_1.EventEmitter {
      */
     filter(urlArray) {
         if (!Array.isArray(urlArray)) {
-            throw new TypeError("method filter need a array-typed param");
+            throw new TypeError("the parameter of the method filter is required, and can only be an array of strings");
         }
         else {
             const s = new Set(urlArray);
             const result = [];
             for (const url of s) {
                 if (typeof url !== "string") {
-                    throw new TypeError("method filter parameter should be a array of string");
+                    throw new TypeError("the parameter of the method filter is required, and can only be an array of strings");
                 }
                 if (!this.isExist(url)) {
                     result.push(url);
@@ -106,6 +106,7 @@ class NodeSpider extends events_1.EventEmitter {
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
     retry(current, maxRetry = 1, finalErrorCallback) {
+        // TODO C 判断 current 成员
         if (typeof current !== "object") {
             throw new TypeError("method retry parameter current should be a object");
         }

@@ -7,11 +7,17 @@ function streamPlan(opts) {
     }
     else if (typeof opts === "object") {
         if (typeof opts.callback !== "function") {
-            throw new Error("新建streamPlan错误，参数对象需要携带函数类型的callback成员");
+            throw new TypeError(`
+                failed to create new stream plan
+                the object of options should include the required member: 'callback' function
+            `);
         }
     }
     else {
-        throw new Error("新建streamPlan错误，参数类型只能是对象或者函数");
+        throw new TypeError(`
+            failed to create new stream plan
+            the parameter can only be a function or an object
+        `);
     }
     const type = opts.type || "stream";
     const option = {

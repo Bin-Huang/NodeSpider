@@ -22,10 +22,16 @@ function defaultPlan(planOptionInput) {
     }
     // 类型检测
     if (typeof planOptionInput !== "object") {
-        throw new TypeError("参数类型错误，只能是函数或则对象");
+        throw new TypeError(`
+            failed to create new default plan
+            the parameter can only be a function or an object
+        `);
     }
     if (typeof planOptionInput.callback !== "function") {
-        throw new TypeError("plan缺失callback成员");
+        throw new TypeError(`
+                failed to create new default plan
+                the object of options should include the required member: 'callback' function
+        `);
     }
     // 填充plan设置默认值
     const pre = planOptionInput.pre || [

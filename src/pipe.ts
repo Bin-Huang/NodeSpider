@@ -12,7 +12,7 @@ class TxtTable {
     private stream: fs.WriteStream;
     constructor(path: string, header: string[]) {
         if (typeof path !== "string") {
-            throw new Error('the string-typed parameter "path" is required');
+            throw new TypeError('the string-typed parameter "path" is required');
         }
         fs.ensureFile(path, (err: Error) => {
             if (err) {
@@ -64,7 +64,7 @@ class JsonTable {
     private first: boolean;
     constructor(path: string, space: number = 2) {
         if (typeof path !== "string") {
-            throw new Error('the string-typed parameter "path" is required');
+            throw new TypeError('the string-typed parameter "path" is required');
         }
         fs.ensureFile(path, (err) => {
             if (err) {

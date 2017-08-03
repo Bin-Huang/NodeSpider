@@ -4,7 +4,7 @@ const fs = require("fs-extra");
 class TxtTable {
     constructor(path, header) {
         if (typeof path !== "string") {
-            throw new Error('the string-typed parameter "path" is required');
+            throw new TypeError('the string-typed parameter "path" is required');
         }
         fs.ensureFile(path, (err) => {
             if (err) {
@@ -50,7 +50,7 @@ class TxtTable {
 class JsonTable {
     constructor(path, space = 2) {
         if (typeof path !== "string") {
-            throw new Error('the string-typed parameter "path" is required');
+            throw new TypeError('the string-typed parameter "path" is required');
         }
         fs.ensureFile(path, (err) => {
             if (err) {
