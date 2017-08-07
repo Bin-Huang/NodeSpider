@@ -1,8 +1,6 @@
 import * as fs from "fs";
 import NodeSpider from "./spider";
 
-// TODO C 每一个类型都应该有注释
-
 export interface IPlan {
     option: any;
     type: string;

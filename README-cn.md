@@ -44,10 +44,8 @@ n.queue(planA, "https://www.nodejs.org");
 
 # 下载及初始化
 
-```
-
+```bash
 npm install nodespider --save
-
 ```
 
 ```javascript
@@ -97,6 +95,46 @@ const n = new Spider({
 *NOTE:* 注意，这时如果使用`plan`新建一个type不存在于`maxConnections`的计划，将会报错
 
 # 方法与属性
+
+## isExist(url)
+
+检查是否添加过某个链接
+
+| 参数 | 说明 | 类型 |
+| --- | --- | --- |
+| url | 需要检测是否存在的url | string |
+
+| return | 说明 |
+| --- | --- |
+| boolean | 若该链接已经添加过，则返回`true`
+
+```javascript
+n.queue(myPlan, "http://www.example.com");
+n.isExist("http://www.example.com");    // True
+```
+
+## filter(urls)
+过滤掉一个数组中的重复链接，以及所有已被添加的链接，返回一个新数组
+
+| 参数 | 类型 |
+| --- | --- |
+| urls | array (of string) |
+
+| return |
+| --- |
+| array |
+
+return  type: array
+
+```javascript
+n.queue(planA, "http://a.com");
+
+var i = n.filter(["http://a.com", "http://b.com", "http://c.com"]);
+console.log(i); // ["http://b.com", "http://c.com"]
+
+var j = n.filter(["http://a.com", "http://aa.com", "http://aa.com"]);
+console.log(j); // ["http://aa.com"]
+```
 
 ## plan(item)
 
@@ -181,13 +219,13 @@ n.queue(myPlan, [
 ]);
 ```
 
-## retry(task, maxRetry, finalErrorCallback);
+## retry(currentTask, maxRetry, finalErrorCallback);
 
 重试某项任务
 
 | 参数 | 说明 | 类型 |
 | --- | --- | --- |
-| task | 需要重试的当前任务 | object |
+| currentTask | 需要重试的当前任务 | object |
 | maxRetry | （可选）该任务的最大重试数目（最多重复多少次）。默认: 1 | number |
 | finalErrorCallback | （可选）达到最大重试数目时调用的函数 | function |
 
@@ -214,45 +252,6 @@ const anotherPlan = n.plan(function (err, current) {
 });
 ```
 
-## isExist(url)
-
-检查是否添加过某个链接
-
-| 参数 | 说明 | 类型 |
-| --- | --- | --- |
-| url | 需要检测是否存在的url | string |
-
-| return | 说明 |
-| --- | --- |
-| boolean | 若该链接已经添加过，则返回`true`
-
-```javascript
-n.queue(myPlan, "http://www.example.com");
-n.isExist("http://www.example.com");    // True
-```
-
-## filter(urls)
-过滤掉一个数组中的重复链接，以及所有已被添加的链接，返回一个新数组
-
-| 参数 | 类型 |
-| --- | --- |
-| urls | array (of string) |
-
-| return |
-| --- |
-| array |
-
-return  type: array
-
-```javascript
-n.queue(planA, "http://a.com");
-
-var i = n.filter(["http://a.com", "http://b.com", "http://c.com"]);
-console.log(i); // ["http://b.com", "http://c.com"]
-
-var j = n.filter(["http://a.com", "http://aa.com", "http://aa.com"]);
-console.log(j); // ["http://aa.com"]
-```
 
 ## pipe(pipeGenerator)
 
@@ -275,7 +274,13 @@ n.save(txtPipe, {
 });
 ```
 
-nodespider 自带了两个pipe建立函数：`jsonPipe`和`txtPipe`，可以帮助开发者以json格式或txt表格形式来储存提取的数据，在下文中有更多介绍。
+nodespider 自带了三个pipe建立函数，帮助开发者更方便的整理并保存从网页中提取得到的数据。
+
+- `jsonPipe`    以json文件形式保存数据，方便程序调用
+- `csvPipe` 以csv文件的形式保存数据，方便数据分析
+- `txtPipe` 以tst文件形式保存，并用制表符和换行符格式化数据
+
+**具体信息见 [pipe文档](./doc/pipe.md)**
 
 ## save(pipeKey, data)
 
@@ -300,48 +305,6 @@ const planA = n.plan(function (err, current) {
         age: $("#age").text(),
         description: $("#desc").text(),
     });
-})
-```
-
-# pipeGenerator
-nodespider自带了两个pipe发生器：`jsonPipe`和`txtPipe`，可以帮助开发者保存提取的数据到本地。
-
-```javascript
-const {Spider, jsonPipe, txtPipe} = require("nodespider");
-```
-
-## jsonPipe(path, space)
-数据将以json形式保存到本地
-
-| 参数 | 类型 | 说明 |
-| --- | --- | --- |
-| path | string | 保存文件路径 |
-| space | number | （可选）缩进空格数 |
-
-```javascript
-const myJson = n.pipe(jsonPipe("path/to/my.json"));
-const myPlan(function (err, current) {
-    const $ = current.$;
-    n.save(myJson, {
-        name: $("#name").text(),
-        desc: $("#desc").text(),
-    })
-})
-```
-
-## txtPipe(path, header)
-数据将以txt表格形式写入（由制表符和换行符隔开）。
-| 参数 | 类型 | 说明 |
-| --- | --- | --- |
-| path | string | 保存文件路径 |
-| header | array | 表头元素数组 |
-
-```javascript
-const txt = n.pipe(txtPipe("path/to/my.txt", ["name", "description"]));
-
-n.save(txt, {
-    name: "some data",
-    description: "example"
 })
 ```
 

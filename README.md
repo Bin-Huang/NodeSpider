@@ -1,15 +1,16 @@
 **NOTE**    The package nodespider is still under development. That means frequent changes and potential bug. So it is not suggested to using it in your project.
 
 # Features
-- 简单高效，开箱即用
-- 自动识别网页编码格式，并将返回正文转码为utf8（可设置）
-- 使用服务器端jQ选择器，轻松操作返回正文（可设置）
-- 更轻松地保存抓取的数据（`pipe`和`save`方法）
-- 轻松识别和过滤已经添加的链接（`isExist`和`filter`方法）
-- 必要时，轻松可靠地重试某次请求任务（`retry`方法）
-- 轻松设置请求间隔、异步任务数。
-- 独立管理不同的爬取策略与计划
-- 支持 async function 和 promise
+- Simple and flexible
+- automatically convert response body to UTF8 if necessary, never worry about encoding anymore(as an option)
+- support server-side jQuery(as an option)
+- save data extracted from web page more easily
+- easy to check and filter the repeat url
+- retry a task more easily and reliably
+- rate limit & simultaneous connections limit
+- independent management of crawling strategies and plans
+- written by ES6 & ES7
+- support async function and promise
 
 ```javascript
 const { Spider, jsonPipe } = require("nodespider");
@@ -18,19 +19,19 @@ const n = new Spider({
     rateLimit: 10
 });
 
-// 新建一个数据保存pipe
+// create a pipe to save data
 const jsonFile = n.pipe(jsonPipe("path/to/my.json"));
 
-// 声明一个爬取计划
+// create a plan
 const planA = n.plan(function (err, current) {
     if (err) {
-        // 如果出错，重试该任务，但最多3次
+        // if throws error, retry the task for a maximum of 3 times
         return n.retry(current, 3);
     }
-    const $ = current.$;    // 用JQ提取正文信息
+    const $ = current.$;    // use jQ to extract data from web pages
     console.log($("title").text());
 
-    // 保存从返回正文中提取的数据
+    // easily save the data extracted from web page
     n.save(jsonFile, {
         user: $("#user").text(),
         description: $("#desc").text(),
@@ -38,11 +39,10 @@ const planA = n.plan(function (err, current) {
     })
 });
 
-// 添加链接到爬取队列
 n.queue(planA, "https://www.nodejs.org");
 ```
 
-# 下载及初始化
+# Installation & initialization
 
 ```bash
 npm install nodespider --save
@@ -51,62 +51,65 @@ npm install nodespider --save
 ```javascript
 const { Spider } = require("nodespider");
 
-const n = new Spider();
+const mySpider = new Spider();
 
-// or
-const nn = new Spider({
+// or initialize with options
+const myOtherSpider = new Spider({
     rateLimit: 20,
     maxConnections: 20,
-    // or more 
+    // and more options... 
 })
 ```
-可选的设置：
 
-| 设置 | 说明 | 类型 | 默认值 |
+Optional settings:
+
+| option | description | type | defaults |
 | --- | ---- | --- | --- |
-| rateLimit | 限速，网络请求的时间间隔（毫秒） | number | 2(毫秒)
-| queue | 任务排队队列 | class | NodeSpider.Queue
-| maxConnections | 最大同时连接限制 | number|object | 20 |
+| rateLimit | request interval | number | 2(millisecond)
+| queue | task queue | class | NodeSpider.Queue
+| maxConnections | maximum number of simultaneous connections | number | object | 20 |
 
 ## maxConnections
-这个设置项用来设置爬虫的最大同时连接数，类型可以是`number`或者`object`。
+Maximum number of simultaneous connections. It can be a number or object.
 
-**当类型是`number`**
+**when it is a `number`**
 
-此时表示，爬虫所有类型的同时连接的总数不能超过最大设置
+It means the amount of simultaneous connections can not exceed `maxConnections`.
+
 ```javascript
 const n = new Spider({
-    maxConnections: 10, // 最多同时执行10个异步连接任务
+    maxConnections: 10, // the amount of simultaneous connections of not more than 10
 });
 ```
 
-**当类型是`object`**
+**when it is an `object`**
 
-此时，你可以指定各种类型的最大同时连接数
+Also, you can specify the maximun number of simultaneous connections for tasks with different type of plan.
+
 ```javascript
 const n = new Spider({
     maxConnections: {
-        "download": 10, // 最多只能同时执行10个类型为"download"的异步连接任务
-        "crawl": 15,
+        "download": 5,
+        "crawl": 15,    //  the maxConnections of tasks with plan "crawl" of not more than 15
     }
 });
 ```
 
-*NOTE:* 注意，这时如果使用`plan`新建一个type不存在于`maxConnections`的计划，将会报错
+*NOTE:* If option `maxConnections` is an object, there will throw an error when create a new plan using method `plan` but its type has not specified in the option `maxConnections`.
 
-# 方法与属性
+# Method
 
 ## isExist(url)
 
-检查是否添加过某个链接
+Check if you have ever added the url
 
-| 参数 | 说明 | 类型 |
+| parameter | description | type |
 | --- | --- | --- |
-| url | 需要检测是否存在的url | string |
+| url | the url you need to check | string |
 
-| return | 说明 |
+| return | description |
 | --- | --- |
-| boolean | 若该链接已经添加过，则返回`true`
+| boolean | if the url exists, return `true`
 
 ```javascript
 n.queue(myPlan, "http://www.example.com");
@@ -114,17 +117,16 @@ n.isExist("http://www.example.com");    // True
 ```
 
 ## filter(urls)
-过滤掉一个数组中的重复链接，以及所有已被添加的链接，返回一个新数组
 
-| 参数 | 类型 |
+filter() method creates a new array with all unique url elements that don't exist in the queue from provided array.
+
+| parameter | type |
 | --- | --- |
 | urls | array (of string) |
 
 | return |
 | --- |
 | array |
-
-return  type: array
 
 ```javascript
 n.queue(planA, "http://a.com");
@@ -136,28 +138,24 @@ var j = n.filter(["http://a.com", "http://aa.com", "http://aa.com"]);
 console.log(j); // ["http://aa.com"]
 ```
 
-## plan(item)
+## plan(planItem)
 
-在开始爬取前，你应该告诉爬虫你的爬取计划。例如，如何操作并提取返回正文的信息、你的爬取策略、请求时的header等。使用 `plan` 方法声明一个爬取计划，你可以详细描述你的爬取策略、请求设置、以及对返回的预处理。
+*Before crawl a web page, it is required to create a crawl plan*
 
-| 参数 | 说明 | 类型 |
+create a new plan, and return the corresponding key(can be used in method `queue`).
+
+| parameter | description | type |
 | --- | --- | --- |
-| item | 爬取策略函数或爬取策略 | function or object |
-
-对当前爬虫声明一个爬取计划，并返回该计划的唯一标识符key(symbol, 用于方法 queue)。
+| planItem | default plan's callback or default plan's option or the return of plan generator | function or object |
 
 ```javascript
-const myPlan = n.plan(function (err, current) {
-    // your crawling rules
-})
-
 const otherPlan = n.plan({
     request: {
         method: "POST",
         header: {
-            // some configs
+            // some code
         }
-        // or more
+        // and more ...
     },
     pre: [],
     callback: function (err, current) {
@@ -168,42 +166,34 @@ const otherPlan = n.plan({
 n.queue(otherPlan, "https://www.example.com");
 ```
 
-### planObject
+NodeSpider comes with two plan generator: `defaultPlan` and `streamPlan`. The `defaultPlan` is the default plan generator, so you can pass the parameter of function `defaultPlan` to the method `plan`.
 
-nodespider自带两种plan： `defaultPlan`和`streamPlan`，具体文档可见[plan.md](./doc/plan.md).当你使用`plan`方法并传递对象作为参数时，将默认使用`defaultPlan`。
+**See [plan document](./doc/plan.md)**
 
-传入`plan`的对象参数，对象成员有以下内容：
+```javascript
+const myPlan = n.plan(function (err, current) {
+    // some coding
+})
 
-- **request (可选)** 即该爬取计划的网络请求设置，将决定执行该计划时爬虫如何发出网络请求。通过设置你可以伪造ip、模拟登录、设置cookies、伪造浏览器标示等。具体设置可见 [request文档](https://www.npmjs.com/package/request#requestoptions-callback)
+const myStreamPlan = n.plan(streamPlan({
+    callback: (stream, current) {
+        stream.on("error", (e) => {
+            console.log(e);
+        });
+        stream.pipe(otherStream);
+    }
+}));
+```
 
-- **pre (可选)** 该爬取计划的预处理列表。当成功请求到网页信息后，将对网页信息进行预处理。nodespider自带两个实用预处理函数：`preToUtf8` 将网页内容自动转码为utf8格式，`preLoadJq` 对该网页内容加载JQ选择器(power by cheerio)
+## queue(planKey, url, info)
 
-- **callback (必须)** 当报错或成功加载正文并预处理后，将调用callback。并传入两个参数`err`和`current`。
-你可以使用callback对爬到的网页进行的操作，比如提取信息、添加新的链接到排队列表……
+add new task(s) with url and appointed plan to the queue.
 
-### current
-`callback`函数在执行时将传入两个参数：`error`和`current`。其中`current`对象包含了很多当前任务的信息：
-
-- **url** 当前任务的链接
-- **planKey** 当前任务指定计划的key
-- **response**    请求回应
-- **body**    返回正文
-- **info**  当前任务附带的信息
-- **hasRetried**    (可能不存在)当前任务已经重试的次数
-- and more ...  以及可能的更多成员属性
- 
- **NOTE**   值得注意的是，当前任务的指定计划，或者是特定设置中的预处理函数，往往会修改`current`中的成员属性，甚至添加更多的成员属性。
-
-## queue(planKey, url, special)
-
-添加链接到队列，并指定对应的爬取计划。
-所有添加到队列的链接，将排队等待抓取工作。
-
-| 设置 | 说明 | 类型 |
+| parameter | description | type |
 | --- | ---- | --- |
-| planKey | 该任务指定计划的key（由`plan`方法生成） | symbol |
-|  url | 需要排队的链接 | string or array |
-| special | (可选) 该任务特有的计划设置（将在爬取过程中覆盖指定计划的执行） | Object |
+| planKey | the key of task's appointed plan (returned by method `pipe` | symbol |
+|  url | the task's url | string or array |
+| info | (Optional)the task's special information object, that will be passed to plan's callback as `current` parameter's member | Object |
 
 ```javascript
 const n = new Spider();
@@ -221,13 +211,13 @@ n.queue(myPlan, [
 
 ## retry(currentTask, maxRetry, finalErrorCallback);
 
-重试某项任务
+Retry a task. The task will be added to the queue again and wait.
 
-| 参数 | 说明 | 类型 |
+| parameter | description | type |
 | --- | --- | --- |
-| currentTask | 需要重试的当前任务 | object |
-| maxRetry | （可选）该任务的最大重试数目（最多重复多少次）。默认: 1 | number |
-| finalErrorCallback | （可选）达到最大重试数目时调用的函数 | function |
+| currentTask | the task needs retry | object |
+| maxRetry | (Optional)Maximum number of retries(how many times can this task be retried?). Default: `1` | number |
+| finalErrorCallback | (Optional)the function when reach maximum number of retries to call | function |
 
 ```javascript
 const myPlan = n.plan(function (err, current) {
@@ -237,31 +227,29 @@ const myPlan = n.plan(function (err, current) {
 });
 const otherPlan = n.plan(function (err, current) {
     if (err) {
-        // 如果出现错误，重试当前任务，但最多不超过10次
+        // if there are an error, retry the task
         return n.retry(current, 10);
     }
 });
 const anotherPlan = n.plan(function (err, current) {
     if (err) {
-        // 如果出现错误，重试当前任务，但最多不超过5次
         return n.retry(current, 5, () => {
-            // 当重复次数达到五次时，调用回调函数
-            console.log(current.url);
+            // when the number of retries reach the maximun, print the task's url
+            console.log(current.url);   
         })
     }
 });
 ```
 
-
 ## pipe(pipeGenerator)
 
-*使用方法 pipe 和 save，可以方便地保存抓取的数据。*
+*the method `pipe` and `save` can help you save data extracted from web page more easily.*
 
-在当前实例注册一个pipe，并返回对应的key（用于 save 方法）。
+create a new pipe, and return the corresponding key.
 
-| 参数 | 说明 | 类型 |
+| parameter | description | type |
 | --- | --- | --- |
-| pipeGenerator | pipe生成器新建的对象 | object |
+| pipeObject | the returns of pipe generator | object |
 
 ```javascript
 const { Spider, jsonPipe, txtPipe } = require("nodespider");
@@ -274,24 +262,25 @@ n.save(txtPipe, {
 });
 ```
 
-nodespider 自带了三个pipe建立函数，帮助开发者更方便的整理并保存从网页中提取得到的数据。
+The NodeSpider package comes with three pipe generators:
 
-- `jsonPipe`    以json文件形式保存数据，方便程序调用
-- `csvPipe` 以csv文件的形式保存数据，方便数据分析
-- `txtPipe` 以tst文件形式保存，并用制表符和换行符格式化数据
+- `jsonPipe`    save data as json file.
+- `csvPipe` save data as csv file.
+- `txtPipe` save data as txt file.
 
-**具体信息见 [pipe文档](./doc/pipe.md)**
+**See [pipe document](./doc/pipe.md)**
 
 ## save(pipeKey, data)
 
-保存数据到指定pipe
+save data to appointed pipe.
 
-| 参数 | 说明 | 类型 |
+| parameter | description | type |
 | --- | --- | --- |
-| pipeKey | 指定pipe的key，由 `pipe` 方法生成 | symbol |
-| data | 需要保存的数据 | object |
+| pipeKey | the key of appointed pipe(the return of method `pipe`) | symbol |
+| data | data | object |
 
 ```javascript
+// create the pipe
 const myJson = n.pipe(jsonPipe("save_path/my.json"));
 const planA = n.plan(function (err, current) {
     if (err) {
@@ -299,7 +288,7 @@ const planA = n.plan(function (err, current) {
     }
     const $ = current.$;
 
-    // 保存抓取的数据到本地 my.json 文件
+    // save data to file "my.json" 
     n.save(myJson, {
         name: $("#name").text(),
         age: $("#age").text(),
@@ -308,44 +297,7 @@ const planA = n.plan(function (err, current) {
 })
 ```
 
-# 预处理函数
-nodespider 自带了两个预处理函数：`preToUtf8`, `preLoadJq`，可以帮助开发者的快速解决很多常见问题。
-
-## preToUtf8()
-根据网页信息，自动将爬取正文转码为utf8格式。即将`current.body`修改为utf8格式。
-
-```javascript
-const { Spider, preToUtf8 } = require("nodespider");
-const newPlan = n.plan({
-    pre: [
-        preToUtf8()
-    ],
-    rule: (err, current) => {
-        console.log(current.body);
-    }
-})
-```
-
-## preLoadJq()
-解析`current.body`并加载服务器端jQ选择器（power by bycheerio），并添加`current.$`成员。利用选择器，你可以非常方便的从返回正文中提取信息
-
-```javascript
-const justPlan = n.plan({
-    pre: [
-        preToUtf8(),
-        preLoadJq(),
-    ],
-    rule: (err, current) => {
-        const $ = current.$;
-        console.log($("title").text());
-    }
-});
-```
-
-# 如何贡献？
-nodespider是一个开源爬虫package，主旨是让爬虫开发更简单、更灵活、模块化、更具扩展性。为了变得更好，nodespider需要更多人的贡献，包括但不限于：
-- 在[github](https://github.com/Ben-Hwang/NodeSpider)上通过`Issues`提交bug或建议。
-- 在[github](https://github.com/Ben-Hwang/NodeSpider)上star
-- fork 以及 pull request
-- 向他人推荐这个package
-- 开源并分享你开发的nodespider预处理函数、queue、pipe以及plan发生器（文档即将补全）
+# How to contribute
+- Submit an **issue** if you need any help.
+- Of course, feel free to submit **pull requests** with bug fixes or changes.
+- Open source your own plan generator, pipe generator, pretreatment function or queue, etc. More better with a name `nodespider-*` to easily search, such like `nodespider-mysqlpipe`.
