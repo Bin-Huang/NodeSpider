@@ -6,7 +6,7 @@ describe("test for parameter check when initalize a spider", () => {
         expect(() => {
             spider = new Spider();
         }).not.toThrow();
-        expect(typeof spider.plan === "function").toBe(true);
+        expect(typeof spider.add === "function").toBe(true);
         spider.end();
     });
 
@@ -19,7 +19,7 @@ describe("test for parameter check when initalize a spider", () => {
                 rateLimit: 100,
             });
         }).not.toThrow();
-        expect(typeof spider.plan === "function").toBe(true);
+        expect(typeof spider.add === "function").toBe(true);
         spider.end();
 
         let newSpider;
@@ -32,7 +32,7 @@ describe("test for parameter check when initalize a spider", () => {
                 queue: Queue,
             });
         }).not.toThrow();
-        expect(typeof newSpider.plan === "function").toBe(true);
+        expect(typeof newSpider.filter === "function").toBe(true);
         newSpider.end();
 
         expect(() => {
@@ -45,7 +45,7 @@ describe("test for parameter check when initalize a spider", () => {
                 rateLimit: 100,
             });
         }).not.toThrow();
-        expect(typeof spider.plan === "function").toBe(true);
+        expect(typeof spider.filter === "function").toBe(true);
         spider.end();
 
         expect(() => {
@@ -53,7 +53,7 @@ describe("test for parameter check when initalize a spider", () => {
                 queue: Queue,
             });
         }).not.toThrow();
-        expect(typeof spider.plan === "function").toBe(true);
+        expect(typeof spider.filter === "function").toBe(true);
         spider.end();
     });
 

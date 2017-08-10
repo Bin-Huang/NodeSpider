@@ -1,11 +1,11 @@
-const { Spider } = require("../build/index");
+const { Spider, defaultPlan } = require("../build/index");
 
 describe("test for method isExist", () => {
     test("parameter check", () => {
         const s = new Spider();
-        const myPlan = s.plan(() => {
+        const myPlan = s.add(defaultPlan(() => {
             return 1;
-        });
+        }));
         expect(() => {
             s.isExist();
         }).toThrow(TypeError);
@@ -35,9 +35,9 @@ describe("test for method isExist", () => {
     });
     test("functional verification", () => {
         const s = new Spider();
-        const myPlan = s.plan(() => {
+        const myPlan = s.add(defaultPlan(() => {
             return 1;
-        });
+        }));
         expect(s.isExist("u1")).toBe(false);
         s.queue(myPlan, "u1");
         expect(s.isExist("u1")).toBe(true);
@@ -51,9 +51,9 @@ describe("test for method isExist", () => {
 describe("test for method filter", () => {
     test("parameter check", () => {
         const s = new Spider();
-        const myPlan = s.plan(() => {
+        const myPlan = s.add(defaultPlan(() => {
             return 1;
-        });
+        }));
 
         expect(() => {
             s.filter();
@@ -94,9 +94,9 @@ describe("test for method filter", () => {
 
     test("functional verification", () => {
         const s = new Spider();
-        const myPlan = s.plan(() => {
+        const myPlan = s.add(defaultPlan(() => {
             return 1;
-        });
+        }));
         expect(s.filter(["u1", "u2", "u3"])).toEqual(["u1", "u2", "u3"]);
         expect(s.filter(["u1", "u2", "u3", "u3", "u3"])).toEqual(["u1", "u2", "u3"]);
 

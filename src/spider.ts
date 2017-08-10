@@ -1,9 +1,7 @@
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
-// TODO: 使用 node 自带 stringdecode 代替 iconv-lite
 // mysql 插件
 // redis queue
 // TODO B 注册pipe和queue可能存在异步操作，此时应该封装到promise或async函数。但依然存在问题：当还没注册好，就调动了queue或者save
-// TODO C 更良好的报错提示
 
 import * as charset from "charset";
 import * as cheerio from "cheerio";
@@ -15,6 +13,7 @@ import * as stream from "stream";
 import * as url from "url";
 import * as uuid from "uuid/v1";
 import defaultPlan from "./defaultPlan";
+import { IDefaultPlanOptionCallback, IDefaultPlanOptionInput } from "./defaultPlan";
 import Queue from "./queue";
 import {
     IDefaultOption,
@@ -35,11 +34,6 @@ import {
     IState,
     ITask,
 } from "./types";
-import {
-    ICurrent,
-    IDefaultPlanOptionCallback,
-    IDefaultPlanOptionInput,
-} from "./defaultPlan";
 
 const defaultOption: IDefaultOption = {
     maxConnections: 20,
@@ -178,30 +172,52 @@ export default class NodeSpider extends EventEmitter {
         this._STATE.queue.jumpTask(task, plan.type);    // 插队到队列，重新等待执行
     }
 
-    public plan(item: IPlan|IDefaultPlanOptionInput|IDefaultPlanOptionCallback): symbol {
-        let newPlan: IPlan;
-        if (typeof (item as IPlan).process === "function") {
-            newPlan = (item as IPlan);
-        } else {
-            newPlan = defaultPlan(item as IDefaultPlanOptionInput|IDefaultPlanOptionCallback);
-        }
-
-        if (typeof this._STATE.option.maxConnections === "object") {
-            if (typeof this._STATE.option.maxConnections[newPlan.type] === "undefined") {
-                throw new Error(`
-                    The plan's type ${newPlan.type} don't exist in the option maxConnections.
-                `);
+    /**
+     * add new plan or pipe, and return a corresponding key.
+     * @param item planObject or PipeObject
+     */
+    public add(item: IPlan|IPipe): symbol {
+        // 如果参数item是plan
+        if ((item as IPlan).process) {
+            const newPlan: IPlan = item as IPlan;
+            // 当设置 maxConnections 是一个对象（即对不同type进行同时连接限制），如果添加的plan的type不存在设置，报错
+            if (typeof this._STATE.option.maxConnections === "object") {
+                if (typeof this._STATE.option.maxConnections[newPlan.type] === "undefined") {
+                    throw new Error(`
+                        The plan's type ${newPlan.type} don't exist in the option maxConnections.
+                    `);
+                }
             }
+            // 如果plan类型是第一次添加，在state中初始化一个该类型的当前连接数信息
+            if (typeof this._STATE.currentConnections[newPlan.type] === "undefined") {
+                this._STATE.currentConnections[newPlan.type] = 0;
+            }
+            // 添加plan到planStore，并返回对应key
+            const key = Symbol(`plan-${newPlan.type}-${uuid()}`);
+            this._STATE.planStore.set(key, newPlan);
+            return key;
         }
 
-        if (typeof this._STATE.currentConnections[newPlan.type] === "undefined") {
-            this._STATE.currentConnections[newPlan.type] = 0;
+        // 如果参数iten是一个pipe
+        if ((item as IPipe).add && (item as IPipe).close) {
+            const newPipe: IPipe = item as IPipe;
+            const key = Symbol("pipe-" + uuid());
+            this._STATE.pipeStore.set(key, newPipe);
+            return key;
         }
 
-        const key = Symbol(`${newPlan.type}-${uuid()}`);
-        this._STATE.planStore.set(key, newPlan);
+        // 如果参数不是pipe或者plan，报错
+        throw new TypeError(`Spider.prototype.add:
+            The parameter's type is unknown.It should be a planObject or pipeObject.
+        `);
+    }
 
-        return key;
+    /**
+     * add new default plan, and return a corresponding key.
+     * @param option default plan's option
+     */
+    public plan(option: IDefaultPlanOptionInput|IDefaultPlanOptionCallback) {
+        return this.add(defaultPlan(option));
     }
 
     /**
@@ -244,20 +260,6 @@ export default class NodeSpider extends EventEmitter {
 
         this._STATE.working = true;
         return this._STATE.queue.getTotalUrlsNum();
-    }
-
-    // 关于pipeGenerator
-    // 提供 add、close、init
-    // 当第一次被save调用时，先触发init后再add（这样就不会生成空文件）
-    // 爬虫生命周期末尾，自动调用close清理工作
-    public pipe(pipeObject: IPipe): symbol {
-        if (typeof pipeObject !== "object" || ! pipeObject.add || !pipeObject.close) {
-            throw new TypeError("the parameter of method pipe should be a object implemented IPipe");
-        }
-
-        const key = Symbol("pipe-" + uuid());
-        this._STATE.pipeStore.set(key, pipeObject);
-        return key;
     }
 
     // item可以是字符串路径，也可以是对象。若字符串则保存为 txt 或json

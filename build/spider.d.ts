@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { EventEmitter } from "events";
-import { IPipe, IPlan, IState, ITask } from "./types";
 import { IDefaultPlanOptionCallback, IDefaultPlanOptionInput } from "./defaultPlan";
+import { IPipe, IPlan, IState, ITask } from "./types";
 /**
  * class of NodeSpider
  * @class NodeSpider
@@ -33,7 +33,16 @@ export default class NodeSpider extends EventEmitter {
      * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
      */
     retry(current: ITask, maxRetry?: number, finalErrorCallback?: () => void): void;
-    plan(item: IPlan | IDefaultPlanOptionInput | IDefaultPlanOptionCallback): symbol;
+    /**
+     * add new plan or pipe, and return a corresponding key.
+     * @param item planObject or PipeObject
+     */
+    add(item: IPlan | IPipe): symbol;
+    /**
+     * add new default plan, and return a corresponding key.
+     * @param option default plan's option
+     */
+    plan(option: IDefaultPlanOptionInput | IDefaultPlanOptionCallback): symbol;
     /**
      * 添加待爬取链接到队列，并指定爬取计划。
      * @param planKey 指定的爬取计划
@@ -41,6 +50,5 @@ export default class NodeSpider extends EventEmitter {
      * @param special （可选）针对当前链接的特别设置，将覆盖与plan重复的设置
      */
     queue(planKey: symbol, url: string | string[], info?: any): number;
-    pipe(pipeObject: IPipe): symbol;
     save(pipeKey: symbol, data: any): TypeError | undefined;
 }

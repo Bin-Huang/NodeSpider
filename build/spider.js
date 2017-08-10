@@ -1,10 +1,8 @@
 "use strict";
 // BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
-// TODO: 使用 node 自带 stringdecode 代替 iconv-lite
 // mysql 插件
 // redis queue
 // TODO B 注册pipe和queue可能存在异步操作，此时应该封装到promise或async函数。但依然存在问题：当还没注册好，就调动了queue或者save
-// TODO C 更良好的报错提示
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
 const uuid = require("uuid/v1");
@@ -134,27 +132,49 @@ class NodeSpider extends events_1.EventEmitter {
         const plan = this._STATE.planStore.get(task.planKey);
         this._STATE.queue.jumpTask(task, plan.type); // 插队到队列，重新等待执行
     }
-    plan(item) {
-        let newPlan;
-        if (typeof item.process === "function") {
-            newPlan = item;
-        }
-        else {
-            newPlan = defaultPlan_1.default(item);
-        }
-        if (typeof this._STATE.option.maxConnections === "object") {
-            if (typeof this._STATE.option.maxConnections[newPlan.type] === "undefined") {
-                throw new Error(`
-                    The plan's type ${newPlan.type} don't exist in the option maxConnections.
-                `);
+    /**
+     * add new plan or pipe, and return a corresponding key.
+     * @param item planObject or PipeObject
+     */
+    add(item) {
+        // 如果参数item是plan
+        if (item.process) {
+            const newPlan = item;
+            // 当设置 maxConnections 是一个对象（即对不同type进行同时连接限制），如果添加的plan的type不存在设置，报错
+            if (typeof this._STATE.option.maxConnections === "object") {
+                if (typeof this._STATE.option.maxConnections[newPlan.type] === "undefined") {
+                    throw new Error(`
+                        The plan's type ${newPlan.type} don't exist in the option maxConnections.
+                    `);
+                }
             }
+            // 如果plan类型是第一次添加，在state中初始化一个该类型的当前连接数信息
+            if (typeof this._STATE.currentConnections[newPlan.type] === "undefined") {
+                this._STATE.currentConnections[newPlan.type] = 0;
+            }
+            // 添加plan到planStore，并返回对应key
+            const key = Symbol(`plan-${newPlan.type}-${uuid()}`);
+            this._STATE.planStore.set(key, newPlan);
+            return key;
         }
-        if (typeof this._STATE.currentConnections[newPlan.type] === "undefined") {
-            this._STATE.currentConnections[newPlan.type] = 0;
+        // 如果参数iten是一个pipe
+        if (item.add && item.close) {
+            const newPipe = item;
+            const key = Symbol("pipe-" + uuid());
+            this._STATE.pipeStore.set(key, newPipe);
+            return key;
         }
-        const key = Symbol(`${newPlan.type}-${uuid()}`);
-        this._STATE.planStore.set(key, newPlan);
-        return key;
+        // 如果参数不是pipe或者plan，报错
+        throw new TypeError(`Spider.prototype.add:
+            The parameter's type is unknown.It should be a planObject or pipeObject.
+        `);
+    }
+    /**
+     * add new default plan, and return a corresponding key.
+     * @param option default plan's option
+     */
+    plan(option) {
+        return this.add(defaultPlan_1.default(option));
     }
     /**
      * 添加待爬取链接到队列，并指定爬取计划。
@@ -195,18 +215,6 @@ class NodeSpider extends events_1.EventEmitter {
         }
         this._STATE.working = true;
         return this._STATE.queue.getTotalUrlsNum();
-    }
-    // 关于pipeGenerator
-    // 提供 add、close、init
-    // 当第一次被save调用时，先触发init后再add（这样就不会生成空文件）
-    // 爬虫生命周期末尾，自动调用close清理工作
-    pipe(pipeObject) {
-        if (typeof pipeObject !== "object" || !pipeObject.add || !pipeObject.close) {
-            throw new TypeError("the parameter of method pipe should be a object implemented IPipe");
-        }
-        const key = Symbol("pipe-" + uuid());
-        this._STATE.pipeStore.set(key, pipeObject);
-        return key;
     }
     // item可以是字符串路径，也可以是对象。若字符串则保存为 txt 或json
     // 如果是对象，则获得对象的 header 属性并对要保存路径进行检测。通过则调用对象 add 方法。
