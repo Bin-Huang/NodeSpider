@@ -1,6 +1,6 @@
 {
   "name": "nodespider",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "Simple, flexible, delightful web crawler/spider package",
   "main": "./build/index.js",
   "typings": "./build/index.d.ts",
@@ -32,5 +32,10 @@
   "bugs": {
     "url": "https://github.com/Bin-Huang/NodeSpider/issues"
   },
+  "keywords": [
+    "crawler",
+    "spider",
+    "nodespider"
+  ],
   "homepage": "https://github.com/Bin-Huang/NodeSpider#readme"
 }

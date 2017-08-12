@@ -20,7 +20,7 @@ const n = new Spider({
 });
 
 // create a pipe to save data
-const jsonFile = n.pipe(jsonPipe("path/to/my.json"));
+const jsonFile = n.add(jsonPipe("path/to/my.json"));
 
 // create a plan
 const planA = n.plan(function (err, current) {
@@ -99,90 +99,58 @@ const n = new Spider({
 
 # Method
 
-## isExist(url)
+## add(item)
 
-Check if you have ever added the url
-
-| parameter | description | type |
-| --- | --- | --- |
-| url | the url you need to check | string |
-
-| return | description |
-| --- | --- |
-| boolean | if the url exists, return `true`
-
-```javascript
-n.queue(myPlan, "http://www.example.com");
-n.isExist("http://www.example.com");    // True
-```
-
-## filter(urls)
-
-filter() method creates a new array with all unique url elements that don't exist in the queue from provided array.
-
-| parameter | type |
-| --- | --- |
-| urls | array (of string) |
-
-| return |
-| --- |
-| array |
-
-```javascript
-n.queue(planA, "http://a.com");
-
-var i = n.filter(["http://a.com", "http://b.com", "http://c.com"]);
-console.log(i); // ["http://b.com", "http://c.com"]
-
-var j = n.filter(["http://a.com", "http://aa.com", "http://aa.com"]);
-console.log(j); // ["http://aa.com"]
-```
-
-## plan(planItem)
-
-*Before crawl a web page, it is required to create a crawl plan*
-
-create a new plan, and return the corresponding key(can be used in method `queue`).
+add new plan or pipe to this spider instance, then you can use them by method `queue` or `save`.
 
 | parameter | description | type |
 | --- | --- | --- |
-| planItem | default plan's callback or default plan's option or the return of plan generator | function or object |
+| item | planObject or pipeObject | object |
 
 ```javascript
-const otherPlan = n.plan({
-    request: {
-        method: "POST",
-        header: {
-            // some code
-        }
-        // and more ...
-    },
-    pre: [],
-    callback: function (err, current) {
-        // your crawl rule
-    },
-})
+// add a stream plan
+const myStreamPlan = n.add(streamPlan( /*some opts*/ }));
+n.queue(myStreamPlan, "http://www.youtube.com");
 
-n.queue(otherPlan, "https://www.example.com");
+// add a csv-pipe
+const csvFilePipe = n.add(csvPipe("path/to/my.csv", ["name", "age"]));
+n.save(csvFilePipe, {   // save data to file my.csv
+    name: "ben",
+    age: 20
+});
 ```
 
-NodeSpider comes with two plan generator: `defaultPlan` and `streamPlan`. The `defaultPlan` is the default plan generator, so you can pass the parameter of function `defaultPlan` to the method `plan`.
+### plan generator
+
+*Before crawl a web page, it is required to create a crawl plan.*
+
+NodeSpider comes with two plan generator:
+- `defaultPlan` The usual plan that expose response and body to developer. 
+- `streamPlan`  The plan will expose the request stream to developer (power by request). If you need to operate on request stream, this is what you want.
 
 **See [plan document](./doc/plan.md)**
 
-```javascript
-const myPlan = n.plan(function (err, current) {
-    // some coding
-})
+### pipe generator
 
-const myStreamPlan = n.plan(streamPlan({
-    callback: (stream, current) {
-        stream.on("error", (e) => {
-            console.log(e);
-        });
-        stream.pipe(otherStream);
-    }
-}));
+*To create a pipe can help you save data extracted from web page more easily.*
+
+NodeSpider comes with three pipe generators:
+- `jsonPipe`    create a pipe that save data as json file.
+- `csvPipe` create a pipe that save data as csv file.
+- `txtPipe` create a pipe that save data as txt file.
+
+**See [pipe document](./doc/pipe.md)**
+
+## plan(option)
+
+Using method `plan` to create a default plan directly.
+
+```javascript
+const s = new Spider();
+
+let plan1 = s.plan(option);
+// equal to 
+let plan2 = s.add(defaultPlan(option));
 ```
 
 ## queue(planKey, url, info)
@@ -241,35 +209,6 @@ const anotherPlan = n.plan(function (err, current) {
 });
 ```
 
-## pipe(pipeGenerator)
-
-*the method `pipe` and `save` can help you save data extracted from web page more easily.*
-
-create a new pipe, and return the corresponding key.
-
-| parameter | description | type |
-| --- | --- | --- |
-| pipeObject | the returns of pipe generator | object |
-
-```javascript
-const { Spider, jsonPipe, txtPipe } = require("nodespider");
-const n = new Spider();
-const txtPipe = n.pipe(jsonPipe("save/my.json"));
-
-n.save(txtPipe, {
-    name: "ben",
-    age: 20,
-});
-```
-
-The NodeSpider package comes with three pipe generators:
-
-- `jsonPipe`    save data as json file.
-- `csvPipe` save data as csv file.
-- `txtPipe` save data as txt file.
-
-**See [pipe document](./doc/pipe.md)**
-
 ## save(pipeKey, data)
 
 save data to appointed pipe.
@@ -296,6 +235,52 @@ const planA = n.plan(function (err, current) {
     });
 })
 ```
+
+## isExist(url)
+
+Check if you have ever added the url
+
+| parameter | description | type |
+| --- | --- | --- |
+| url | the url you need to check | string |
+
+| return | description |
+| --- | --- |
+| boolean | if the url exists, return `true`
+
+```javascript
+n.queue(myPlan, "http://www.example.com");
+n.isExist("http://www.example.com");    // True
+```
+
+## filter(urls)
+
+filter() method creates a new array with all unique url elements that don't exist in the queue from provided array.
+
+| parameter | type |
+| --- | --- |
+| urls | array (of string) |
+
+| return |
+| --- |
+| array |
+
+```javascript
+n.queue(planA, "http://a.com");
+
+var i = n.filter(["http://a.com", "http://b.com", "http://c.com"]);
+console.log(i); // ["http://b.com", "http://c.com"]
+
+var j = n.filter(["http://a.com", "http://aa.com", "http://aa.com"]);
+console.log(j); // ["http://aa.com"]
+```
+
+## end()
+
+close the spider instance.
+
+
+
 
 # How to contribute
 - Submit an **issue** if you need any help.
