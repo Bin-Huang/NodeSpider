@@ -403,7 +403,6 @@ function timerCallbackWhenMaxIsObject(self: NodeSpider) {
  */
 function ParameterOptsCheck(opts: any): null {
     // check type of parameter opts
-    // TODO C 需要考虑数组、promise
     if (typeof opts !== "object") {
         throw new TypeError(`Paramter option is no required, and it should be a object.
             But ${opts} as you passed, it is a ${typeof opts}.
