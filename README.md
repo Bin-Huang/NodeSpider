@@ -2,14 +2,13 @@
 
 # Features
 - Simple and flexible
-- automatically convert response body to UTF8 if necessary, never worry about encoding anymore(as an option)
+- automatically convert body to UTF8 if necessary, never worry about encoding anymore(as an option)
 - support server-side jQuery(as an option)
 - save data extracted from web page more easily
-- easy to check and filter the repeat url
-- retry a task more easily and reliably
+- easy to check and filter existed urls in queue.
+- retry task easily and reliably
 - rate limit & simultaneous connections limit
-- independent management of crawling strategies and plans
-- written by ES6 & ES7
+- written in ES6 & ES7
 - support async function and promise
 
 ```javascript
@@ -25,10 +24,10 @@ const jsonFile = n.add(jsonPipe("path/to/my.json"));
 // create a plan
 const planA = n.plan(function (err, current) {
     if (err) {
-        // if throws error, retry the task for a maximum of 3 times
+        // if throws error, retry the task of not more than 3 times.
         return n.retry(current, 3);
     }
-    const $ = current.$;    // use jQ to extract data from web pages
+    const $ = current.$;    // you can use jQ
     console.log($("title").text());
 
     // easily save the data extracted from web page
@@ -36,7 +35,9 @@ const planA = n.plan(function (err, current) {
         user: $("#user").text(),
         description: $("#desc").text(),
         date: "2017-7-7",
-    })
+    });
+
+    n.queue(planA, $("#next_page").href());
 });
 
 n.queue(planA, "https://www.nodejs.org");
@@ -95,7 +96,7 @@ const n = new Spider({
 });
 ```
 
-*NOTE:* If option `maxConnections` is an object, there will throw an error when create a new plan using method `plan` but its type has not specified in the option `maxConnections`.
+*NOTE:* If option `maxConnections` is an object, there will throw an error when add a new plan but its type has not existed in the option `maxConnections`.
 
 # Method
 
