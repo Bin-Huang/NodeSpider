@@ -2,7 +2,7 @@
 
 # Features
 - Simple and flexible
-- automatically convert body to UTF8 if necessary, never worry about encoding anymore(as an option)
+- automatically convert body to UTF8 if necessary(as an option), never worry about encoding anymore
 - support server-side jQuery(as an option)
 - save data extracted from web page more easily
 - easy to check and filter existed urls in queue.

@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@types/cheerio": "^0.22.2",
+    "@types/fs-extra": "^4.0.0",
     "@types/node": "^7.0.8",
     "@types/uuid": "^3.4.0",
     "jest": "^19.0.2"

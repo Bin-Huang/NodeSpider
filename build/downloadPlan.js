@@ -8,43 +8,33 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const filenamifyUrl = require("filenamify-url");
 const fs = require("fs-extra");
 const path = require("path");
 const request = require("request");
-// TODO B 完成pipe发生函数
 function downloadPlan(opts) {
-    // TODO B 参数检验与默认赋值
-    const planOption = opts;
-    return new IPlan("download", planOption, (task, self) => __awaiter(this, void 0, void 0, function* () {
-        const reqStream = request(task.specialOpts.request);
-        const fileStream = fs.createWriteStream(task.specialOpts.path);
-        reqStream.pipe(fileStream);
-    }));
+    return new DownloadPlan(opts);
 }
 exports.default = downloadPlan;
 class DownloadPlan {
-    constructor(type, option) {
+    constructor(option) {
         this.option = option;
-        this.type = type;
+        this.type = option.type || "download";
     }
     process(task) {
         return __awaiter(this, void 0, void 0, function* () {
             return new Promise((resolve, reject) => {
-                // TODO B 当url结尾是询问语句，此时fileName中会有?字符，而这种命名在文件系统是不支持的，需要转义
-                let fileName = path.basename(task.url);
+                // .ext or ext
+                let fileName = filenamifyUrl(task.url) + this.option.ext; // 将url转化为合法的文件名
                 if (typeof task.info === "string") {
                     fileName = task.info;
                 }
                 if (typeof task.info === "object" && typeof task.info.fileName === "string") {
                     fileName = task.info.fileName;
                 }
-                if (typeof this.option.fileExt === "string") {
-                    fileName += `.${this.option.fileExt}`;
-                }
-                const savePath = path.resolve(this.option.saveFolder, fileName); // 保存路径
-                // TODO C 保证路径存在，以及无重名文件？
                 const requestOpts = Object.assign({ url: task.url }, this.option.request);
                 const req = request(requestOpts); // request stream
+                const savePath = path.resolve(this.option.path, fileName); // 保存路径
                 const file = fs.createWriteStream(savePath);
                 req.pipe(file);
                 // 当请求流结束或错误，即应该认为这次任务是执行完全的

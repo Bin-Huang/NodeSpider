@@ -1,8 +1,4 @@
 "use strict";
-// BUG: 使用url.resolve补全url，可能导致 'http://www.xxx.com//www.xxx.com' 的问题。补全前，使用 is-absolute-url 包判断, 或考录使用 relative-url 代替
-// mysql 插件
-// redis queue
-// TODO B 注册pipe和queue可能存在异步操作，此时应该封装到promise或async函数。但依然存在问题：当还没注册好，就调动了queue或者save
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
 const uuid = require("uuid/v1");
@@ -347,7 +343,6 @@ function timerCallbackWhenMaxIsObject(self) {
  */
 function ParameterOptsCheck(opts) {
     // check type of parameter opts
-    // TODO C 需要考虑数组、promise
     if (typeof opts !== "object") {
         throw new TypeError(`Paramter option is no required, and it should be a object.
             But ${opts} as you passed, it is a ${typeof opts}.
