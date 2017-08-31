@@ -61,22 +61,39 @@ export default class NodeSpider extends EventEmitter {
             working: true,
         };
 
-        this.on("end", () => {
-            // some code，如果没有需要，就删除
+        this.on("empty", () => {
+            if (this._STATE.currentTotalConnections === 0) {
+                this.emit("vacant");   // queue为空，当前异步连接为0，说明爬虫已经空闲，触发事件
+            }
         });
 
-        if (typeof this._STATE.option.maxConnections === "number") {
-            this._STATE.timer = setInterval(() => {
-                timerCallbackWhenMaxIsNumber(this);
-            }, this._STATE.option.rateLimit);
-        } else {
-            this._STATE.timer = setInterval(() => {
-                timerCallbackWhenMaxIsObject(this);
-            }, this._STATE.option.rateLimit);
-        }
+        this.on("vacant", () => {
+            if (this._STATE.timer) {
+                clearInterval(this._STATE.timer);
+                this._STATE.timer = null;
+            }
+        });
+
+        this.on("queueTask", (task: ITask) => {
+            if (this._STATE.timer) {
+                return ;
+            }
+            if (typeof this._STATE.option.maxConnections === "number") {
+                this._STATE.timer = setInterval(() => {
+                    timerCallbackWhenMaxIsNumber(this);
+                }, this._STATE.option.rateLimit);
+            } else {
+                this._STATE.timer = setInterval(() => {
+                    timerCallbackWhenMaxIsObject(this);
+                }, this._STATE.option.rateLimit);
+            }
+        });
 
     }
 
+    /**
+     * 终止爬虫
+     */
     public end() {
         // 爬虫不再定时从任务队列获得新任务
         if (this._STATE.timer) {
@@ -87,8 +104,6 @@ export default class NodeSpider extends EventEmitter {
             pipe.close();
         }
         // TODO C 更多，比如修改所有method来提醒开发者已经end
-        // 触发事件，将信号传递出去
-        this.emit("end");
     }
 
     /**
@@ -239,8 +254,9 @@ export default class NodeSpider extends EventEmitter {
         }
 
         // 添加到队列
+        const newTasks: ITask[] = [];
         if (! Array.isArray(url)) {
-            this._STATE.queue.addTask({url, planKey, info}, plan.type);
+            newTasks.push({url, planKey, info});
         } else {
             url.map((u) => {
                 if (typeof u !== "string") {
@@ -249,10 +265,14 @@ export default class NodeSpider extends EventEmitter {
                         the parameter url should be a string or string array!
                     `);
                 }
-                this._STATE.queue.addTask({url: u, planKey, info}, plan.type);
+                newTasks.push({url: u, planKey, info});
             });
         }
 
+        for (const task of newTasks) {
+            this._STATE.queue.addTask(task, plan.type);
+            this.emit("queueTask", task);
+        }
         this._STATE.working = true;
         return this._STATE.queue.getTotalUrlsNum();
     }
@@ -352,11 +372,7 @@ function timerCallbackWhenMaxIsNumber(self: NodeSpider) {
     if (type && task) {
         startTask(type, task, self);
     } else {
-        if (self._STATE.currentTotalConnections === 0) {
-            // 当所有连接已经结束，将开始执行结束
-            // TODO C 更好的事件名
-            self.emit("done");   // 爬虫工作全部结束，进入 end 阶段
-        }
+        self.emit("empty");
     }
 }
 
@@ -385,10 +401,7 @@ function timerCallbackWhenMaxIsObject(self: NodeSpider) {
     if (type && task) {
         startTask(type, task, self);
     } else {
-        if (self._STATE.currentTotalConnections === 0) {
-            // TODO C 更好的事件名
-            self.emit("done");   // 爬虫工作全部结束，进入 end 阶段
-        }
+        self.emit("empty"); // 说明queue已为空，触发事件
     }
 }
 

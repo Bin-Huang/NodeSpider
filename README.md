@@ -281,7 +281,16 @@ console.log(j); // ["http://aa.com"]
 close the spider instance.
 
 
+# Event
 
+## "empty"
+When there aren't more task in the queue, the event "empty" will be emitted.
+
+## "queueTask"
+When add a new task to the queue, the event "queueTask" will be emitted with a parameter `taskObject`.
+
+## "vacant"
+When the queue is empty and all tasks has been done, the event "vacant" will be emitted.
 
 # How to contribute
 - Submit an **issue** if you need any help.
