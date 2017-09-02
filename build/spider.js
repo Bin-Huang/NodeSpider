@@ -295,7 +295,7 @@ function startTask(type, task, self) {
     }).catch((e) => {
         self._STATE.currentConnections[type]--;
         self._STATE.currentTotalConnections--;
-        throw e;
+        console.log(e);
     });
 }
 /**

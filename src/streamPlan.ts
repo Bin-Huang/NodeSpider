@@ -52,6 +52,7 @@ export class StreamPlan implements IPlan {
     public process(task: ITask) {
         return new Promise((resolve, reject) => {
             const requestOpts = Object.assign({url: task.url}, this.option.request);
+
             const req = request(requestOpts);
 
             // 为什么不直接监听request的close事件以resolve？

@@ -333,7 +333,7 @@ function startTask(type: string, task: ITask, self: NodeSpider) {
     }).catch((e: Error) => {
         self._STATE.currentConnections[type] --;
         self._STATE.currentTotalConnections --;
-        throw e;
+        console.log(e);
     });
 }
 

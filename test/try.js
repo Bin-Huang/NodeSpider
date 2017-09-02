@@ -1,27 +1,15 @@
-const { Spider } = require("../build/index");
-const fs = require("fs");
+const { Spider, streamPlan } = require("../build/index");
 
-const n = new Spider ({
-    multiTasking: 100,
+const s = new Spider();
+const de = s.plan((err, current) => {
+    console.log(err.message);
 });
+const st = s.add(streamPlan({
+    callback: (req, current) => {
+        console.log(req);
+        throw new Error("lkdfjdskljf");
+    },
+}));
 
-const w = fs.createWriteStream("m.txt");
-
-let i = 0;
-let bug = 0;
-let u = 10000;
-const myPlan = n.plan((err, current) => {
-    const text = `${new Date().getTime()}\t${i++}\t${n._STATE.currentMultiTask}\t${bug}\t${n._STATE.queue.crawlWaitingNum()}\n`;
-    if (err) {
-        bug ++;
-        return w.write(text);
-    }
-    const $ = current.$;
-    if (n._STATE.queue.crawlWaitingNum() < u) {
-        n.queue(myPlan, $("a").url());
-    }
-    console.log(text);
-    return w.write(text);
-});
-
-n.queue(myPlan, "http://www.baidu.com");
+s.queue(de, "kldfjklsdjf");
+s.queue(de, "121212");

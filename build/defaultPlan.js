@@ -22,15 +22,15 @@ function defaultPlan(planOptionInput) {
     }
     // 类型检测
     if (typeof planOptionInput !== "object") {
-        throw new TypeError(`
+        throw new TypeError(`\
             failed to create new default plan
             the parameter can only be a function or an object
         `);
     }
     if (typeof planOptionInput.callback !== "function") {
-        throw new TypeError(`
-                failed to create new default plan
-                the object of options should include the required member: 'callback' function
+        throw new TypeError(`\
+            failed to create new default plan
+            the object of options should include the required member: 'callback' function
         `);
     }
     // 填充plan设置默认值
@@ -67,9 +67,14 @@ class DefaultPlan {
                 }
             }
             // 执行该计划的爬取策略函数，根据开发者定义的抓取规则进行操作
-            const result = this.option.callback(error, current);
-            if (result instanceof Promise) {
-                yield result;
+            try {
+                const result = this.option.callback(error, current);
+                if (result instanceof Promise) {
+                    yield result;
+                }
+            }
+            catch (e) {
+                throw e;
             }
             // 结尾的清理工作
             current = null;
