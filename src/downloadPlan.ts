@@ -53,7 +53,7 @@ export class DownloadPlan implements IPlan {
             const requestOpts = Object.assign({url: task.url}, this.option.request);
             const req = request(requestOpts);   // request stream
 
-            const savePath = path.resolve(this.option.path, fileName);    // 保存路径
+            const savePath = path.resolve(this.option.path, fileName);    // 安全地拼接保存路径
             const file = fs.createWriteStream(savePath);
             req.pipe(file);
 

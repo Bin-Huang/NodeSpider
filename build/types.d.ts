@@ -1,5 +1,4 @@
 /// <reference types="node" />
-import * as fs from "fs";
 export interface IPlan {
     option: any;
     type: string;
@@ -44,46 +43,4 @@ export interface ITask {
     info?: any;
 }
 export interface IRequestOpts {
-}
-export declare type IDownloadCallback = (err: Error, current: IDownloadCurrent) => void | Promise<void>;
-export interface IDownloadPlanInput {
-    callback: IDownloadCallback;
-    path?: string;
-    use?: any;
-    request?: IRequestOpts;
-    info?: any;
-}
-export interface IDownloadPlan extends IDownloadPlanInput {
-    callback: IDownloadCallback;
-    path: string;
-    use?: any;
-    request: IRequestOpts;
-    info: any;
-}
-export interface IDownloadCurrent extends ITask {
-    plan: IDownloadPlan;
-    error: Error;
-    info: any;
-    [propName: string]: any;
-}
-export declare type IPipeCallback = (err: Error, current: IPipeCurrent) => void | Promise<void>;
-export interface IPipePlanInput {
-    pipe: fs.WriteStream;
-    callback: IPipeCallback;
-    request?: IRequestOpts;
-    info?: any;
-    use?: any;
-}
-export interface IPipePlan {
-    pipe: fs.WriteStream;
-    callback: IPipeCallback;
-    request: IRequestOpts;
-    info: any;
-    use: any;
-}
-export interface IPipeCurrent extends ITask {
-    plan: IPipePlan;
-    error: Error;
-    info: any;
-    [propName: string]: any;
 }

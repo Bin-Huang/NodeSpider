@@ -43,7 +43,7 @@ class DownloadPlan {
                 }
                 const requestOpts = Object.assign({ url: task.url }, this.option.request);
                 const req = request(requestOpts); // request stream
-                const savePath = path.resolve(this.option.path, fileName); // 保存路径
+                const savePath = path.resolve(this.option.path, fileName); // 安全地拼接保存路径
                 const file = fs.createWriteStream(savePath);
                 req.pipe(file);
                 // 当请求流结束或错误，即应该认为这次任务是执行完全的

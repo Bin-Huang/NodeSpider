@@ -12,18 +12,7 @@ import { IDefaultPlanOptionCallback, IDefaultPlanOptionInput } from "./defaultPl
 import Queue from "./queue";
 import {
     IDefaultOption,
-    IDownloadCallback,
-    IDownloadCurrent,
-    IDownloadPlan,
-
-    IDownloadPlanInput,
     IPipe,
-    IPipeCallback,
-    IPipeCurrent,
-
-    IPipePlan,
-    IPipePlanInput,
-
     IPlan,
     IQueue,
     IState,

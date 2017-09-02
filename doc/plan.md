@@ -6,8 +6,9 @@
 
 nodespider 自带三种常用的爬取方案，可以帮助你解决绝大部分问题：
 - **defaultPlan**   默认、常见的方案。发送请求并获得响应（response），然后对返回正文进行操作，比如提取内容或数据、收集需要的链接……
-- **downloadPlan**  专门下载文件的方案(即将完成......)
+- **downloadPlan**  专门下载文件的方案
 - **streamPlan**    如果你想直接操作返回的流，这正是你需要的。与`defaultPlan`不同，`streamPlan`不等待返回加载完全，而是直接将流直接暴露给开发者。
+
 
 ## defaultPlan
 
@@ -35,6 +36,7 @@ const mydefaultPlan3 = n.plan(defaultPlan({
     }
 }))
 ```
+
 **NOTE**:   当你直接传递callback函数作为plan参数时，将默认加载两个预处理函数：`preToUtf8`和`preLoadJq`。
 
 ### 设置
@@ -56,6 +58,7 @@ const myPlan = n.plan({
 - **preLoadJq**   对该网页内容加载JQ选择器(power by cheerio)
 
 当未设置`pre`时，其默认值是`[preToUtf8(), preLoadJq()]`，即下面两种情况是等价的：
+
 ```javascript
 const myPlan = n.plan(defaultPlan({
     callback: () => {}
@@ -65,6 +68,7 @@ const myOtherPlan = n.plan(defaultPlan({
     callback: () => {}
 }));
 ```
+
 也就是说，使用`defaultPlan`，默认情况下将预先自动转码网页内容为utf8格式，并加载jQ选择器。
 
 本质上，pre就是普通的callback函数。所以你可以提取callback中通用部分，将其作为预处理函数，实现代码复用及模块化开发。
@@ -185,3 +189,63 @@ request 返回的流对象。power by request
 - **planKey** 当前任务指定计划的key
 - **info**  当前任务附带的信息
 - **hasRetried**    (可能不存在)当前任务已经重试的次数
+
+
+## downloadPlan(option)
+
+```javascript
+const dlPlan = s.add(downloadPlan({
+    path: "./myDownloadFolder",
+    callback: (err, current) => {
+        if (err) {
+            // todo
+        } else {
+            console.log("downloaded from " + current.url);
+        }
+    }
+}));
+```
+
+### option
+```javascript
+const option = {
+    path: "./download",
+    callback: (err, current) => { /.../ },
+    request: {},
+    type: "download",
+}
+const dlPlan = s.add(downloadPlan(option));
+```
+
+#### path
+(必须). 保存下载文件的路径
+
+#### callback
+(必须). 当下载任务完成或失败时，将调用 callback 函数。
+
+如果任务失败，错误信息将传入参数 err；如果任务成功，参数err则为 null。
+
+参数 current 将携带以下信息：
+
+- **url** 当前任务的链接
+- **planKey** 当前任务指定计划的key
+- **info**  当前任务附带的信息
+- **hasRetried**    (可能不存在)当前任务已经重试的次数
+
+#### request
+ (可选). 即该爬取计划的网络请求设置，将决定执行该计划时爬虫如何发出网络请求。通过设置你可以伪造ip、模拟登录、设置cookies、伪造浏览器标示等。具体设置可见 [request文档](https://www.npmjs.com/package/request#requestoptions-callback)
+
+### 保存文件命名
+希望爬虫自动重命名下载的文件？通过修改`info`可以做到这一点。
+
+执行 downloadPlan 时，将根据任务携带的`info`来决定下载文件的本地命名。
+
+```javascript
+s.queue(dlPlan, "http://img.com/my.jpg"); //=> img.com!my.jpg
+
+s.queue(dlPlan, "http://img.com/my.jpg", "name.jpg"); //=> name.jpg
+s.queue(dlPlan, "http://img.com/my.jpg", "*.png"); //=> img.com!my.jpg.png
+
+s.queue(dlPlan, "http://img.com/my.jpg", {fileName: "name.jpg"}); //=> name.jpg
+s.queue(dlPlan, "http://img.com/my.jpg", {ext: ".png"}); //=> img.com!my.jpg.png
+ ```
