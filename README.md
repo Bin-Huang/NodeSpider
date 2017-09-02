@@ -128,6 +128,7 @@ n.save(csvFilePipe, {   // save data to file my.csv
 NodeSpider comes with two plan generator:
 - `defaultPlan` The usual plan that expose response and body to developer. 
 - `streamPlan`  The plan will expose the request stream to developer (power by request). If you need to operate on request stream, this is what you want.
+- `downloadPlan` Very easy to download files from web.
 
 **See [plan document](./doc/plan.md)**
 
@@ -221,7 +222,7 @@ save data to appointed pipe.
 
 ```javascript
 // create the pipe
-const myJson = n.pipe(jsonPipe("save_path/my.json"));
+const myJson = n.add(jsonPipe("save_path/my.json"));
 const planA = n.plan(function (err, current) {
     if (err) {
         return n.retry(current);
