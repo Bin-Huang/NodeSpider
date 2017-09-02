@@ -24,13 +24,22 @@ class DownloadPlan {
     process(task) {
         return __awaiter(this, void 0, void 0, function* () {
             return new Promise((resolve, reject) => {
-                // .ext or ext
-                let fileName = filenamifyUrl(task.url) + this.option.ext; // 将url转化为合法的文件名
+                let fileName = filenamifyUrl(task.url); // 将url转化为合法的文件名
                 if (typeof task.info === "string") {
-                    fileName = task.info;
+                    if (task.info[0] === "*") {
+                        fileName = task.info.replace("*", filenamifyUrl);
+                    }
+                    else {
+                        fileName = task.info;
+                    }
                 }
-                if (typeof task.info === "object" && typeof task.info.fileName === "string") {
-                    fileName = task.info.fileName;
+                if (typeof task.info === "object") {
+                    if (typeof task.info.fileName === "string") {
+                        fileName = task.info.fileName;
+                    }
+                    if (typeof task.info.ext === "string") {
+                        fileName += task.info.ext;
+                    }
                 }
                 const requestOpts = Object.assign({ url: task.url }, this.option.request);
                 const req = request(requestOpts); // request stream

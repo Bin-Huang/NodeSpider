@@ -9,10 +9,18 @@ export default function downloadPlan(opts: IDownloadPlanOpion) {
     return new DownloadPlan(opts);
 }
 
+/**
+ * s.queue(dlPlan, "http://img.com/my.jpg"); ==> img.com!my.jpg
+ * s.queue(dlPlan, "http://img.com/my.jpg", "name.jpg"); ===> name.jpg
+ * s.queue(dlPlan, "http://img.com/my.jpg", "name.jpg"); ===> name.jpg
+ * s.queue(dlPlan, "http://img.com/my.jpg", "*.png"); ===> img.com!my.jpg.png
+ * s.queue(dlPlan, "http://img.com/my.jpg", {fileName: "name.jpg"}); ===> name.jpg
+ * s.queue(dlPlan, "http://img.com/my.jpg", {ext: ".png"}); ===> img.com!my.jpg.png
+ */
+
 export interface IDownloadPlanOpion {
     request?: any;
     path: string; // 保存文件夹
-    ext: string;    // 保存文件后缀名
     callback: (err: Error|null, current: ITask) => void; // 当下载完成或出错时调用
     type?: string;
 }
@@ -25,13 +33,21 @@ export class DownloadPlan implements IPlan {
     }
     public async process(task: ITask) {
         return new Promise((resolve, reject) => {
-            // .ext or ext
-            let fileName = filenamifyUrl(task.url) + this.option.ext; // 将url转化为合法的文件名
+            let fileName = filenamifyUrl(task.url); // 将url转化为合法的文件名
             if (typeof task.info === "string") {
-                fileName = task.info;
+                if (task.info[0] === "*") {
+                    fileName = task.info.replace("*", filenamifyUrl);
+                } else {
+                    fileName = task.info;
+                }
             }
-            if (typeof task.info === "object" && typeof task.info.fileName === "string") {
-                fileName = task.info.fileName;
+            if (typeof task.info === "object") {
+                if (typeof task.info.fileName === "string") {
+                    fileName = task.info.fileName;
+                }
+                if (typeof task.info.ext === "string") {
+                    fileName += task.info.ext;
+                }
             }
 
             const requestOpts = Object.assign({url: task.url}, this.option.request);
