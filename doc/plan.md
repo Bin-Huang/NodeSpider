@@ -29,7 +29,7 @@ const mydefaultPlan2 = n.plan({
     }
 })
 // same as
-const mydefaultPlan3 = n.plan(defaultPlan({
+const mydefaultPlan3 = n.add(defaultPlan({
     pre: [preToUtf8, preLoadJq],
     callback: (err, current) => {
         // callback code
@@ -60,10 +60,10 @@ const myPlan = n.plan({
 当未设置`pre`时，其默认值是`[preToUtf8(), preLoadJq()]`，即下面两种情况是等价的：
 
 ```javascript
-const myPlan = n.plan(defaultPlan({
+const myPlan = n.add(defaultPlan({
     callback: () => {}
 }));
-const myOtherPlan = n.plan(defaultPlan({
+const myOtherPlan = n.add(defaultPlan({
     pre: [preToUtf8(), preLoadJq()],
     callback: () => {}
 }));
@@ -111,7 +111,7 @@ const planA = n.plan({
 const { Spider, streamPlan } = require("nodespider");
 const s = new Spider();
 
-const myStreamPlan = s.plan(streamPlan({
+const myStreamPlan = s.add(streamPlan({
     request: {
         // ...
     },
