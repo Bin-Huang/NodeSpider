@@ -331,9 +331,11 @@ function startTask(type: string, task: ITask, self: NodeSpider) {
         self._STATE.currentConnections[type] --;
         self._STATE.currentTotalConnections --;
     }).catch((e: Error) => {
+        // 如果计划执行失败，这是非常严重的，因为直接会导致爬虫不能完成开发者制定的任务
         self._STATE.currentConnections[type] --;
         self._STATE.currentTotalConnections --;
-        console.log(e);
+        self.end(); // 停止爬虫并退出，以提醒并便于开发者debug
+        throw e;
     });
 }
 
