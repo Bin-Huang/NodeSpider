@@ -16,7 +16,7 @@ export default class NodeSpider extends EventEmitter {
     /**
      * 终止爬虫
      */
-    end(): void;
+    cease(): void;
     /**
      * Check whether the url has been added
      * @param {string} url
@@ -40,7 +40,7 @@ export default class NodeSpider extends EventEmitter {
      * add new plan or pipe, and return a corresponding key.
      * @param item planObject or PipeObject
      */
-    add(item: IPlan | IPipe): symbol;
+    create(item: IPlan | IPipe): symbol;
     /**
      * add new default plan, and return a corresponding key.
      * @param option default plan's option
@@ -52,6 +52,6 @@ export default class NodeSpider extends EventEmitter {
      * @param url 待爬取的链接（们）
      * @param special （可选）针对当前链接的特别设置，将覆盖与plan重复的设置
      */
-    queue(planKey: symbol, url: string | string[], info?: any): number;
+    add(planKey: symbol, url: string | string[], info?: any): number;
     save(pipeKey: symbol, data: any): TypeError | undefined;
 }

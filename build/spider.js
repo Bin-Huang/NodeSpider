@@ -62,7 +62,7 @@ class NodeSpider extends events_1.EventEmitter {
     /**
      * 终止爬虫
      */
-    end() {
+    cease() {
         // 爬虫不再定时从任务队列获得新任务
         if (this._STATE.timer) {
             clearInterval(this._STATE.timer);
@@ -146,7 +146,7 @@ class NodeSpider extends events_1.EventEmitter {
      * add new plan or pipe, and return a corresponding key.
      * @param item planObject or PipeObject
      */
-    add(item) {
+    create(item) {
         // 如果参数item是plan
         if (item.process) {
             const newPlan = item;
@@ -184,7 +184,7 @@ class NodeSpider extends events_1.EventEmitter {
      * @param option default plan's option
      */
     plan(option) {
-        return this.add(defaultPlan_1.defaultPlan(option));
+        return this.create(defaultPlan_1.defaultPlan(option));
     }
     /**
      * 添加待爬取链接到队列，并指定爬取计划。
@@ -192,7 +192,7 @@ class NodeSpider extends events_1.EventEmitter {
      * @param url 待爬取的链接（们）
      * @param special （可选）针对当前链接的特别设置，将覆盖与plan重复的设置
      */
-    queue(planKey, url, info) {
+    add(planKey, url, info) {
         // 参数检验
         if (typeof planKey !== "symbol") {
             throw new TypeError(`
@@ -296,7 +296,7 @@ function startTask(type, task, self) {
         // 如果计划执行失败，这是非常严重的，因为直接会导致爬虫不能完成开发者制定的任务
         self._STATE.currentConnections[type]--;
         self._STATE.currentTotalConnections--;
-        self.end(); // 停止爬虫并退出，以提醒并便于开发者debug
+        self.cease(); // 停止爬虫并退出，以提醒并便于开发者debug
         console.error(`An error is threw from plan execution.
             Check your callback function, or create an issue in the planGenerator's repository`);
         throw e;
