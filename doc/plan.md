@@ -18,22 +18,14 @@ nodespider 自带三种常用的爬取方案，可以帮助你解决绝大部分
 
 下面新建的三个plan是等价的
 ```javascript
-const mydefaultPlan1 = n.plan((err, current) => {
-    // callback code
-});
-// same as
-const mydefaultPlan2 = n.plan({
-    pre: [preToUtf8, preLoadJq],
-    callback: (err, current) => {
-        // callback code
-    }
-})
-// same as
-const mydefaultPlan3 = n.add(defaultPlan({
-    pre: [preToUtf8, preLoadJq],
-    callback: (err, current) => {
-        // callback code
-    }
+function myCallback (err, current) {
+    console.log(current.url);
+}
+
+const myPlan1 = s.create(defaultPlan(myCallback));
+// deep equal to
+const myPlan2 = s.create(defaultPlan({
+    callback: [preToUtf8, preLoadJq, myCallback],
 }))
 ```
 
@@ -44,7 +36,6 @@ const mydefaultPlan3 = n.add(defaultPlan({
 ```javascript
 const myPlan = n.plan({
     request,
-    pre,
     callback,
 });
 ```
@@ -60,10 +51,10 @@ const myPlan = n.plan({
 当未设置`pre`时，其默认值是`[preToUtf8(), preLoadJq()]`，即下面两种情况是等价的：
 
 ```javascript
-const myPlan = n.add(defaultPlan({
+const myPlan = n.create(defaultPlan({
     callback: () => {}
 }));
-const myOtherPlan = n.add(defaultPlan({
+const myOtherPlan = n.create(defaultPlan({
     pre: [preToUtf8(), preLoadJq()],
     callback: () => {}
 }));
@@ -111,7 +102,7 @@ const planA = n.plan({
 const { Spider, streamPlan } = require("nodespider");
 const s = new Spider();
 
-const myStreamPlan = s.add(streamPlan({
+const myStreamPlan = s.create(streamPlan({
     request: {
         // ...
     },
@@ -194,7 +185,7 @@ request 返回的流对象。power by request
 ## downloadPlan(option)
 
 ```javascript
-const dlPlan = s.add(downloadPlan({
+const dlPlan = s.create(downloadPlan({
     path: "./myDownloadFolder",
     callback: (err, current) => {
         if (err) {
@@ -214,7 +205,7 @@ const option = {
     request: {},
     type: "download",
 }
-const dlPlan = s.add(downloadPlan(option));
+const dlPlan = s.create(downloadPlan(option));
 ```
 
 #### path
@@ -241,11 +232,11 @@ const dlPlan = s.add(downloadPlan(option));
 执行 downloadPlan 时，将根据任务携带的`info`来决定下载文件的本地命名。
 
 ```javascript
-s.queue(dlPlan, "http://img.com/my.jpg"); //=> img.com!my.jpg
+s.add(dlPlan, "http://img.com/my.jpg"); //=> img.com!my.jpg
 
-s.queue(dlPlan, "http://img.com/my.jpg", "name.jpg"); //=> name.jpg
-s.queue(dlPlan, "http://img.com/my.jpg", "*.png"); //=> img.com!my.jpg.png
+s.add(dlPlan, "http://img.com/my.jpg", "name.jpg"); //=> name.jpg
+s.add(dlPlan, "http://img.com/my.jpg", "*.png"); //=> img.com!my.jpg.png
 
-s.queue(dlPlan, "http://img.com/my.jpg", {fileName: "name.jpg"}); //=> name.jpg
-s.queue(dlPlan, "http://img.com/my.jpg", {ext: ".png"}); //=> img.com!my.jpg.png
+s.add(dlPlan, "http://img.com/my.jpg", {fileName: "name.jpg"}); //=> name.jpg
+s.add(dlPlan, "http://img.com/my.jpg", {ext: ".png"}); //=> img.com!my.jpg.png
  ```

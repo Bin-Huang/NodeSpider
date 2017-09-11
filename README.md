@@ -14,15 +14,15 @@
 ```javascript
 const { Spider, jsonPipe } = require("nodespider");
 
-const n = new Spider({
+const s = new Spider({
     rateLimit: 10
 });
 
 // create a pipe to save data
-const jsonFile = n.add(jsonPipe("path/to/my.json"));
+const jsonFile = s.create(jsonPipe("path/to/my.json"));
 
 // create a plan
-const planA = n.plan(function (err, current) {
+const planA = s.plan((err, current) => {
     if (err) {
         // if throws error, retry the task of not more than 3 times.
         return n.retry(current, 3);
@@ -31,16 +31,16 @@ const planA = n.plan(function (err, current) {
     console.log($("title").text());
 
     // easily save the data extracted from web page
-    n.save(jsonFile, {
+    s.save(jsonFile, {
         user: $("#user").text(),
         description: $("#desc").text(),
         date: "2017-7-7",
     });
 
-    n.queue(planA, $("#next_page").href());
+    s.add(planA, $("#next_page").href());
 });
 
-n.queue(planA, "https://www.nodejs.org");
+s.add(planA, "https://www.nodejs.org");
 ```
 
 # Installation & initialization
@@ -100,9 +100,9 @@ const n = new Spider({
 
 # Method
 
-## add(item)
+## create(item)
 
-add new plan or pipe to this spider instance, then you can use them by method `queue` or `save`.
+create new plan or pipe, then you can use them by method `add` or `save`.
 
 | parameter | description | type |
 | --- | --- | --- |
@@ -110,11 +110,11 @@ add new plan or pipe to this spider instance, then you can use them by method `q
 
 ```javascript
 // add a stream plan
-const myStreamPlan = n.add(streamPlan( /*some opts*/ }));
-n.queue(myStreamPlan, "http://www.youtube.com");
+const myStreamPlan = n.create(streamPlan( /*some opts*/ }));
+n.add(myStreamPlan, "http://www.youtube.com");
 
 // add a csv-pipe
-const csvFilePipe = n.add(csvPipe("path/to/my.csv", ["name", "age"]));
+const csvFilePipe = n.create(csvPipe("path/to/my.csv", ["name", "age"]));
 n.save(csvFilePipe, {   // save data to file my.csv
     name: "ben",
     age: 20
@@ -152,12 +152,12 @@ const s = new Spider();
 
 let plan1 = s.plan(option);
 // equal to 
-let plan2 = s.add(defaultPlan(option));
+let plan2 = s.create(defaultPlan(option));
 ```
 
-## queue(planKey, url, info)
+## add(planKey, url, info)
 
-add new task(s) with url and appointed plan to the queue.
+add new task(s) to the queue.
 
 | parameter | description | type |
 | --- | ---- | --- |
@@ -171,8 +171,8 @@ const myPlan = n.plan(function (err, current) {
     // some crawling rules
 });
 
-n.queue(myPlan, "https://en.wikipedia.org");
-n.queue(myPlan, [
+n.add(myPlan, "https://en.wikipedia.org");
+n.add(myPlan, [
     "http://www.github.com",
     "https://stackoverflow.com/",
     "https://nodejs.org"
@@ -222,7 +222,7 @@ save data to appointed pipe.
 
 ```javascript
 // create the pipe
-const myJson = n.add(jsonPipe("save_path/my.json"));
+const myJson = n.create(jsonPipe("save_path/my.json"));
 const planA = n.plan(function (err, current) {
     if (err) {
         return n.retry(current);
@@ -251,7 +251,7 @@ Check if you have ever added the url
 | boolean | if the url exists, return `true`
 
 ```javascript
-n.queue(myPlan, "http://www.example.com");
+n.add(myPlan, "http://www.example.com");
 n.isExist("http://www.example.com");    // True
 ```
 
@@ -268,7 +268,7 @@ filter() method creates a new array with all unique url elements that don't exis
 | array |
 
 ```javascript
-n.queue(planA, "http://a.com");
+n.add(planA, "http://a.com");
 
 var i = n.filter(["http://a.com", "http://b.com", "http://c.com"]);
 console.log(i); // ["http://b.com", "http://c.com"]
@@ -277,10 +277,9 @@ var j = n.filter(["http://a.com", "http://aa.com", "http://aa.com"]);
 console.log(j); // ["http://aa.com"]
 ```
 
-## end()
+## cease()
 
-close the spider instance.
-
+cease to wait or start new task, close the spider.
 
 # Event
 

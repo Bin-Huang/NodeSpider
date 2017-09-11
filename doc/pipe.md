@@ -14,10 +14,13 @@ const {Spider, jsonPipe, txtPipe} = require("nodespider");
 | space | number | （可选）缩进空格数 |
 
 ```javascript
-const myJson = n.pipe(jsonPipe("path/to/my.json"));
-const myPlan(function (err, current) {
+const myJson = s.create(jsonPipe("path/to/my.json"));
+
+s.save(myJson, {data: "some data", date: "2017.9"})
+
+const myPlan = s.plan(function (err, current) {
     const $ = current.$;
-    n.save(myJson, {
+    s.save(myJson, {
         name: $("#name").text(),
         desc: $("#desc").text(),
     })
@@ -32,7 +35,7 @@ const myPlan(function (err, current) {
 | header | array | 表头元素数组 |
 
 ```javascript
-const myCsvFile = n.pipe(txtPipe("path/to/my.csv", ["name", "description"]));
+const myCsvFile = n.create(txtPipe("path/to/my.csv", ["name", "description"]));
 
 n.save(myCsvFile, {
     name: "some data",
@@ -48,7 +51,7 @@ n.save(myCsvFile, {
 | header | array | 表头元素数组 |
 
 ```javascript
-const txt = n.pipe(txtPipe("path/to/my.txt", ["name", "description"]));
+const txt = n.create(txtPipe("path/to/my.txt", ["name", "description"]));
 
 n.save(txt, {
     name: "some data",
