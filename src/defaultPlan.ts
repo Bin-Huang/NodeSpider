@@ -97,6 +97,8 @@ export class DefaultPlan implements IPlan {
                 await result;
             }
         } catch (e) {
+            console.error(`An error is threw from plan execution.
+                Check your callback function, or create an issue in the planGenerator's repository`);
             throw e;
         }
         // 结尾的清理工作
