@@ -2,9 +2,10 @@ import * as fs from "fs";
 import NodeSpider from "./spider";
 
 export interface IPlan {
-    option: any;
     type: string;
+    // process 不能抛出错误，否则将导致爬虫终止。所有错误应该以参数传递到callback，由开发者自行处理
     process: (task: ITask) => Promise<{}|null|void>;
+    option?: any;
 }
 
 // nodespider's queue;

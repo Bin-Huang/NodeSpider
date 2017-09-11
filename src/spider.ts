@@ -335,6 +335,8 @@ function startTask(type: string, task: ITask, self: NodeSpider) {
         self._STATE.currentConnections[type] --;
         self._STATE.currentTotalConnections --;
         self.end(); // 停止爬虫并退出，以提醒并便于开发者debug
+        console.error(`An error is threw from plan execution.
+            Check your callback function, or create an issue in the planGenerator's repository`);
         throw e;
     });
 }

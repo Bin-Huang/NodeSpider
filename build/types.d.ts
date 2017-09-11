@@ -1,8 +1,8 @@
 /// <reference types="node" />
 export interface IPlan {
-    option: any;
     type: string;
     process: (task: ITask) => Promise<{} | null | void>;
+    option?: any;
 }
 export interface IQueue {
     addTask: (newTask: ITask, type: string) => void;
