@@ -1,8 +1,6 @@
-import defaultPlan from "./defaultPlan";
+import {defaultPlan, preLoadJq, preToUtf8} from "./defaultPlan";
 import downloadPlan from "./downloadPlan";
 import { csvPipe, jsonPipe, txtPipe } from "./pipe";
-import preLoadJq from "./preLoadJq";
-import preToUtf8 from "./preToUtf8";
 import Queue from "./queue";
 import Spider from "./spider";
 import streamPlan from "./streamPlan";

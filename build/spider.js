@@ -184,7 +184,7 @@ class NodeSpider extends events_1.EventEmitter {
      * @param option default plan's option
      */
     plan(option) {
-        return this.add(defaultPlan_1.default(option));
+        return this.add(defaultPlan_1.defaultPlan(option));
     }
     /**
      * 添加待爬取链接到队列，并指定爬取计划。

@@ -7,7 +7,7 @@ import * as request from "request";
 import * as stream from "stream";
 import * as url from "url";
 import * as uuid from "uuid/v1";
-import defaultPlan from "./defaultPlan";
+import { defaultPlan } from "./defaultPlan";
 import { IDefaultPlanOptionCallback, IDefaultPlanOptionInput } from "./defaultPlan";
 import Queue from "./queue";
 import {
