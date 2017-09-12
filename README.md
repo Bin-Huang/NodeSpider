@@ -2,8 +2,8 @@
 
 # Features
 - Simple and flexible
-- automatically convert body to UTF8 if necessary(as an option), never worry about encoding anymore
-- support server-side jQuery(as an option)
+- Funny selector you must like it, just like jQ
+- automatically convert response body to UTF8 if necessary(as an option), never worry about encoding anymore
 - save data extracted from web page more easily
 - easy to check and filter existed urls in queue.
 - retry task easily and reliably
@@ -19,10 +19,9 @@ const s = new Spider({
         "articleSpider + otherSpider": 10
     }
 });
-s.add("blogSpider", defaultPlan((err, current) => {
-    if (err) {
-        return current.retry(3);
-    }
+s.add(defaultPlan("blogSpider", function (err, current) {
+    if (err) return current.retry(3);
+
     const $ = current.$;
     const newUrl = $("#next_page").url();
     if (! current.isExist(newUrl)) {
@@ -30,6 +29,15 @@ s.add("blogSpider", defaultPlan((err, current) => {
     }
 }));
 s.queue("blogSpider", "http://www.baidu.com");
+
+s.add(defaultPlan({
+    name: "imgSpider",
+    callback: function (err, current) {
+        if (err) return current.retry(3);
+        const $ = current.$;
+        const newUrl = $("#next_page").url();
+    }
+}));
 ```
 
 

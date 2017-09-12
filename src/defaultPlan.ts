@@ -9,7 +9,7 @@ import { IPlan, IRequestOpts, ITask } from "./types";
 // for 函数defaultPlan的设置参数
 export interface IDefaultPlanOptionInput {
     callback: IDefaultPlanOptionCallback | IDefaultPlanOptionCallback[];
-    type?: string;
+    name?: string;
     request ?: IRequestOpts;
 }
 // for 传递给Plan真正的设置
@@ -28,34 +28,41 @@ export interface IDefaultPlanCurrent extends ITask {
     [propName: string]: any;
 }
 
+export interface IDefaultPlanApi1 {
+    (name: string, callback: IDefaultPlanOptionCallback): DefaultPlan;
+    (option: IDefaultPlanOptionInput): DefaultPlan;
+}
+
 /**
  * 默认值 type: "default", info: {}, option: {request: {encoding: null}, pre: [preToUtf8(), preLoadJq()], callback }
  * @param planOptionInput
  */
-
-export function defaultPlan(name: string, planOptionInput: IDefaultPlanOptionCallback|IDefaultPlanOptionInput): IPlan {
+export let defaultPlan: IDefaultPlanApi1;
+defaultPlan = (name: string|IDefaultPlanOptionInput, callback?: IDefaultPlanOptionCallback) => {
     // 当只传入一个rule函数，则包装成 IPlanInput 对象，并设置预处理函数
-    if (typeof planOptionInput === "function") {
-        planOptionInput = { callback: [preToUtf8, preLoadJq, planOptionInput] };
-    }
-
-    // 类型检测
-    if (typeof planOptionInput !== "object") {
-        throw new TypeError(`\
-            failed to create new default plan
-            the parameter can only be a function or an object
-        `);
-    }
-
-    const request = Object.assign({encoding: null}, planOptionInput.request);
-    const callback = planOptionInput.callback;
     const planOption: IDefaultPlanOption = {
-        request,
-        callback: (Array.isArray(callback)) ? callback : [callback],
+        callback: [],
+        request: {},
     };
+    if (typeof name === "string") {
+        if (!callback || typeof callback === "function") {
+            throw new TypeError("err");
+        }
+        planOption.callback = [preToUtf8, preLoadJq, callback];
+    } else if (typeof name === "object") {
+        if (!name.callback || !name.name) {
+            throw new TypeError("err");
+        }
+        planOption.callback = Array.isArray(name.callback) ? name.callback : [name.callback];
+        planOption.request = name.request || {};
+        name = name.name;
+    } else {
+        throw new TypeError("err");
+    }
 
+    planOption.request = Object.assign({encoding: null}, planOption.request);
     return new DefaultPlan(name, planOption);
-}
+};
 
 export class DefaultPlan implements IPlan {
     public option: IDefaultPlanOption;
