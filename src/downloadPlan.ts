@@ -5,8 +5,8 @@ import * as request from "request";
 import NodeSpider from "./spider";
 import { IPlan, ITask } from "./types";
 
-export default function downloadPlan(opts: IDownloadPlanOpion) {
-    return new DownloadPlan(opts);
+export default function downloadPlan(name: string, opts: IDownloadPlanOpion) {
+    return new DownloadPlan(name, opts);
 }
 
 /**
@@ -22,14 +22,13 @@ export interface IDownloadPlanOpion {
     request?: any;
     path: string; // 保存文件夹
     callback: (err: Error|null, current: ITask) => void; // 当下载完成或出错时调用
-    type?: string;
 }
 export class DownloadPlan implements IPlan {
     public option: IDownloadPlanOpion;
-    public type: string;
-    constructor(option: IDownloadPlanOpion) {
+    public name: string;
+    constructor(name: string, option: IDownloadPlanOpion) {
         this.option = option;
-        this.type = option.type || "download";
+        this.name = name;
     }
     public async process(task: ITask) {
         return new Promise((resolve, reject) => {

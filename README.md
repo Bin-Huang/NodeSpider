@@ -12,6 +12,28 @@
 - support async function and promise
 
 ```javascript
+const s = new Spider({
+    concurrency: {
+        "blogSpider": 20,
+        "imgSpider": 4,
+        "articleSpider + otherSpider": 10
+    }
+});
+s.add("blogSpider", defaultPlan((err, current) => {
+    if (err) {
+        return current.retry(3);
+    }
+    const $ = current.$;
+    const newUrl = $("#next_page").url();
+    if (! current.isExist(newUrl)) {
+        current.queue("articleSpider", newUrl);
+    }
+}));
+s.queue("blogSpider", "http://www.baidu.com");
+```
+
+
+```javascript
 const { Spider, jsonPipe } = require("nodespider");
 
 const n = new Spider({

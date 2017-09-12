@@ -2,8 +2,8 @@ import * as fs from "fs";
 import NodeSpider from "./spider";
 
 export interface IPlan {
-    type: string;
     // process 不能抛出错误，否则将导致爬虫终止。所有错误应该以参数传递到callback，由开发者自行处理
+    name: string;
     process: (task: ITask) => Promise<{}|null|void>;
     option?: any;
 }
@@ -29,8 +29,8 @@ export interface IPipe {
 // NodeSpider' state
 export interface IState {
     queue: IQueue;
-    planStore: Map<symbol, IPlan>;
-    pipeStore: Map<symbol, IPipe>;
+    planStore: Map<string, IPlan>;
+    pipeStore: Map<string, IPipe>;
     option: IDefaultOption;
     working: boolean;
     timer: NodeJS.Timer|null;
@@ -51,9 +51,15 @@ export interface IDefaultOption {
 // for task object in the queue;在queue保存的task
 export interface ITask {
     url: string;
-    planKey: symbol;
+    planName: string;
     hasRetried?: number;
     info?: any;
+}
+
+export interface ICurrent extends ITask {
+    info: {[index: string]: any};
+    retry: (maxRetry: number, finalErrorCallback: () => any) => void;
+    queue: (planName: string, url: string|string[]) => void;
 }
 
 // ====== request options ======

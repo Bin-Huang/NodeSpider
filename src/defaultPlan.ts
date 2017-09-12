@@ -19,10 +19,10 @@ export interface IDefaultPlanOption {
 }
 
 // for defaultPlan设置中的callback
-export type IDefaultPlanOptionCallback = (err: Error, current: ICurrent) => any|Promise<any>;
+export type IDefaultPlanOptionCallback = (err: Error, current: IDefaultPlanCurrent) => any|Promise<any>;
 
 // current crawl task; for `rule` function in the plan
-export interface ICurrent extends ITask {
+export interface IDefaultPlanCurrent extends ITask {
     response: any;
     body: string;
     [propName: string]: any;
@@ -33,7 +33,7 @@ export interface ICurrent extends ITask {
  * @param planOptionInput
  */
 
-export function defaultPlan(planOptionInput: IDefaultPlanOptionCallback|IDefaultPlanOptionInput): IPlan {
+export function defaultPlan(name: string, planOptionInput: IDefaultPlanOptionCallback|IDefaultPlanOptionInput): IPlan {
     // 当只传入一个rule函数，则包装成 IPlanInput 对象，并设置预处理函数
     if (typeof planOptionInput === "function") {
         planOptionInput = { callback: [preToUtf8, preLoadJq, planOptionInput] };
@@ -54,24 +54,22 @@ export function defaultPlan(planOptionInput: IDefaultPlanOptionCallback|IDefault
         callback: (Array.isArray(callback)) ? callback : [callback],
     };
 
-    const type = planOptionInput.type || "default";
-
-    return new DefaultPlan(type, planOption);
+    return new DefaultPlan(name, planOption);
 }
 
 export class DefaultPlan implements IPlan {
     public option: IDefaultPlanOption;
-    public type: string;
-    constructor(type: string, option: IDefaultPlanOption) {
+    public name: string;
+    constructor(name: string, option: IDefaultPlanOption) {
         this.option = option;
-        this.type = type;
+        this.name = name;
     }
     public async process(task: ITask) {
         const {error, response, body}: any = await requestAsync({
             ...this.option.request,
             url: task.url,
         });
-        const current: ICurrent = Object.assign(task, {
+        const current: IDefaultPlanCurrent = Object.assign(task, {
             response,
             body,
         });
@@ -103,7 +101,7 @@ function requestAsync(opts: IRequestOpts) {
 /**
  * 根据currentTask.body加载jQ对象，并扩展url、todo、download方法，以第三个参数$的形式传递
  */
-export function preLoadJq(error: Error, currentTask: ICurrent): void {
+export function preLoadJq(error: Error, currentTask: IDefaultPlanCurrent): void {
     if (error) { return ; }
 
     const $ = cheerio.load(currentTask.body);
@@ -157,7 +155,7 @@ export function preLoadJq(error: Error, currentTask: ICurrent): void {
 /**
  * 根据当前任务的response.header和response.body中的编码格式，将currentTask.body转码为utf8格式
  */
-export function preToUtf8(error: Error, currentTask: ICurrent): void {
+export function preToUtf8(error: Error, currentTask: IDefaultPlanCurrent): void {
     if (error) { return ; }
     const encoding = charset(currentTask.response.headers, currentTask.response.body.toString());
     // 有些时候会无法获得当前网站的编码，原因往往是网站内容过于简单，比如最简单的404界面。此时无需转码

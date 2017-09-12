@@ -27,23 +27,21 @@ describe("test for method add", () => {
 
     test("functional verification", (done) => {
         const s = new Spider();
-        const myPlan = s.add(defaultPlan((error, current) => {
+        s.add("testSpider", defaultPlan((error, current) => {
             expect(current.body.length > 100).toBe(true);
             done();
         }));
-        expect(typeof myPlan).toBe("symbol");
-        s.queue(myPlan, "http://www.baidu.com");
+        s.queue("testSpider", "http://www.baidu.com");
     });
 });
 
 describe("test for method plan", () => {
     test("functional verification", (done) => {
         const s = new Spider();
-        const myPlan = s.plan((error, current) => {
+        s.plan("testSpider", (error, current) => {
             expect(current.body.length > 100).toBe(true);
             done();
         });
-        expect(typeof myPlan).toBe("symbol");
-        s.queue(myPlan, "http://www.baidu.com");
+        s.queue("testSpider", "http://www.baidu.com");
     });
 });

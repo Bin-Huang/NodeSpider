@@ -1,3 +1,7 @@
+- concurrent control with planName
+- modify document
+- modify unit tests
+
 - document in English
 - share package in some nodejs's bbs
 - website? www.nodespider.org

@@ -1,13 +1,10 @@
 import * as request from "request";
 import * as stream from "stream";
-import preLoadJq from "./preLoadJq";
-import preToUtf8 from "./preToUtf8";
-import NodeSpider from "./spider";
 import { IPlan, IRequestOpts, ITask } from "./types";
 
 export type TStreamPlanOptionCallback = (req: request.Request, current: ITask) => void;
 export interface IStreamPlanOptionInput {
-    type?: string;
+    name?: string;
     request?: any;
     callback: TStreamPlanOptionCallback;
 }
@@ -16,7 +13,7 @@ export interface IStreamPlanOption {
     callback: TStreamPlanOptionCallback;
 }
 
-export default function streamPlan(opts: TStreamPlanOptionCallback|IStreamPlanOptionInput) {
+export default function streamPlan(name: string, opts: TStreamPlanOptionCallback|IStreamPlanOptionInput) {
     if (typeof opts === "function") {
         opts = {callback: opts};
     } else if (typeof opts === "object") {
@@ -33,20 +30,19 @@ export default function streamPlan(opts: TStreamPlanOptionCallback|IStreamPlanOp
         `);
     }
 
-    const type = opts.type || "stream";
     const option = {
         callback: opts.callback,
         request: opts.request || {},
     };
 
-    return new StreamPlan(type, option);
+    return new StreamPlan(name, option);
 }
 
 export class StreamPlan implements IPlan {
     public option: IStreamPlanOption;
-    public type: string;
-    constructor(type: string, option: IStreamPlanOption) {
-        this.type = type;
+    public name: string;
+    constructor(name: string, option: IStreamPlanOption) {
+        this.name = name;
         this.option = option;
     }
     public process(task: ITask) {

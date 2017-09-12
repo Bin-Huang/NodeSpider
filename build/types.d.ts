@@ -1,6 +1,5 @@
 /// <reference types="node" />
 export interface IPlan {
-    type: string;
     process: (task: ITask) => Promise<{} | null | void>;
     option?: any;
 }
@@ -18,8 +17,8 @@ export interface IPipe {
 }
 export interface IState {
     queue: IQueue;
-    planStore: Map<symbol, IPlan>;
-    pipeStore: Map<symbol, IPipe>;
+    planStore: Map<string, IPlan>;
+    pipeStore: Map<string, IPipe>;
     option: IDefaultOption;
     working: boolean;
     timer: NodeJS.Timer | null;
@@ -38,9 +37,16 @@ export interface IDefaultOption {
 }
 export interface ITask {
     url: string;
-    planKey: symbol;
+    planName: string;
     hasRetried?: number;
     info?: any;
+}
+export interface ICurrent extends ITask {
+    info: {
+        [index: string]: any;
+    };
+    retry: (maxRetry: number, finalErrorCallback: () => any) => void;
+    queue: (planName: string, url: string | string[]) => void;
 }
 export interface IRequestOpts {
 }

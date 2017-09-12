@@ -1,9 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
-const uuid = require("uuid/v1");
 const defaultPlan_1 = require("./defaultPlan");
 const queue_1 = require("./queue");
+// TODO C save as single file
 const defaultOption = {
     maxConnections: 20,
     queue: queue_1.default,
@@ -108,71 +108,40 @@ class NodeSpider extends events_1.EventEmitter {
         }
     }
     /**
-     * Retry the task within the maximum number of retries
-     * @param {ITask} task The task which want to retry
-     * @param {number} maxRetry Maximum number of retries for this task
-     * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
-     */
-    retry(current, maxRetry = 1, finalErrorCallback) {
-        // TODO C 判断 current 成员
-        if (typeof current !== "object") {
-            throw new TypeError("method retry parameter current should be a object");
-        }
-        // 过滤出current重要的task基本信息
-        const task = {
-            hasRetried: current.hasRetried,
-            info: current.info,
-            planKey: current.planKey,
-            url: current.url,
-        };
-        if (!task.hasRetried) {
-            task.hasRetried = 0;
-        }
-        if (!finalErrorCallback) {
-            finalErrorCallback = () => {
-                throw new Error(`
-                    ${current.url}达到最大重试次数，但依然出错
-                `);
-            };
-        }
-        if (task.hasRetried >= maxRetry) {
-            return finalErrorCallback();
-        }
-        task.hasRetried++;
-        const plan = this._STATE.planStore.get(task.planKey);
-        this._STATE.queue.jumpTask(task, plan.type); // 插队到队列，重新等待执行
-    }
-    /**
      * add new plan or pipe, and return a corresponding key.
      * @param item planObject or PipeObject
      */
-    add(item) {
+    add(name, item) {
+        if (this._STATE.planStore.has(name)) {
+            // TODO C 重名报错
+        }
+        if (this._STATE.pipeStore.has(name)) {
+            // TODO C 重名报错
+        }
         // 如果参数item是plan
         if (item.process) {
             const newPlan = item;
             // 当设置 maxConnections 是一个对象（即对不同type进行同时连接限制），如果添加的plan的type不存在设置，报错
             if (typeof this._STATE.option.maxConnections === "object") {
-                if (typeof this._STATE.option.maxConnections[newPlan.type] === "undefined") {
+                if (typeof this._STATE.option.maxConnections[name] === "undefined") {
                     throw new Error(`
-                        The plan's type ${newPlan.type} don't exist in the option maxConnections.
+                        The plan's name "${name}" don't exist in the option maxConnections.
                     `);
                 }
             }
             // 如果plan类型是第一次添加，在state中初始化一个该类型的当前连接数信息
-            if (typeof this._STATE.currentConnections[newPlan.type] === "undefined") {
-                this._STATE.currentConnections[newPlan.type] = 0;
+            if (typeof this._STATE.currentConnections[name] === "undefined") {
+                this._STATE.currentConnections[name] = 0;
             }
-            // 添加plan到planStore，并返回对应key
-            const key = Symbol(`plan-${newPlan.type}-${uuid()}`);
-            this._STATE.planStore.set(key, newPlan);
-            return key;
+            // 添加plan到planStore
+            this._STATE.planStore.set(name, newPlan);
+            return;
         }
         // 如果参数iten是一个pipe
         if (item.add && item.close) {
             const newPipe = item;
-            const key = Symbol("pipe-" + uuid());
-            this._STATE.pipeStore.set(key, newPipe);
-            return key;
+            this._STATE.pipeStore.set(name, newPipe);
+            return;
         }
         // 如果参数不是pipe或者plan，报错
         throw new TypeError(`Spider.prototype.add:
@@ -183,24 +152,24 @@ class NodeSpider extends events_1.EventEmitter {
      * add new default plan, and return a corresponding key.
      * @param option default plan's option
      */
-    plan(option) {
-        return this.add(defaultPlan_1.defaultPlan(option));
+    plan(name, option) {
+        return this.add(name, defaultPlan_1.defaultPlan(option));
     }
     /**
      * 添加待爬取链接到队列，并指定爬取计划。
-     * @param planKey 指定的爬取计划
+     * @param planName 指定的爬取计划
      * @param url 待爬取的链接（们）
      * @param special （可选）针对当前链接的特别设置，将覆盖与plan重复的设置
      */
-    queue(planKey, url, info) {
+    queue(planName, url, info) {
         // 参数检验
-        if (typeof planKey !== "symbol") {
-            throw new TypeError(`
-                """queue(planKey, url, info?)"""
-                The parameter planKey should be a symbol returned from calling the method plan!
-            `);
-        }
-        const plan = this._STATE.planStore.get(planKey);
+        // if (typeof planName !== "symbol") {
+        //     throw new TypeError(`
+        //         """queue(planKey, url, info?)"""
+        //         The parameter planKey should be a symbol returned from calling the method plan!
+        //     `);
+        // }
+        const plan = this._STATE.planStore.get(planName);
         if (!plan) {
             throw new Error(`
                 """queue(planKey, url, info?)"""
@@ -211,7 +180,7 @@ class NodeSpider extends events_1.EventEmitter {
         // 添加到队列
         const newTasks = [];
         if (!Array.isArray(url)) {
-            newTasks.push({ url, planKey, info });
+            newTasks.push({ url, planName, info });
         }
         else {
             url.map((u) => {
@@ -221,11 +190,11 @@ class NodeSpider extends events_1.EventEmitter {
                         the parameter url should be a string or string array!
                     `);
                 }
-                newTasks.push({ url: u, planKey, info });
+                newTasks.push({ url: u, planName, info });
             });
         }
         for (const task of newTasks) {
-            this._STATE.queue.addTask(task, plan.type);
+            this._STATE.queue.addTask(task, planName);
             this.emit("queueTask", task);
         }
         this._STATE.working = true;
@@ -234,20 +203,20 @@ class NodeSpider extends events_1.EventEmitter {
     // item可以是字符串路径，也可以是对象。若字符串则保存为 txt 或json
     // 如果是对象，则获得对象的 header 属性并对要保存路径进行检测。通过则调用对象 add 方法。
     // 每一个人都可以开发 table 对象的生成器。只需要提供 header 和 add 接口。其他由开发者考虑如何完成。
-    save(pipeKey, data) {
-        if (typeof pipeKey !== "symbol") {
-            throw new TypeError(`
-                """save(pipeKey, data)"""
-                The parameter pipeKey should be a symbol returned from calling the method pipe!
-            `);
-        }
+    save(pipeName, data) {
+        // if (typeof pipeName !== "symbol") {
+        //     throw new TypeError(`
+        //         """save(pipeKey, data)"""
+        //         The parameter pipeKey should be a symbol returned from calling the method pipe!
+        //     `);
+        // }
         if (typeof data !== "object") {
             throw new TypeError(`
                 """save(pipeKey, data)"""
                 The parameter data should be a object!
             `);
         }
-        const pipe = this._STATE.pipeStore.get(pipeKey);
+        const pipe = this._STATE.pipeStore.get(pipeName);
         if (pipe) {
             pipe.add(data);
         }
@@ -285,7 +254,31 @@ function getTaskByTypes(types, queue) {
  * @param self nodespider实例（this）
  */
 function startTask(type, task, self) {
-    const plan = self._STATE.planStore.get(task.planKey);
+    const plan = self._STATE.planStore.get(task.planName);
+    const current = Object.assign({}, task, { info: task.info, queue: self.queue, retry: (maxRetry, finalErrorCallback) => {
+            // 过滤出current重要的task基本信息
+            const retryTask = {
+                hasRetried: current.hasRetried,
+                info: current.info,
+                planName: current.planName,
+                url: current.url,
+            };
+            if (!retryTask.hasRetried) {
+                retryTask.hasRetried = 0;
+            }
+            if (!finalErrorCallback) {
+                finalErrorCallback = () => {
+                    throw new Error(`
+                        ${current.url}达到最大重试次数，但依然出错
+                    `);
+                };
+            }
+            if (retryTask.hasRetried >= maxRetry) {
+                return finalErrorCallback();
+            }
+            retryTask.hasRetried++;
+            self._STATE.queue.jumpTask(retryTask, current.planName); // 插队到队列，重新等待执行
+        } });
     task.info = typeof task.info === "undefined" ? {} : task.info;
     self._STATE.currentConnections[type]++;
     self._STATE.currentTotalConnections++;

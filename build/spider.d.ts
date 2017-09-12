@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { EventEmitter } from "events";
 import { IDefaultPlanOptionCallback, IDefaultPlanOptionInput } from "./defaultPlan";
-import { IPipe, IPlan, IState, ITask } from "./types";
+import { IPipe, IPlan, IState } from "./types";
 /**
  * class of NodeSpider
  * @class NodeSpider
@@ -30,28 +30,21 @@ export default class NodeSpider extends EventEmitter {
      */
     filter(urlArray: string[]): string[];
     /**
-     * Retry the task within the maximum number of retries
-     * @param {ITask} task The task which want to retry
-     * @param {number} maxRetry Maximum number of retries for this task
-     * @param {function} finalErrorCallback The function called when the maximum number of retries is reached
-     */
-    retry(current: ITask, maxRetry?: number, finalErrorCallback?: () => void): void;
-    /**
      * add new plan or pipe, and return a corresponding key.
      * @param item planObject or PipeObject
      */
-    add(item: IPlan | IPipe): symbol;
+    add(name: string, item: IPlan | IPipe): void;
     /**
      * add new default plan, and return a corresponding key.
      * @param option default plan's option
      */
-    plan(option: IDefaultPlanOptionInput | IDefaultPlanOptionCallback): symbol;
+    plan(name: string, option: IDefaultPlanOptionInput | IDefaultPlanOptionCallback): void;
     /**
      * 添加待爬取链接到队列，并指定爬取计划。
-     * @param planKey 指定的爬取计划
+     * @param planName 指定的爬取计划
      * @param url 待爬取的链接（们）
      * @param special （可选）针对当前链接的特别设置，将覆盖与plan重复的设置
      */
-    queue(planKey: symbol, url: string | string[], info?: any): number;
-    save(pipeKey: symbol, data: any): TypeError | undefined;
+    queue(planName: string, url: string | string[], info?: any): number;
+    save(pipeName: string, data: any): TypeError | undefined;
 }
