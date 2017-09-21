@@ -13,48 +13,48 @@ const cheerio = require("cheerio");
 const iconv = require("iconv-lite");
 const request = require("request");
 const url = require("url");
-exports.defaultPlan = (name, callback) => {
-    // 当只传入一个rule函数，则包装成 IPlanInput 对象，并设置预处理函数
-    const planOption = {
-        callback: [],
-        request: {},
-    };
-    if (typeof name === "string") {
-        if (!callback || typeof callback === "function") {
-            throw new TypeError("err");
-        }
-        planOption.callback = [preToUtf8, preLoadJq, callback];
-    }
-    else if (typeof name === "object") {
-        if (!name.callback || !name.name) {
-            throw new TypeError("err");
-        }
-        planOption.callback = Array.isArray(name.callback) ? name.callback : [name.callback];
-        planOption.request = name.request || {};
-        name = name.name;
-    }
-    else {
+/**
+ * 默认值 type: "default", info: {}, option: {request: {encoding: null}, pre: [preToUtf8(), preLoadJq()], callback }
+ * @param planOptionInput
+ */
+function defaultPlan(option) {
+    if (typeof option.name !== "string") {
         throw new TypeError("err");
     }
-    planOption.request = Object.assign({ encoding: null }, planOption.request);
-    return new DefaultPlan(name, planOption);
-};
+    if (!Array.isArray(option.callbacks)) {
+        throw new TypeError("err");
+    }
+    for (const cb of option.callbacks) {
+        if (typeof cb !== "function") {
+            throw new TypeError("err");
+        }
+    }
+    option.method = option.method || "GET";
+    option.header = option.header || {};
+    return new DefaultPlan(option.name, option);
+}
+exports.defaultPlan = defaultPlan;
 class DefaultPlan {
     constructor(name, option) {
         this.option = option;
         this.name = name;
     }
-    process(task) {
+    process(task, spider) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { error, response, body } = yield requestAsync(Object.assign({}, this.option.request, { url: task.url }));
+            const { error, response, body } = yield requestAsync({
+                encoding: null,
+                header: this.option.header,
+                method: this.option.method,
+                url: task.url,
+            });
             const current = Object.assign(task, {
                 response,
                 body,
             });
             // 按顺序执行callback
             try {
-                for (const cb of this.option.callback) {
-                    const result = cb(error, current);
+                for (const cb of this.option.callbacks) {
+                    const result = cb(error, current, spider);
                     if (result instanceof Promise) {
                         yield result;
                     }

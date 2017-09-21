@@ -1,6 +1,6 @@
 import * as request from "request";
 import * as stream from "stream";
-import { IPlan, IRequestOpts, ITask } from "./types";
+import { IPlan, IRequestOptionInput, ITask } from "./types";
 
 export type TStreamPlanOptionCallback = (req: request.Request, current: ITask) => void;
 export interface IStreamPlanOptionInput {

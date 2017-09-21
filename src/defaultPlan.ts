@@ -3,23 +3,17 @@ import * as cheerio from "cheerio";
 import * as iconv from "iconv-lite";
 import * as request from "request";
 import * as url from "url";
-import NodeSpider from "./spider";
-import { IPlan, IRequestOpts, ITask } from "./types";
+import Spider from "./spider";
+import { IPlan, IRequestOptionInput, ITask } from "./types";
 
-// for 函数defaultPlan的设置参数
-export interface IDefaultPlanOptionInput {
-    callback: IDefaultPlanOptionCallback | IDefaultPlanOptionCallback[];
-    name?: string;
-    request ?: IRequestOpts;
-}
 // for 传递给Plan真正的设置
-export interface IDefaultPlanOption {
-    request: IRequestOpts;
-    callback: IDefaultPlanOptionCallback[];
+export interface IDefaultPlanOption extends IRequestOptionInput {
+    callbacks: IDefaultPlanOptionCallback[];
+    name: string;
 }
 
 // for defaultPlan设置中的callback
-export type IDefaultPlanOptionCallback = (err: Error, current: IDefaultPlanCurrent) => any|Promise<any>;
+export type IDefaultPlanOptionCallback = (err: Error, current: IDefaultPlanCurrent, spider: Spider) => any|Promise<any>;
 
 // current crawl task; for `rule` function in the plan
 export interface IDefaultPlanCurrent extends ITask {
@@ -28,41 +22,26 @@ export interface IDefaultPlanCurrent extends ITask {
     [propName: string]: any;
 }
 
-export interface IDefaultPlanApi1 {
-    (name: string, callback: IDefaultPlanOptionCallback): DefaultPlan;
-    (option: IDefaultPlanOptionInput): DefaultPlan;
-}
-
 /**
  * 默认值 type: "default", info: {}, option: {request: {encoding: null}, pre: [preToUtf8(), preLoadJq()], callback }
  * @param planOptionInput
  */
-export let defaultPlan: IDefaultPlanApi1;
-defaultPlan = (name: string|IDefaultPlanOptionInput, callback?: IDefaultPlanOptionCallback) => {
-    // 当只传入一个rule函数，则包装成 IPlanInput 对象，并设置预处理函数
-    const planOption: IDefaultPlanOption = {
-        callback: [],
-        request: {},
-    };
-    if (typeof name === "string") {
-        if (!callback || typeof callback === "function") {
-            throw new TypeError("err");
-        }
-        planOption.callback = [preToUtf8, preLoadJq, callback];
-    } else if (typeof name === "object") {
-        if (!name.callback || !name.name) {
-            throw new TypeError("err");
-        }
-        planOption.callback = Array.isArray(name.callback) ? name.callback : [name.callback];
-        planOption.request = name.request || {};
-        name = name.name;
-    } else {
+export function defaultPlan(option: IDefaultPlanOption) {
+    if (typeof option.name !== "string") {
         throw new TypeError("err");
     }
-
-    planOption.request = Object.assign({encoding: null}, planOption.request);
-    return new DefaultPlan(name, planOption);
-};
+    if (! Array.isArray(option.callbacks)) {
+        throw new TypeError("err");
+    }
+    for (const cb of option.callbacks) {
+        if (typeof cb !== "function") {
+            throw new TypeError("err");
+        }
+    }
+    option.method = option.method || "GET";
+    option.header = option.header || {};
+    return new DefaultPlan(option.name, option);
+}
 
 export class DefaultPlan implements IPlan {
     public option: IDefaultPlanOption;
@@ -71,9 +50,11 @@ export class DefaultPlan implements IPlan {
         this.option = option;
         this.name = name;
     }
-    public async process(task: ITask) {
+    public async process(task: ITask, spider: Spider) {
         const {error, response, body}: any = await requestAsync({
-            ...this.option.request,
+            encoding: null,
+            header: this.option.header,
+            method: this.option.method,
             url: task.url,
         });
         const current: IDefaultPlanCurrent = Object.assign(task, {
@@ -83,8 +64,8 @@ export class DefaultPlan implements IPlan {
 
         // 按顺序执行callback
         try {
-            for (const cb of this.option.callback) {
-                const result = cb(error, current);
+            for (const cb of this.option.callbacks) {
+                const result = cb(error, current, spider);
                 if (result instanceof Promise) {
                     await result;
                 }
@@ -97,7 +78,7 @@ export class DefaultPlan implements IPlan {
     }
 }
 
-function requestAsync(opts: IRequestOpts) {
+function requestAsync(opts: any) {
     return new Promise((resolve, reject) => {
         request(opts, (error: Error, response: any, body: any) => {
             resolve({error, response, body});

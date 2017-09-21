@@ -1,7 +1,6 @@
 import { EventEmitter } from "events";
 import * as request from "request";
-import { defaultPlan } from "./defaultPlan";
-import { IDefaultPlanOptionCallback, IDefaultPlanOptionInput } from "./defaultPlan";
+import { defaultPlan, IDefaultPlanOptionCallback, preLoadJq, preToUtf8 } from "./defaultPlan";
 import Queue from "./queue";
 import {
     ICurrent,
@@ -25,6 +24,8 @@ const defaultOption: IDefaultOption = {
  * @class NodeSpider
  */
 export default class NodeSpider extends EventEmitter {
+    public static preToUtf8 = preToUtf8;
+    public static preLoadJq = preLoadJq;
     public _STATE: IState;
     /**
      * create an instance of NodeSpider
@@ -86,7 +87,7 @@ export default class NodeSpider extends EventEmitter {
         // 关闭注册的pipe
         for (const pipe of this._STATE.pipeStore.values()) {
             pipe.close();
-        }
+        },
         // TODO C 更多，比如修改所有method来提醒开发者已经end
     }
 
@@ -172,12 +173,43 @@ export default class NodeSpider extends EventEmitter {
         `);
     }
 
+    public retry(current: ITask, maxRetry: number, finalErrorCallback?: () => any) {
+        // 过滤出current重要的task基本信息
+        const retryTask = {
+            hasRetried: current.hasRetried,
+            info: current.info,
+            planName: current.planName,
+            url: current.url,
+        };
+        if (! retryTask.hasRetried) {
+            retryTask.hasRetried = 0;
+        }
+        if (! finalErrorCallback) {
+            finalErrorCallback = () => {
+                throw new Error(`
+                    ${current.url}达到最大重试次数，但依然出错
+                `);
+            };
+        }
+        if (retryTask.hasRetried >= maxRetry) {
+            return finalErrorCallback();
+        }
+        retryTask.hasRetried ++;
+        this._STATE.queue.jumpTask(retryTask, current.planName);    // 插队到队列，重新等待执行
+    }
     /**
      * add new default plan, and return a corresponding key.
      * @param option default plan's option
      */
-    public plan(name: string, option: IDefaultPlanOptionInput|IDefaultPlanOptionCallback) {
-        return this.add(defaultPlan(name, option));
+    public plan(name: string, callback: IDefaultPlanOptionCallback) {
+        return this.add(defaultPlan({
+            name,
+            callbacks: [
+                NodeSpider.preToUtf8,
+                NodeSpider.preLoadJq,
+                callback,
+            ],
+        }));
     }
 
     /**
@@ -287,37 +319,12 @@ function startTask(type: string, task: ITask, self: NodeSpider) {
     const current: ICurrent = {
         ... task,
         info: task.info as any,
-        queue: self.queue,
-        retry: (maxRetry: number, finalErrorCallback) => {
-            // 过滤出current重要的task基本信息
-            const retryTask = {
-                hasRetried: current.hasRetried,
-                info: current.info,
-                planName: current.planName,
-                url: current.url,
-            };
-            if (! retryTask.hasRetried) {
-                retryTask.hasRetried = 0;
-            }
-            if (! finalErrorCallback) {
-                finalErrorCallback = () => {
-                    throw new Error(`
-                        ${current.url}达到最大重试次数，但依然出错
-                    `);
-                };
-            }
-            if (retryTask.hasRetried >= maxRetry) {
-                return finalErrorCallback();
-            }
-            retryTask.hasRetried ++;
-            self._STATE.queue.jumpTask(retryTask, current.planName);    // 插队到队列，重新等待执行
-        },
     };
     task.info = typeof task.info === "undefined" ? {} : task.info;
 
     self._STATE.currentConnections[type] ++;
     self._STATE.currentTotalConnections ++;
-    plan.process(task).then(() => {
+    plan.process(task, self).then(() => {
         self._STATE.currentConnections[type] --;
         self._STATE.currentTotalConnections --;
     }).catch((e: Error) => {

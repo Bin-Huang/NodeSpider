@@ -35,51 +35,67 @@ class NodeSpider extends events_1.EventEmitter {
         this.on("empty", () => {
             if (this._STATE.currentTotalConnections === 0) {
                 this.emit("vacant"); // queue为空，当前异步连接为0，说明爬虫已经空闲，触发事件
+                defaultPlan_1.preLoadJq;
+                defaultPlan_1.preLoadJq.on("vacant", () => {
+                    if (this._STATE.timer) {
+                        clearInterval(this._STATE.timer);
+                        this._STATE.timer = null;
+                    }
+                });
+                this.on("queueTask", (task) => {
+                    if (this._STATE.timer) {
+                        return;
+                    }
+                    if (typeof this._STATE.option.maxConnections === "number") {
+                        this._STATE.timer = setInterval(() => {
+                            timerCallbackWhenMaxIsNumber(this);
+                        }, this._STATE.option.rateLimit);
+                    }
+                    else {
+                        this._STATE.timer = setInterval(() => {
+                            timerCallbackWhenMaxIsObject(this);
+                        }, this._STATE.option.rateLimit);
+                    }
+                });
             }
-        });
-        this.on("vacant", () => {
-            if (this._STATE.timer) {
+            /**
+             * 终止爬虫
+             */
+        }
+        /**
+         * 终止爬虫
+         */
+        , 
+        /**
+         * 终止爬虫
+         */
+        public, end(), {
+            // 爬虫不再定时从任务队列获得新任务
+            if(_STATE, timer) {
                 clearInterval(this._STATE.timer);
-                this._STATE.timer = null;
             }
-        });
-        this.on("queueTask", (task) => {
-            if (this._STATE.timer) {
-                return;
-            }
-            if (typeof this._STATE.option.maxConnections === "number") {
-                this._STATE.timer = setInterval(() => {
-                    timerCallbackWhenMaxIsNumber(this);
-                }, this._STATE.option.rateLimit);
-            }
-            else {
-                this._STATE.timer = setInterval(() => {
-                    timerCallbackWhenMaxIsObject(this);
-                }, this._STATE.option.rateLimit);
-            }
-        });
-    }
-    /**
-     * 终止爬虫
-     */
-    end() {
-        // 爬虫不再定时从任务队列获得新任务
-        if (this._STATE.timer) {
-            clearInterval(this._STATE.timer);
+            // 关闭注册的pipe
+            ,
+            // 关闭注册的pipe
+            for( = pipe, of = this._STATE.pipeStore.values()) {
+                pipe.close();
+            },
         }
-        // 关闭注册的pipe
-        for (const pipe of this._STATE.pipeStore.values()) {
-            pipe.close();
-        }
-        // TODO C 更多，比如修改所有method来提醒开发者已经end
-    }
-    /**
-     * Check whether the url has been added
-     * @param {string} url
-     * @returns {boolean}
-     */
-    isExist(url) {
-        if (typeof url !== "string") {
+        /**
+         * Check whether the url has been added
+         * @param {string} url
+         * @returns {boolean}
+         */
+        , 
+        /**
+         * Check whether the url has been added
+         * @param {string} url
+         * @returns {boolean}
+         */
+        public, isExist(url, string), {
+            if() { }, typeof: url !== "string"
+        });
+        {
             throw new TypeError(`the parameter of method isExist should be a string`);
         }
         return this._STATE.queue.check(url);
@@ -148,12 +164,39 @@ class NodeSpider extends events_1.EventEmitter {
             The parameter's type is unknown.It should be a planObject or pipeObject.
         `);
     }
+    retry(current, maxRetry, finalErrorCallback) {
+        // 过滤出current重要的task基本信息
+        const retryTask = {
+            hasRetried: current.hasRetried,
+            info: current.info,
+            planName: current.planName,
+            url: current.url,
+        };
+        if (!retryTask.hasRetried) {
+            retryTask.hasRetried = 0;
+        }
+        if (!finalErrorCallback) {
+            finalErrorCallback = () => {
+                throw new Error(`
+                    ${current.url}达到最大重试次数，但依然出错
+                `);
+            };
+        }
+        if (retryTask.hasRetried >= maxRetry) {
+            return finalErrorCallback();
+        }
+        retryTask.hasRetried++;
+        this._STATE.queue.jumpTask(retryTask, current.planName); // 插队到队列，重新等待执行
+    }
     /**
      * add new default plan, and return a corresponding key.
      * @param option default plan's option
      */
-    plan(name, option) {
-        return this.add(defaultPlan_1.defaultPlan(name, option));
+    plan(name, callback) {
+        return this.add(defaultPlan_1.defaultPlan({
+            name,
+            callbacks: [],
+        }));
     }
     /**
      * 添加待爬取链接到队列，并指定爬取计划。
@@ -228,6 +271,8 @@ class NodeSpider extends events_1.EventEmitter {
         }
     }
 }
+NodeSpider.preToUtf8 = defaultPlan_1.preToUtf8;
+NodeSpider.preLoadJq = defaultPlan_1.preLoadJq;
 exports.default = NodeSpider;
 /**
  * 尝试从queue获得一个task，使其对应的type存在于规定的type数组。如果存在满足的任务，则返回[type, task]，否则[null, null]
@@ -255,34 +300,11 @@ function getTaskByTypes(types, queue) {
  */
 function startTask(type, task, self) {
     const plan = self._STATE.planStore.get(task.planName);
-    const current = Object.assign({}, task, { info: task.info, queue: self.queue, retry: (maxRetry, finalErrorCallback) => {
-            // 过滤出current重要的task基本信息
-            const retryTask = {
-                hasRetried: current.hasRetried,
-                info: current.info,
-                planName: current.planName,
-                url: current.url,
-            };
-            if (!retryTask.hasRetried) {
-                retryTask.hasRetried = 0;
-            }
-            if (!finalErrorCallback) {
-                finalErrorCallback = () => {
-                    throw new Error(`
-                        ${current.url}达到最大重试次数，但依然出错
-                    `);
-                };
-            }
-            if (retryTask.hasRetried >= maxRetry) {
-                return finalErrorCallback();
-            }
-            retryTask.hasRetried++;
-            self._STATE.queue.jumpTask(retryTask, current.planName); // 插队到队列，重新等待执行
-        } });
+    const current = Object.assign({}, task, { info: task.info });
     task.info = typeof task.info === "undefined" ? {} : task.info;
     self._STATE.currentConnections[type]++;
     self._STATE.currentTotalConnections++;
-    plan.process(task).then(() => {
+    plan.process(task, self).then(() => {
         self._STATE.currentConnections[type]--;
         self._STATE.currentTotalConnections--;
     }).catch((e) => {

@@ -1,7 +1,8 @@
 /// <reference types="node" />
+import Spider from "./spider";
 export interface IPlan {
     name: string;
-    process: (task: ITask) => Promise<{} | null | void>;
+    process: (task: ITask, spider: Spider) => Promise<{} | null | void>;
     option?: any;
 }
 export interface IQueue {
@@ -49,5 +50,7 @@ export interface ICurrent extends ITask {
     retry: (maxRetry: number, finalErrorCallback: () => any) => void;
     queue: (planName: string, url: string | string[]) => void;
 }
-export interface IRequestOpts {
+export interface IRequestOptionInput {
+    method?: string;
+    header?: any;
 }
