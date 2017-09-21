@@ -19,14 +19,14 @@ const url = require("url");
  */
 function defaultPlan(option) {
     if (typeof option.name !== "string") {
-        throw new TypeError("err");
+        throw new TypeError(`the option's member "name" should be a string`);
     }
     if (!Array.isArray(option.callbacks)) {
-        throw new TypeError("err");
+        throw new TypeError(`the option's member "callbacks" should be an array of function`);
     }
     for (const cb of option.callbacks) {
         if (typeof cb !== "function") {
-            throw new TypeError("err");
+            throw new TypeError(`the option's member "callbacks" should be an array of function`);
         }
     }
     option.method = option.method || "GET";

@@ -35,67 +35,51 @@ class NodeSpider extends events_1.EventEmitter {
         this.on("empty", () => {
             if (this._STATE.currentTotalConnections === 0) {
                 this.emit("vacant"); // queue为空，当前异步连接为0，说明爬虫已经空闲，触发事件
-                defaultPlan_1.preLoadJq;
-                defaultPlan_1.preLoadJq.on("vacant", () => {
-                    if (this._STATE.timer) {
-                        clearInterval(this._STATE.timer);
-                        this._STATE.timer = null;
-                    }
-                });
-                this.on("queueTask", (task) => {
-                    if (this._STATE.timer) {
-                        return;
-                    }
-                    if (typeof this._STATE.option.maxConnections === "number") {
-                        this._STATE.timer = setInterval(() => {
-                            timerCallbackWhenMaxIsNumber(this);
-                        }, this._STATE.option.rateLimit);
-                    }
-                    else {
-                        this._STATE.timer = setInterval(() => {
-                            timerCallbackWhenMaxIsObject(this);
-                        }, this._STATE.option.rateLimit);
-                    }
-                });
             }
-            /**
-             * 终止爬虫
-             */
-        }
-        /**
-         * 终止爬虫
-         */
-        , 
-        /**
-         * 终止爬虫
-         */
-        public, end(), {
-            // 爬虫不再定时从任务队列获得新任务
-            if(_STATE, timer) {
-                clearInterval(this._STATE.timer);
-            }
-            // 关闭注册的pipe
-            ,
-            // 关闭注册的pipe
-            for( = pipe, of = this._STATE.pipeStore.values()) {
-                pipe.close();
-            },
-        }
-        /**
-         * Check whether the url has been added
-         * @param {string} url
-         * @returns {boolean}
-         */
-        , 
-        /**
-         * Check whether the url has been added
-         * @param {string} url
-         * @returns {boolean}
-         */
-        public, isExist(url, string), {
-            if() { }, typeof: url !== "string"
         });
-        {
+        this.on("vacant", () => {
+            if (this._STATE.timer) {
+                clearInterval(this._STATE.timer);
+                this._STATE.timer = null;
+            }
+        });
+        this.on("queueTask", (task) => {
+            if (this._STATE.timer) {
+                return;
+            }
+            if (typeof this._STATE.option.maxConnections === "number") {
+                this._STATE.timer = setInterval(() => {
+                    timerCallbackWhenMaxIsNumber(this);
+                }, this._STATE.option.rateLimit);
+            }
+            else {
+                this._STATE.timer = setInterval(() => {
+                    timerCallbackWhenMaxIsObject(this);
+                }, this._STATE.option.rateLimit);
+            }
+        });
+    }
+    /**
+     * 终止爬虫
+     */
+    end() {
+        // 爬虫不再定时从任务队列获得新任务
+        if (this._STATE.timer) {
+            clearInterval(this._STATE.timer);
+        }
+        // 关闭注册的pipe
+        for (const pipe of this._STATE.pipeStore.values()) {
+            pipe.close();
+        }
+        // TODO C 更多，比如修改所有method来提醒开发者已经end
+    }
+    /**
+     * Check whether the url has been added
+     * @param {string} url
+     * @returns {boolean}
+     */
+    isExist(url) {
+        if (typeof url !== "string") {
             throw new TypeError(`the parameter of method isExist should be a string`);
         }
         return this._STATE.queue.check(url);
@@ -193,9 +177,16 @@ class NodeSpider extends events_1.EventEmitter {
      * @param option default plan's option
      */
     plan(name, callback) {
+        if (!this._STATE.planStore.has(name)) {
+            throw new TypeError(`method plan: the plan name ${name} is repeated.`);
+        }
         return this.add(defaultPlan_1.defaultPlan({
             name,
-            callbacks: [],
+            callbacks: [
+                NodeSpider.preToUtf8,
+                NodeSpider.preLoadJq,
+                callback,
+            ],
         }));
     }
     /**

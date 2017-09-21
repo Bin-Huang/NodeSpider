@@ -16,6 +16,16 @@ export default class NodeSpider extends EventEmitter {
      */
     constructor(opts?: {});
     /**
+     * 终止爬虫
+     */
+    end(): void;
+    /**
+     * Check whether the url has been added
+     * @param {string} url
+     * @returns {boolean}
+     */
+    isExist(url: string): boolean;
+    /**
      * 过滤掉一个数组中的重复链接，以及所有已被添加的链接，返回一个新数组
      * @param urlArray {array}
      * @returns {array}

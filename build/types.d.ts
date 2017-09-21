@@ -47,8 +47,6 @@ export interface ICurrent extends ITask {
     info: {
         [index: string]: any;
     };
-    retry: (maxRetry: number, finalErrorCallback: () => any) => void;
-    queue: (planName: string, url: string | string[]) => void;
 }
 export interface IRequestOptionInput {
     method?: string;

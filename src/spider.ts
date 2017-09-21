@@ -87,7 +87,7 @@ export default class NodeSpider extends EventEmitter {
         // 关闭注册的pipe
         for (const pipe of this._STATE.pipeStore.values()) {
             pipe.close();
-        },
+        }
         // TODO C 更多，比如修改所有method来提醒开发者已经end
     }
 
@@ -202,6 +202,9 @@ export default class NodeSpider extends EventEmitter {
      * @param option default plan's option
      */
     public plan(name: string, callback: IDefaultPlanOptionCallback) {
+        if (! this._STATE.planStore.has(name)) {
+            throw new TypeError(`method plan: the plan name ${name} is repeated.`);
+        }
         return this.add(defaultPlan({
             name,
             callbacks: [
