@@ -1,5 +1,6 @@
 /// <reference types="node" />
 export interface IPlan {
+    name: string;
     process: (task: ITask) => Promise<{} | null | void>;
     option?: any;
 }

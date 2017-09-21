@@ -111,7 +111,7 @@ class NodeSpider extends events_1.EventEmitter {
      * add new plan or pipe, and return a corresponding key.
      * @param item planObject or PipeObject
      */
-    add(name, item) {
+    add(item) {
         if (this._STATE.planStore.has(name)) {
             // TODO C 重名报错
         }
@@ -153,7 +153,7 @@ class NodeSpider extends events_1.EventEmitter {
      * @param option default plan's option
      */
     plan(name, option) {
-        return this.add(name, defaultPlan_1.defaultPlan(option));
+        return this.add(defaultPlan_1.defaultPlan(name, option));
     }
     /**
      * 添加待爬取链接到队列，并指定爬取计划。

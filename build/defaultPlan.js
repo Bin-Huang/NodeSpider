@@ -13,36 +13,36 @@ const cheerio = require("cheerio");
 const iconv = require("iconv-lite");
 const request = require("request");
 const url = require("url");
-/**
- * 默认值 type: "default", info: {}, option: {request: {encoding: null}, pre: [preToUtf8(), preLoadJq()], callback }
- * @param planOptionInput
- */
-function defaultPlan(planOptionInput) {
+exports.defaultPlan = (name, callback) => {
     // 当只传入一个rule函数，则包装成 IPlanInput 对象，并设置预处理函数
-    if (typeof planOptionInput === "function") {
-        planOptionInput = { callback: [preToUtf8, preLoadJq, planOptionInput] };
-    }
-    // 类型检测
-    if (typeof planOptionInput !== "object") {
-        throw new TypeError(`\
-            failed to create new default plan
-            the parameter can only be a function or an object
-        `);
-    }
-    const request = Object.assign({ encoding: null }, planOptionInput.request);
-    const callback = planOptionInput.callback;
     const planOption = {
-        request,
-        callback: (Array.isArray(callback)) ? callback : [callback],
+        callback: [],
+        request: {},
     };
-    const type = planOptionInput.type || "default";
-    return new DefaultPlan(type, planOption);
-}
-exports.defaultPlan = defaultPlan;
+    if (typeof name === "string") {
+        if (!callback || typeof callback === "function") {
+            throw new TypeError("err");
+        }
+        planOption.callback = [preToUtf8, preLoadJq, callback];
+    }
+    else if (typeof name === "object") {
+        if (!name.callback || !name.name) {
+            throw new TypeError("err");
+        }
+        planOption.callback = Array.isArray(name.callback) ? name.callback : [name.callback];
+        planOption.request = name.request || {};
+        name = name.name;
+    }
+    else {
+        throw new TypeError("err");
+    }
+    planOption.request = Object.assign({ encoding: null }, planOption.request);
+    return new DefaultPlan(name, planOption);
+};
 class DefaultPlan {
-    constructor(type, option) {
+    constructor(name, option) {
         this.option = option;
-        this.type = type;
+        this.name = name;
     }
     process(task) {
         return __awaiter(this, void 0, void 0, function* () {

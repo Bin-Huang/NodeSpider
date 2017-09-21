@@ -12,14 +12,14 @@ const filenamifyUrl = require("filenamify-url");
 const fs = require("fs-extra");
 const path = require("path");
 const request = require("request");
-function downloadPlan(opts) {
-    return new DownloadPlan(opts);
+function downloadPlan(name, opts) {
+    return new DownloadPlan(name, opts);
 }
 exports.default = downloadPlan;
 class DownloadPlan {
-    constructor(option) {
+    constructor(name, option) {
         this.option = option;
-        this.type = option.type || "download";
+        this.name = name;
     }
     process(task) {
         return __awaiter(this, void 0, void 0, function* () {

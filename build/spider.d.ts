@@ -33,7 +33,7 @@ export default class NodeSpider extends EventEmitter {
      * add new plan or pipe, and return a corresponding key.
      * @param item planObject or PipeObject
      */
-    add(name: string, item: IPlan | IPipe): void;
+    add(item: IPlan | IPipe): void;
     /**
      * add new default plan, and return a corresponding key.
      * @param option default plan's option

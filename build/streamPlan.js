@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const request = require("request");
-function streamPlan(opts) {
+function streamPlan(name, opts) {
     if (typeof opts === "function") {
         opts = { callback: opts };
     }
@@ -19,17 +19,16 @@ function streamPlan(opts) {
             the parameter can only be a function or an object
         `);
     }
-    const type = opts.type || "stream";
     const option = {
         callback: opts.callback,
         request: opts.request || {},
     };
-    return new StreamPlan(type, option);
+    return new StreamPlan(name, option);
 }
 exports.default = streamPlan;
 class StreamPlan {
-    constructor(type, option) {
-        this.type = type;
+    constructor(name, option) {
+        this.name = name;
         this.option = option;
     }
     process(task) {

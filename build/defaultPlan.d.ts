@@ -1,7 +1,7 @@
 import { IPlan, IRequestOpts, ITask } from "./types";
 export interface IDefaultPlanOptionInput {
     callback: IDefaultPlanOptionCallback | IDefaultPlanOptionCallback[];
-    type?: string;
+    name?: string;
     request?: IRequestOpts;
 }
 export interface IDefaultPlanOption {
@@ -14,15 +14,19 @@ export interface IDefaultPlanCurrent extends ITask {
     body: string;
     [propName: string]: any;
 }
+export interface IDefaultPlanApi1 {
+    (name: string, callback: IDefaultPlanOptionCallback): DefaultPlan;
+    (option: IDefaultPlanOptionInput): DefaultPlan;
+}
 /**
  * 默认值 type: "default", info: {}, option: {request: {encoding: null}, pre: [preToUtf8(), preLoadJq()], callback }
  * @param planOptionInput
  */
-export declare function defaultPlan(planOptionInput: IDefaultPlanOptionCallback | IDefaultPlanOptionInput): IPlan;
+export declare let defaultPlan: IDefaultPlanApi1;
 export declare class DefaultPlan implements IPlan {
     option: IDefaultPlanOption;
-    type: string;
-    constructor(type: string, option: IDefaultPlanOption);
+    name: string;
+    constructor(name: string, option: IDefaultPlanOption);
     process(task: ITask): Promise<void>;
 }
 /**
