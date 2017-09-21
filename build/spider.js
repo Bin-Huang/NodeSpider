@@ -112,6 +112,10 @@ class NodeSpider extends events_1.EventEmitter {
      * @param item planObject or PipeObject
      */
     add(item) {
+        if (!item.name) {
+            throw new TypeError("");
+        }
+        const name = item.name;
         if (this._STATE.planStore.has(name)) {
             // TODO C 重名报错
         }
@@ -177,7 +181,15 @@ class NodeSpider extends events_1.EventEmitter {
      * @param option default plan's option
      */
     plan(name, callback) {
-        if (!this._STATE.planStore.has(name)) {
+        if (typeof name !== "string") {
+            throw new TypeError(`method plan: failed to add new plan.
+            then parameter "name" should be a string`);
+        }
+        if (typeof callback !== "function") {
+            throw new TypeError(`method plan: failed to add new plan.
+            then parameter "callback" should be a function`);
+        }
+        if (this._STATE.planStore.has(name)) {
             throw new TypeError(`method plan: Can not add new plan named "${name}".
             There is already a plan called "${name}".`);
         }

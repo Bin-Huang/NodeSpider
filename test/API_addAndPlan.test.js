@@ -27,9 +27,14 @@ describe("test for method add", () => {
 
     test("functional verification", (done) => {
         const s = new Spider();
-        s.add("testSpider", defaultPlan((error, current) => {
-            expect(current.body.length > 100).toBe(true);
-            done();
+        s.add(defaultPlan({
+            callbacks: [
+                (err, current) => {
+                    expect(current.body.length > 100).toBe(true);
+                    done();
+                },
+            ],
+            name: "testSpider",
         }));
         s.queue("testSpider", "http://www.baidu.com");
     });

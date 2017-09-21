@@ -3,8 +3,13 @@ const { Spider, defaultPlan } = require("../build/index");
 describe("test for method isExist", () => {
     test("parameter check", () => {
         const s = new Spider();
-        const myPlan = s.add(defaultPlan(() => {
-            return 1;
+        s.add(defaultPlan({
+            callbacks: [
+                (err, current) => {
+                    return 1;
+                },
+            ],
+            name: "myPlan",
         }));
         expect(() => {
             s.isExist();
@@ -25,7 +30,7 @@ describe("test for method isExist", () => {
         }).toThrow(TypeError);
         expect(() => {
             s.isExist(new Promise((resolve, reject) => {
-            resolve("this is a promise");
+                resolve("this is a promise");
             }));
         }).toThrow(TypeError);
 
@@ -35,15 +40,20 @@ describe("test for method isExist", () => {
     });
     test("functional verification", () => {
         const s = new Spider();
-        const myPlan = s.add(defaultPlan(() => {
-            return 1;
+        s.add(defaultPlan({
+            callbacks: [
+                (err, current) => {
+                    return 1;
+                },
+            ],
+            name: "myPlan",
         }));
         expect(s.isExist("u1")).toBe(false);
-        s.queue(myPlan, "u1");
+        s.queue("myPlan", "u1");
         expect(s.isExist("u1")).toBe(true);
 
         expect(s.isExist("u3")).toBe(false);
-        s.queue(myPlan, ["u2", "u3", "u4", "u5"]);
+        s.queue("myPlan", ["u2", "u3", "u4", "u5"]);
         expect(s.isExist("u3")).toBe(true);
     });
 });
@@ -51,8 +61,13 @@ describe("test for method isExist", () => {
 describe("test for method filter", () => {
     test("parameter check", () => {
         const s = new Spider();
-        const myPlan = s.add(defaultPlan(() => {
-            return 1;
+        s.add(defaultPlan({
+            callbacks: [
+                (err, current) => {
+                    return 1;
+                },
+            ],
+            name: "myPlan",
         }));
 
         expect(() => {
@@ -94,17 +109,23 @@ describe("test for method filter", () => {
 
     test("functional verification", () => {
         const s = new Spider();
-        const myPlan = s.add(defaultPlan(() => {
-            return 1;
+
+        s.add(defaultPlan({
+            callbacks: [
+                (err, current) => {
+                    return 1;
+                },
+            ],
+            name: "myPlan",
         }));
         expect(s.filter(["u1", "u2", "u3"])).toEqual(["u1", "u2", "u3"]);
         expect(s.filter(["u1", "u2", "u3", "u3", "u3"])).toEqual(["u1", "u2", "u3"]);
 
-        s.queue(myPlan, "u1");
+        s.queue("myPlan", "u1");
         expect(s.filter(["u1", "u2", "u3"])).toEqual(["u2", "u3"]);
         expect(s.filter(["u1", "u1", "u2", "u2", "u3"])).toEqual(["u2", "u3"]);
 
-        s.queue(myPlan, ["u2", "u3"]);
+        s.queue("myPlan", ["u2", "u3"]);
         expect(s.filter(["u1", "u1", "u2", "u2", "u3"])).toEqual([]);
     });
 });

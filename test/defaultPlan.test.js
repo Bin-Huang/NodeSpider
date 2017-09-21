@@ -13,7 +13,12 @@ test("function defaultPlan parameter check", () => {
     }).toThrow(TypeError);
 
     expect(() => {
-        defaultPlan(() => "this is a function");
+        defaultPlan({
+            callbacks: [
+                () => "this is a function",
+            ],
+            name: "plan1",
+        });
     }).not.toThrow(TypeError);
 
     expect(() => {
@@ -24,25 +29,6 @@ test("function defaultPlan parameter check", () => {
     }).toThrow(TypeError);
 
     expect(() => {
-        defaultPlan({callback: () => "a object with callback"});
+        defaultPlan({name: "plan1", callbacks: [() => "a object with callback"]});
     }).not.toThrow(TypeError);
-});
-
-test("function defaultPlan parameter default value", () => {
-    const callback = () => "this is a callback function";
-
-    expect(defaultPlan(callback).option.callback).toBe(callback);
-    expect(defaultPlan(callback).option.request).toEqual({encoding: null});
-
-    const plan1 = defaultPlan({callback});
-    expect(plan1.option.callback).toBe(callback);
-    expect(plan1.option.request).toEqual({encoding: null});
-    expect(plan1.option.callback).toBe(callback);
-    expect(plan1.type).toBe("default");
-
-    const plan2 = defaultPlan({callback, type: "myType"});
-    expect(plan2.option.callback).toBe(callback);
-    expect(plan2.option.request).toEqual({encoding: null});
-    expect(plan2.option.callback).toBe(callback);
-    expect(plan2.type).toBe("myType");
 });
