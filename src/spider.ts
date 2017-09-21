@@ -203,7 +203,8 @@ export default class NodeSpider extends EventEmitter {
      */
     public plan(name: string, callback: IDefaultPlanOptionCallback) {
         if (! this._STATE.planStore.has(name)) {
-            throw new TypeError(`method plan: the plan name ${name} is repeated.`);
+            throw new TypeError(`method plan: Can not add new plan named "${name}".
+            There is already a plan called "${name}".`);
         }
         return this.add(defaultPlan({
             name,
@@ -222,20 +223,9 @@ export default class NodeSpider extends EventEmitter {
      * @param special （可选）针对当前链接的特别设置，将覆盖与plan重复的设置
      */
     public queue(planName: string, url: string | string[], info?: any): number {
-        // 参数检验
-        // if (typeof planName !== "symbol") {
-        //     throw new TypeError(`
-        //         """queue(planKey, url, info?)"""
-        //         The parameter planKey should be a symbol returned from calling the method plan!
-        //     `);
-        // }
         const plan = this._STATE.planStore.get(planName);
         if (! plan) {
-            throw new Error(`
-                """queue(planKey, url, info?)"""
-                The planKey you passed map to nothing. No such planKey is linked to a defined plan.
-                The parameter planKey should be the return of the method plan
-            `);
+            throw new TypeError(`method queue: no such plan named "${planName}"`);
         }
 
         // 添加到队列
@@ -245,10 +235,7 @@ export default class NodeSpider extends EventEmitter {
         } else {
             url.map((u) => {
                 if (typeof u !== "string") {
-                    return new TypeError(`
-                        """queue(planKey, url, info?)"""
-                        the parameter url should be a string or string array!
-                    `);
+                    throw new TypeError(`the parameter "url" should be a string or an string array`);
                 }
                 newTasks.push({url: u, planName, info});
             });
