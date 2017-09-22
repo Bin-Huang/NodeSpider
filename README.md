@@ -1,14 +1,11 @@
-**NOTE**    The package nodespider is still under development. That means frequent changes and potential bug. So it is not suggested to using it in your project.
-
 # Features
 - Simple and flexible
-- Funny selector you must like it, just like jQ
-- automatically convert response body to UTF8 if necessary(as an option), never worry about encoding anymore
-- save data extracted from web page more easily
+- Funny **jQ** selector you must like it
+- automatically decode body into **UTF8**(as an option), never worry about encoding anymore
+- save extracted data by pipe, just enjoy
 - easy to check and filter existed urls in queue.
 - retry task easily and reliably
-- rate limit & simultaneous connections limit
-- written in ES6 & ES7
+- rate limit & concurrent limit
 - support async function and promise
 
 ```javascript
@@ -20,91 +17,9 @@ s.plan("getTitle", function(err, current) {
     console.log($("title").text());
 });
 s.queue("getTitle", "https://www.google.com");
+
+s.download("./save/to/path", "https://www.npmjs.com/static/images/mountain-dot.svg");
 ```
-
-```javascript
-s.add(csvPipe({
-    name: "myCsv",
-    file: "./save/to/my.csv",
-    items: ["title", "article"]
-}));
-s.save("myCsv", {
-    title: "this is my title",
-    article: "article body",
-});
-```
-
-```javascript
-s.add(downloadPlan({
-    name: "downloadImg",
-    path: "./save/to/myFolder",
-    callback: (err, current) => console.log("done!");
-}));
-
-s.queue("downloadImg", "http://example.com/example.jpg");
-
-
-s.add(defaultPlan({
-    name: "getImgUrl",
-    headers: {
-        cookie: "this-is-my-cookie-with-secret",
-    },
-    method: "GET",
-    callbacks: [
-        Spider.preToUtf8,
-        Spider.preLoadJq,
-        (err, current) => {
-            const $ = current.$;
-            s.queue("downloadImg", $("img").src());
-        }
-    ],
-}));
-s.queue("getImgUrl", "http://www.google.com");
-
-
-s.add(jsonPipe({
-    name: "myJson",
-    file: "./path/to/myJson.json",
-}));
-s.save("myJson", {
-    title: "nodespider",
-    description: "Simple, flexible, delightful web crawler/spider package",
-});
-```
-
-```javascript
-const s = new Spider({
-    concurrency: {
-        "blogSpider": 20,
-        "imgSpider": 4,
-        "articleSpider + otherSpider": 10
-    }
-});
-s.plan("blogSpider", (err, current) => {
-    if (err) return current.retry(3);
-
-    const $ = current.$;
-    const newUrl = $("#next_page").url();
-    if (! current.isExist(newUrl)) {
-        current.queue("articleSpider", newUrl);
-    }
-});
-s.queue("blogSpider", "http://www.baidu.com");
-
-s.add(defaultPlan({
-    name: "imgSpider",
-    callbacks: [
-        Spider.preToUtf8,
-        Spider.preLoadJq,
-        (err, current) => {
-            if (err) return current.retry(3);
-            const $ = current.$;
-            const newUrl = $("#next_page").url();
-        },
-    ],
-}))
-```
-
 
 # Installation & initialization
 
@@ -121,7 +36,7 @@ const mySpider = new Spider();
 const myOtherSpider = new Spider({
     rateLimit: 20,
     maxConnections: 20,
-    // and more options... 
+    // and more options...
 })
 ```
 
@@ -131,197 +46,132 @@ Optional settings:
 | --- | ---- | --- | --- |
 | rateLimit | request interval | number | 2(millisecond)
 | queue | task queue | class | NodeSpider.Queue
-| maxConnections | maximum number of simultaneous connections | number | object | 20 |
+| maxConnections | maximum number of simultaneous connections | number | 20 |
 
-## maxConnections
-Maximum number of simultaneous connections. It can be a number or object.
+# Method
 
-**when it is a `number`**
+## Spider.prototype.plan(planName, callback)
+add a default plan
 
-It means the amount of simultaneous connections can not exceed `maxConnections`.
-
-```javascript
-const s = new Spider({
-    maxConnections: 10, // the amount of simultaneous connections of not more than 10
-});
-```
-
-**when it is an `object`**
-
-Also, you can specify the maximun number of simultaneous connections for tasks with different type of plan.
-
-```javascript
-const s = new Spider({
-    maxConnections: {
-        "download": 5,
-        "crawl": 15,    //  the maxConnections of tasks with plan "crawl" of not more than 15
-    }
-});
-```
-
-*NOTE:* If option `maxConnections` is an object, there will throw an error when add a new plan but its type has not existed in the option `maxConnections`.
-
-## add(item)
-
-add new plan or pipe to this spider instance, then you can use it by method `queue` or `save`.
-
-| parameter | description | type |
+| name | type | description |
 | --- | --- | --- |
-| item | planObject or pipeObject | object |
+| planName | string | new plan's name |
+| callback | function | the function to call when successfully crawled or threw an error |
+
+Three parameters will be passed to the callback function:
+
+- `err` when there aren't error , it will be `null`
+- `current` current task's information
+- - `response`
+- - `body`  the response body in utf8 format
+- - `url`
+- - `planName`
+- - `hasRetried`
+- - `info`
+- - `$` the jQ selector that you can use it to extract data
+- `spider`  this spider instance
+
+// TODO $的有趣方法
 
 ```javascript
-// add a default plan
-s.add(defaultPlan({
-    name: "myNewPlan",
-    callbacks: [
-        () => console.log("hello, world"),
-    ]
-}));
-s.queue("myNewPlan", "http://www.youtube.com");
-
-// add a csv-pipe
-const csvFilePipe = s.add(csvPipe("path/to/my.csv", ["name", "age"]));
-s.save(csvFilePipe, {   // save data to file my.csv
-    name: "ben",
-    age: 20
+const s = new Spider();
+s.plan("myPlan", (err, current, s) => {
+    if (err) return s.retry(current);
+    const $ = current.$;
+    console.log($("title").text());
 });
+s.queue("myPlan", "http://www.google.com");
 ```
 
-### plan generator
+**Tips:**   If you want to cancel jQ loading, close automatic decode, or make more detailed settings (such as modifying request headers), it is recommended to use the method `add` to add the default plan.
 
-*Before crawl a web page, it is required to create a crawl plan.*
+Even if you want to decide how to perform the task by yourself, you can use the method `add` to add your own plan. These will be mentioned later.
 
-NodeSpider comes with two plan generator:
-- `defaultPlan` The usual plan that expose response and body to developer. 
-- `streamPlan`  The plan will expose the request stream to developer (power by request). If you need to operate on request stream, this is what you want.
-- `downloadPlan` Very easy to download files from web.
+## Spider.prototype.queue(planName, url, info)
 
-**See [plan document](./doc/plan.md)**
+Add url(s) to the queue and specify a plan. These task will be performed as planned when it's turn.
 
-### pipe generator
-
-*To create a pipe can help you save data extracted from web page more easily.*
-
-NodeSpider comes with three pipe generators:
-- `jsonPipe`    create a pipe that save data as json file.
-- `csvPipe` create a pipe that save data as csv file.
-- `txtPipe` create a pipe that save data as txt file.
-
-**See [pipe document](./doc/pipe.md)**
-
-## plan(name, callback)
-
-Using method `plan` is the easier way to add a default plan.
+| name | type | description |
+| --- | --- | --- |
+| planName | string | specified plan's name |
+| url | string or string array | the url(s) need to add |
+| info | * | `(Optional)`. Attached information. The `Info` will be passed to the callback as ` current.info` when the task of adding url is executed |
 
 ```javascript
-const { Spider } = require("nodespider");
-const s = new Spider();
-
-function myCallback(err, current) {
+s.plan("myPlan", (err, current) => {
     console.log(current.url);
-}
-
-s.plan("myPlan", myCallback);
-// equal to 
-s.add(defaultPlan({
-    name: "myPlan",
-    callbacks: [
-        Spider.preToUtf8,
-        Spider.preLoadJq,
-        myCallback,
-    ]
-}));
+    if (current.info) {
+        console.log(current.info.from);
+    }
+});
+s.queue("myPlan", "https://www.quora.com");
+s.queue("myPlan", [
+    "https://www.github.com",
+    "https://www.baidu.com",
+]);
+s.queue("myPlan", "https://www.npmjs.com", {
+    from: "google"
+});
 ```
 
-## queue(planName, url, info)
+## Spider.prototype.download(path, url, fileName)
 
-add new task(s) with url and appointed plan to the queue.
+Add download url to the queue. The downloaded file will be saved in specified path.
 
-| parameter | description | type |
-| --- | ---- | --- |
-| planName |  | string |
-|  url | the task's url | string or array |
-| info | (Optional)the task's special information object, that will be passed to plan's callback as `current` parameter's member | Object |
+| name | type | description |
+| --- | --- | --- |
+| path | string | the path to save downloaded file |
+| url | string | the url need to add |
+| fileName | string | `(Optional)` . The downloaded file's name |
 
 ```javascript
-const s = new Spider();
-s.plan("myPlan", function (err, current) {
-    // some crawling rules
-});
-
-s.queue("myPlan", "https://en.wikipedia.org");
-s.queue("myPlan", [
-    "http://www.github.com",
-    "https://stackoverflow.com/",
-    "https://nodejs.org"
-]);
+s.download("./save/to/path", "https://www.npmjs.com/static/images/mountain-dot.svg");
+s.download(
+    "./save/to/path",
+    "https://www.npmjs.com/static/images/mountain-dot.svg",
+    "download.svg"
+);
 ```
 
-## retry(currentTask, maxRetry, finalErrorCallback);
+When `fileName === undefined`, the download file will be named by url in legal. Never worry about naming problems
+```javascript
+s.download("./", "https://www.npmjs.com/static/images/rucksack-dot.svg");
+// filename: npmjs.com!static!images!rucksack-dot.svg
+```
 
-Retry a task. The task will be added to the queue again and wait.
+**Warn**    When an error threw from downloading, it will automatically retry 3 times (in maximum). More than three times, it will just `console.log(error)` and do not more.
+
+If you want to decide how to handle error by yourself, or make more detailed settings, you can use the method `add` to add download plan. These will be mentioned later.
+
+## Spider.prototype.retry(currentTask, maxRetry, finalErrorCallback);
+
+Retry the task. The task will be added to queue again.
 
 | parameter | description | type |
 | --- | --- | --- |
-| currentTask | the task needs retry | object |
-| maxRetry | (Optional)Maximum number of retries(how many times can this task be retried?). Default: `1` | number |
-| finalErrorCallback | (Optional)the function when reach maximum number of retries to call | function |
+| currentTask | the task which need to be retried | object |
+| maxRetry | (Optional) Maximum number of retries. Default: `1` | number |
+| finalErrorCallback | (Optional) the function will be called when reach maximum number of retries | function |
 
 ```javascript
 s.plan("myPlan", function (err, current) {
-    if (err) {
-        return s.retry(current);
-    }
+    if (err) return s.retry(current);
 });
 s.plan("otherPlan", function (err, current) {
-    if (err) {
-        // if there are an error, retry the task
-        return s.retry(current, 10);
-    }
+    if (err) return s.retry(current, 10);
 });
 s.plan("anotherPlan", function (err, current) {
-    if (err) {
-        return s.retry(current, 5, () => {
-            // when the number of retries reach the maximun, print the task's url
-            console.log(current.url);   
-        })
-    }
+    if (err) return s.retry(current, 5, () => console.log(err));
 });
 ```
 
-## save(pipeName, data)
+## Spider.prototype.isExist(url)
 
-save data to appointed pipe.
-
-| parameter | description | type |
-| --- | --- | --- |
-| pipeName | the name of appointed pipe | string |
-| data | data | object |
-
-```javascript
-// create the pipe
-s.add(jsonPipe({
-    name: "myJson",
-    path: "./my.json",
-}));
-s.plan(function (err, current) {
-    const $ = current.$;
-    // save data to file "my.json" 
-    s.save("myJson", {
-        title: $("#title").text(),
-        article: $("#article").text(),
-        date: $("#date").text(),
-    });
-});
-```
-
-## isExist(url)
-
-Check if you have ever added the url
+Check whether the url has been added. If the url is in the queue, is crawling or has been crawled, return `true`.
 
 | parameter | description | type |
 | --- | --- | --- |
-| url | the url you need to check | string |
+| url | the url you want to check | string |
 
 | return | description |
 | --- | --- |
@@ -329,12 +179,12 @@ Check if you have ever added the url
 
 ```javascript
 s.queue("myPlan", "http://www.example.com");
-console.log(s.isExist("http://www.example.com"));    // True
+console.log(s.isExist("http://www.example.com"));    // true
 ```
 
-## filter(urls)
+## Spider.prototype.filter(urls)
 
-filter() method creates a new array with all unique url elements that don't exist in the queue from provided array.
+Method `filter` return a new array of all unique url items which don't exist in the queue from provided array.
 
 | parameter | type |
 | --- | --- |
@@ -345,19 +195,92 @@ filter() method creates a new array with all unique url elements that don't exis
 | array |
 
 ```javascript
-s.queue(planA, "http://a.com");
+s.queue(planA, "a.com");
 
-var urls = n.filter(["http://a.com", "http://b.com", "http://c.com"]);
+var urls = n.filter(["a.com", "b.com", "c.com"]);
 console.log(urls); // ["http://b.com", "http://c.com"]
 
-urls = n.filter(["http://a.com", "http://aa.com", "http://aa.com"]);
+urls = n.filter(["a.com", "aa.com", "aa.com"]);
 console.log(urls); // ["http://aa.com"]
 ```
 
-## end()
+## Spider.prototype.add(planObject)
+add a new plan
 
+```javascript
+s.add(defaultPlan({
+    name: "myPlan1",
+    callbacks: [
+        (err, current, s) => console.log(current.url)
+    ]
+}));
+s.queue("myPlan1", "https://www.google.com");
+```
+
+**What is the "plan"?** What spider to do after got url from queue, we call that "plan".
+
+**What is the "plan generator"?**   A function that returns plan, and it can reuses code.
+
+There are three built-in plan generators that can help you quickly create a plan:
+
+- `defaultPlan` requests and passes response body to callbacks(expose to developer)
+- `streamPlan`  requests and passes response stream to callback(expose to developer)
+- `downloadPlan`    downloads file and saves it in specified path.
+
+See more: **[plan document](./doc/plan.md)**
+
+*In the future version, you can also create your own more flexible plan, even your own plan generator. At present version already have these base, but the api and document is not perfect, so please expect*
+
+## Spider.prototype.connect(pipeObject)
+add a new data pipe.
+
+```javascript
+s.connect(jsonPipe({
+    name: "myJson",
+    path: "./my.json",
+    items: [title, article, publish_date],
+}));
+```
+
+There are three built-in pipe generators that can help you quickly create a pipe:
+
+- `txt pipe`    Data will be saved in the ".txt" file in tabular format
+- `json pipe`   Data will be stored in a ".json" file
+- `csv pipe`    Data will be stored in a ".csv" file
+
+See more: **[pipe document](./doc/pipe.md)**
+
+## Spider.prototype.save(pipeName, data)
+
+Save data through a pipe
+
+```javascript
+// connect a pipe
+s.connect(jsonPipe({
+    name: "myJson",
+    path: "./my.json",
+    items: [title, article, url],
+}))
+s.plan("saveDoc", (err, current, s) => {
+    const $ = current.$;
+    // save data through pipe
+    s.save("myJson", {
+        title: $("title").text(),
+        article: $("#readme").text(),
+        url: current.url,
+    });
+})
+s.queue("saveDoc", "https://github.com/Bin-Huang/NodeSpider");
+```
+
+## Spider.prototype.end()
 close the spider instance.
 
+```javascript
+const s = new Spider();
+s.end();
+s.plan(() => null); // throw error
+```
 
 # Event
 

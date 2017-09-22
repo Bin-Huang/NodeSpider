@@ -1,3 +1,4 @@
+- 在执行任务之前，先让url正常化，防止出现缺失协议的情况，使用 normalize-url
 - concurrent control with planName
 - modify document
 - modify unit tests

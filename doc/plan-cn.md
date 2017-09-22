@@ -1,7 +1,8 @@
-There are three built-in plan generators that can help you quickly create a plan:
-- `defaultPlan` requests and passes response body to callbacks(expose to developer)
-- `streamPlan`  requests and passes response stream to callback(expose to developer)
-- `downloadPlan`    downloads file and saves it in specified path.
+
+nodespider 自带了三个计划模板，可以帮助你快速新建一个爬取计划:
+- `defaultPlan` (默认的计划模板) 向站点发送网络请求，然后将接受到的 response 传递给 callbacks，以暴露返回正文给开发者处理
+- `streamPlan`  根据url发送网络请求，并将返回的流(stream)直接通过 callback 暴露给开发者
+- `downloadPlan`    下载url指向的文件到本地，开发者可以通过 callback 来处理下载成功与失败的情况
 
 # default plan
 ```javascript
@@ -58,7 +59,7 @@ streamPlan({
 ```
 ## callback
 
-When receiving the response stream, call the callback function immediately and pass in three parameters:
+当收到response stream，立即调用 callback 函数，并传入三个参数：
 
 - `err` when there aren't error , it will be `null`
 - `current` current task's information
@@ -94,7 +95,7 @@ downloadPlan({
 ```
 ## callback
 
-When the download succeeds, or when an error threw, the function will be called and passed in three parameters:
+当成功下载后，或者遇到错误时，将调用 callback 函数，并传入三个参数：
 
 - `err` when there aren't error , it will be `null`
 - `current` current task's information
@@ -118,11 +119,11 @@ s.queue("downloadImg", "http://example.com/example.png");
 ```
 
 ## filename
-When you add url using method `queue`, if the download plan is specified, the download file will name according to` info`.
+当你使用`queue`添加一个url时，如果指定的是 download plan，爬虫将根据 `info` 为下载文件命名。
 
-- When `info` is a string, it will be the name of download file
-- When `info` is an object, if there are `info.fileName` it will be the name
-- If these does not occur, it will automatically be named according to url
+- 当`info`是字符串时，将直接以此命名
+- 当`info`是一个对象时，如果存在`info.fileName`则以此命名
+- 如果没有出现上述情况，将自动根据url命名
 
 ```javascript
 s.queue("downloadImg", "http://example.com/example.png", "download.png");
