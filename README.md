@@ -12,6 +12,67 @@
 - support async function and promise
 
 ```javascript
+const { Spider } = require("nodespider");
+const s = new Spider();
+
+s.plan("getTitle", function(err, current) {
+    const $ = current.$;
+    console.log($("title").text());
+});
+s.queue("getTitle", "https://www.google.com");
+
+s.download("./save/to/myFolder", "http://example.com/example.jpg");
+
+s.add(csvPipe({
+    name: "myCsv",
+    file: "./save/to/my.csv",
+    items: ["title", "article"]
+}));
+s.save("myCsv", {
+    title: "this is my title",
+    article: "article body",
+});
+```
+
+```javascript
+s.add(downloadPlan({
+    name: "downloadImg",
+    path: "./save/to/myFolder",
+    callback: (err, current) => console.log("done!");
+}));
+
+s.queue("downloadImg", "http://example.com/example.jpg");
+
+
+s.add(defaultPlan({
+    name: "getImgUrl",
+    headers: {
+        cookie: "this-is-my-cookie-with-secret",
+    },
+    method: "GET",
+    callbacks: [
+        Spider.preToUtf8,
+        Spider.preLoadJq,
+        (err, current) => {
+            const $ = current.$;
+            s.queue("downloadImg", $("img").src());
+        }
+    ],
+}));
+s.queue("getImgUrl", "http://www.google.com");
+
+
+s.add(jsonPipe({
+    name: "myJson",
+    file: "./path/to/myJson.json",
+}));
+s.save("myJson", {
+    name: "nodespider",
+    description: "Simple, flexible, delightful web crawler/spider package",
+});
+```
+
+```javascript
 const s = new Spider({
     concurrency: {
         "blogSpider": 20,
@@ -19,7 +80,7 @@ const s = new Spider({
         "articleSpider + otherSpider": 10
     }
 });
-s.add(defaultPlan("blogSpider", function (err, current) {
+s.plan("blogSpider", (err, current) => {
     if (err) return current.retry(3);
 
     const $ = current.$;
@@ -27,17 +88,21 @@ s.add(defaultPlan("blogSpider", function (err, current) {
     if (! current.isExist(newUrl)) {
         current.queue("articleSpider", newUrl);
     }
-}));
+});
 s.queue("blogSpider", "http://www.baidu.com");
 
 s.add(defaultPlan({
     name: "imgSpider",
-    callback: function (err, current) {
-        if (err) return current.retry(3);
-        const $ = current.$;
-        const newUrl = $("#next_page").url();
-    }
-}));
+    callbacks: [
+        Spider.preToUtf8,
+        Spider.preLoadJq,
+        (err, current) => {
+            if (err) return current.retry(3);
+            const $ = current.$;
+            const newUrl = $("#next_page").url();
+        },
+    ],
+}))
 ```
 
 
@@ -128,20 +193,23 @@ const n = new Spider({
 
 *NOTE:* If option `maxConnections` is an object, there will throw an error when add a new plan but its type has not existed in the option `maxConnections`.
 
-# Method
-
 ## add(item)
 
-add new plan or pipe to this spider instance, then you can use them by method `queue` or `save`.
+add new plan or pipe to this spider instance, then you can use it by method `queue` or `save`.
 
 | parameter | description | type |
 | --- | --- | --- |
 | item | planObject or pipeObject | object |
 
 ```javascript
-// add a stream plan
-const myStreamPlan = n.add(streamPlan( /*some opts*/ }));
-n.queue(myStreamPlan, "http://www.youtube.com");
+// add a default plan
+s.add(defaultPlan({
+    name: "myNewPlan",
+    callbacks: [
+        () => console.log("hello, world"),
+    ]
+}));
+s.queue("myNewPlan", "http://www.youtube.com");
 
 // add a csv-pipe
 const csvFilePipe = n.add(csvPipe("path/to/my.csv", ["name", "age"]));
@@ -173,36 +241,48 @@ NodeSpider comes with three pipe generators:
 
 **See [pipe document](./doc/pipe.md)**
 
-## plan(option)
+## plan(name, callback)
 
-Using method `plan` to create a default plan directly.
+Using method `plan` is the easier way to add a default plan.
 
 ```javascript
+const { Spider } = require("nodespider");
 const s = new Spider();
 
-let plan1 = s.plan(option);
+function myCallback {
+    // some code
+}
+
+s.plan("myPlan", myCallback);
 // equal to 
-let plan2 = s.add(defaultPlan(option));
+s.add(defaultPlan({
+    name: "myPlan",
+    callbacks: [
+        Spider.preToUtf8,
+        Spider.preLoadJq,
+        myCallback,
+    ]
+}));
 ```
 
-## queue(planKey, url, info)
+## queue(planName, url, info)
 
 add new task(s) with url and appointed plan to the queue.
 
 | parameter | description | type |
 | --- | ---- | --- |
-| planKey | the key of task's appointed plan (returned by method `pipe` | symbol |
+| planName |  | string |
 |  url | the task's url | string or array |
 | info | (Optional)the task's special information object, that will be passed to plan's callback as `current` parameter's member | Object |
 
 ```javascript
 const n = new Spider();
-const myPlan = n.plan(function (err, current) {
+n.plan("myPlan", function (err, current) {
     // some crawling rules
 });
 
-n.queue(myPlan, "https://en.wikipedia.org");
-n.queue(myPlan, [
+n.queue("myPlan", "https://en.wikipedia.org");
+n.queue("myPlan", [
     "http://www.github.com",
     "https://stackoverflow.com/",
     "https://nodejs.org"

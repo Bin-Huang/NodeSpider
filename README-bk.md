@@ -1,253 +1,329 @@
+**NOTE**    The package nodespider is still under development. That means frequent changes and potential bug. So it is not suggested to using it in your project.
 
-20 lines of code to create a web crawler as a geek.
-
-Easier and more efficient to crawl a website and extract data, NodeSpider can save your time.
+# Features
+- Simple and flexible
+- Funny selector you must like it, just like jQ
+- automatically convert response body to UTF8 if necessary(as an option), never worry about encoding anymore
+- save data extracted from web page more easily
+- easy to check and filter existed urls in queue.
+- retry task easily and reliably
+- rate limit & simultaneous connections limit
+- written in ES6 & ES7
+- support async function and promise
 
 ```javascript
-let s = new NodeSpider({
-    preToUtf8: true,   // Convert body to UTF8
-    // or more...
+const s = new Spider({
+    concurrency: {
+        "blogSpider": 20,
+        "imgSpider": 4,
+        "articleSpider + otherSpider": 10
+    }
+});
+s.add(defaultPlan("blogSpider", function (err, current) {
+    if (err) return current.retry(3);
+
+    const $ = current.$;
+    const newUrl = $("#next_page").url();
+    if (! current.isExist(newUrl)) {
+        current.queue("articleSpider", newUrl);
+    }
+}));
+s.queue("blogSpider", "http://www.baidu.com");
+
+s.add(defaultPlan({
+    name: "imgSpider",
+    callback: function (err, current) {
+        if (err) return current.retry(3);
+        const $ = current.$;
+        const newUrl = $("#next_page").url();
+    }
+}));
+```
+
+
+```javascript
+const { Spider, jsonPipe } = require("nodespider");
+
+const n = new Spider({
+    rateLimit: 10
 });
 
-s.start('https://en.wikipedia.org/wiki/Main_Page', function (err, currentTask, $) {
+// create a pipe to save data
+const jsonFile = n.add(jsonPipe("path/to/my.json"));
+
+// create a plan
+const planA = n.plan(function (err, current) {
     if (err) {
-        return s.retry(currentTask);   //retry when there are a error
+        // if throws error, retry the task of not more than 3 times.
+        return n.retry(current, 3);
     }
+    const $ = current.$;    // you can use jQ
+    console.log($("title").text());
 
-    // Yes, you can use jQuery 
-    console.log($('title').text()); 
-
-    // Add new task to NodeSpider's todo-list.
-    s.todo($('#next_page').attr('href'), current.callback);
-
-    // You can also write like that:
-    // Before add to todo-list, convert relative url into absolute if necessary
-    s.todo($('#pre_page'), current.callback);
-
-    // Easy to save data
-    s.save('./mydata.json', {
-        title: $('title').text(),
-        sumary: $('p').text(),
-        picture_url: $('img').attr('href')
+    // easily save the data extracted from web page
+    n.save(jsonFile, {
+        user: $("#user").text(),
+        description: $("#desc").text(),
+        date: "2017-7-7",
     });
 
-    // And more interesting thing...
+    n.queue(planA, $("#next_page").href());
 });
+
+n.queue(planA, "https://www.nodejs.org");
 ```
 
-# Installation and import
+# Installation & initialization
 
-```
-npm install nodespider
+```bash
+npm install nodespider --save
 ```
 
 ```javascript
-// in your .js file
-const NodeSpider = require("NodeSpider");
+const { Spider } = require("nodespider");
+
+const mySpider = new Spider();
+
+// or initialize with options
+const myOtherSpider = new Spider({
+    rateLimit: 20,
+    maxConnections: 20,
+    // and more options... 
+})
 ```
 
-# Initialization
+Optional settings:
 
-## new NodeSpider( [option] )
-create an instance of NodeSpider
+| option | description | type | defaults |
+| --- | ---- | --- | --- |
+| rateLimit | request interval | number | 2(millisecond)
+| queue | task queue | class | NodeSpider.Queue
+| maxConnections | maximum number of simultaneous connections | number | object | 20 |
 
-| param | required  | type  | description   |
-| :---:   | :---:   | :---:   | :---   |
-| option    | no  | object    | option  |
+## maxConnections
+Maximum number of simultaneous connections. It can be a number or object.
 
-**option:**
+**when it is a `number`**
 
-- **jq**    (default: `true`) whether to load jQ
-- **preToUtf8** (default: `true`)   convert body to utf8
-- **multiTasking**  (default: `20`) max multitasking number
-- **multiDownload** (default: `2`)  max download multitasking number
-- **defaultDownloadPath**   (default: `""`) default path for download file
-- **defaultRetry**  (default: `3`)  default retry count
+It means the amount of simultaneous connections can not exceed `maxConnections`.
 
 ```javascript
-var mySpider = new NodeSpider();
-
-var anotherSpider = new NodeSpider({
-    preToUtf8: true,
-    jq: false
-    // or more...
+const n = new Spider({
+    maxConnections: 10, // the amount of simultaneous connections of not more than 10
 });
 ```
+
+**when it is an `object`**
+
+Also, you can specify the maximun number of simultaneous connections for tasks with different type of plan.
+
+```javascript
+const n = new Spider({
+    maxConnections: {
+        "download": 5,
+        "crawl": 15,    //  the maxConnections of tasks with plan "crawl" of not more than 15
+    }
+});
+```
+
+*NOTE:* If option `maxConnections` is an object, there will throw an error when add a new plan but its type has not existed in the option `maxConnections`.
 
 # Method
 
-## NodeSpider.prototype.start(startUrl, callback)
+## add(item)
 
-Start web crawling with startUrl(s)
+add new plan or pipe to this spider instance, then you can use them by method `queue` or `save`.
 
-| param | required  | type  | description   |
-| :---:   | :---:   | :---:   | :---   |
-| startUrl    | yes  | string    | the url to start with. It can be a string or an array of string. |
-| callback  | yes   | function  | the function about what you want to do after received response.   |
-
-```javascript
-NodeSpider.start('http://www.google.com', function (error, currentTask, $) {
-    if (error) {
-        return console.log(error);
-    }
-
-    // get information from currentTask
-    console.log(currentTask.url);
-    console.log(currentTask.response);
-
-    // Use the $ to operate/select Elements
-    console.log($('title').text());
-});
-```
-
-## NodeSpider.prototype.todo(item, [opts,] callback)
-
-Add new web-crawl task to spider's todo-list. The task will be executed automatically.
-
-**item**    type: string, array or jQuery
-
-The url(s) you want to crawl. It can be a url `string`, array of urls, and jQuery element object that possess `href` attribute.
-
-If it is jQuery element object, nodespider will convert relative url into absolute url automatically, never wrong about the relative url in page.
+| parameter | description | type |
+| --- | --- | --- |
+| item | planObject or pipeObject | object |
 
 ```javascript
-s.todo('http://www.google.com', yourCallback);
-s.todo(['http://www.wiki.com', 'http://www.amazon.con'], yourCallback);
+// add a stream plan
+const myStreamPlan = n.add(streamPlan( /*some opts*/ }));
+n.queue(myStreamPlan, "http://www.youtube.com");
 
-function yourCallback(err, current, $) {
-    s.todo($('a'), yourCallback);
-}
-```
-
-**opts** type: object
-*optional* Special option for this task
-```
-var opts = {
-    jq: true
-    //...
-}
-```
-
-**callback** type: function
-
-the callback function for the task, about how to scrape the web
-
-```javascript
-function (err, current, $) {
-    // your code
-}
-```
-
-## NodeSpider.prototype.save(path, data)
-Method save help you to save/collect data from website to local easier.
-
-**path** type: string
-
-The path to save data. 
-If path or file does not exist, nodespider will create it automatically.
-
-
-Different file extension lead to defferent mode to save data.
-```javascript
-var s = new NodeSpider();
-var data = {type: 'cat', color: 'white'};
-
-// save as json
-s.save('./myFolder/myData.json', data); 
-
-// save as txt, using '\t','\n' as separator.
-// if you copy all to Excel, you will like that :)
-s.save('./myFolder/myData.txt', data); 
-
-// if there are no file extension, save as json by default
-s.save('./myFolder/myData', data);
-```
-
-**data** type: object
-
-Data you want to save/collect.
-
-```javascript
-s.save('student.json', {
-    name: 'ben',
+// add a csv-pipe
+const csvFilePipe = n.add(csvPipe("path/to/my.csv", ["name", "age"]));
+n.save(csvFilePipe, {   // save data to file my.csv
+    name: "ben",
     age: 20
 });
 ```
 
-## NodeSpider.prototype.retry(task [, max_retry_num [, final_err_callback]])
+### plan generator
 
-Method `retry` can help you to retry failed task.
+*Before crawl a web page, it is required to create a crawl plan.*
+
+NodeSpider comes with two plan generator:
+- `defaultPlan` The usual plan that expose response and body to developer. 
+- `streamPlan`  The plan will expose the request stream to developer (power by request). If you need to operate on request stream, this is what you want.
+- `downloadPlan` Very easy to download files from web.
+
+**See [plan document](./doc/plan.md)**
+
+### pipe generator
+
+*To create a pipe can help you save data extracted from web page more easily.*
+
+NodeSpider comes with three pipe generators:
+- `jsonPipe`    create a pipe that save data as json file.
+- `csvPipe` create a pipe that save data as csv file.
+- `txtPipe` create a pipe that save data as txt file.
+
+**See [pipe document](./doc/pipe.md)**
+
+## plan(option)
+
+Using method `plan` to create a default plan directly.
 
 ```javascript
-var s = new NodeSpider();
-s.start('http://some_url_maybe_wrong', function(err, current, $) {
+const s = new Spider();
+
+let plan1 = s.plan(option);
+// equal to 
+let plan2 = s.add(defaultPlan(option));
+```
+
+## queue(planKey, url, info)
+
+add new task(s) with url and appointed plan to the queue.
+
+| parameter | description | type |
+| --- | ---- | --- |
+| planKey | the key of task's appointed plan (returned by method `pipe` | symbol |
+|  url | the task's url | string or array |
+| info | (Optional)the task's special information object, that will be passed to plan's callback as `current` parameter's member | Object |
+
+```javascript
+const n = new Spider();
+const myPlan = n.plan(function (err, current) {
+    // some crawling rules
+});
+
+n.queue(myPlan, "https://en.wikipedia.org");
+n.queue(myPlan, [
+    "http://www.github.com",
+    "https://stackoverflow.com/",
+    "https://nodejs.org"
+]);
+```
+
+## retry(currentTask, maxRetry, finalErrorCallback);
+
+Retry a task. The task will be added to the queue again and wait.
+
+| parameter | description | type |
+| --- | --- | --- |
+| currentTask | the task needs retry | object |
+| maxRetry | (Optional)Maximum number of retries(how many times can this task be retried?). Default: `1` | number |
+| finalErrorCallback | (Optional)the function when reach maximum number of retries to call | function |
+
+```javascript
+const myPlan = n.plan(function (err, current) {
     if (err) {
-        s.retry(err);
-        // as
-        // s.retry(err, 3);
-        // as
-        // s.retry(err, 3, function (err) {
-        //    s.save('log', err);
-        // };
+        return n.retry(current);
     }
-})
+});
+const otherPlan = n.plan(function (err, current) {
+    if (err) {
+        // if there are an error, retry the task
+        return n.retry(current, 10);
+    }
+});
+const anotherPlan = n.plan(function (err, current) {
+    if (err) {
+        return n.retry(current, 5, () => {
+            // when the number of retries reach the maximun, print the task's url
+            console.log(current.url);   
+        })
+    }
+});
 ```
-**err** type: {Error}
 
-the error passed into the callback.
+## save(pipeKey, data)
 
-**max_retry_num** type: {number}
+save data to appointed pipe.
 
-*optional* Number of retries if the request fails. Default `3`
-
-**final_callback** type: {function}
-
-*optional* the function to execute when a task failure more than max_retry_num.
-There are only parameter `error`.
-
-Default: save error as data to log, equal to `function (err){s.save('log', err)}`.
-
-
-# callback
-
-the function about what you want to do after received response and body. 
+| parameter | description | type |
+| --- | --- | --- |
+| pipeKey | the key of appointed pipe(the return of method `pipe`) | symbol |
+| data | data | object |
 
 ```javascript
-function myCallback(error, currentTask, $) {
-    // some code
-}
+// create the pipe
+const myJson = n.add(jsonPipe("save_path/my.json"));
+const planA = n.plan(function (err, current) {
+    if (err) {
+        return n.retry(current);
+    }
+    const $ = current.$;
 
-mySpider.start("http://www.google.com", myCallback);
-mySpider.addTask({
-    url: "http://www.github.com",
-    callback: myCallback
+    // save data to file "my.json" 
+    n.save(myJson, {
+        name: $("#name").text(),
+        age: $("#age").text(),
+        description: $("#desc").text(),
+    });
 })
 ```
 
-There are three parameters: `error`, `currentTask` and `$`.
+## isExist(url)
 
-- **error** 
+Check if you have ever added the url
 
-    If there are not error in the task, it is `null`
+| parameter | description | type |
+| --- | --- | --- |
+| url | the url you need to check | string |
 
-- **currentTask**
+| return | description |
+| --- | --- |
+| boolean | if the url exists, return `true`
 
-    In NodeSpider, all tasks will be executed Asynchronously. But you can get information about the current task through the 'currentTask' parameter in callback function.
-    - `currentTask.url` current task's url
-    - `currentTask.callback` current task's callback
-    - `currentTask.response` current response from website
-    - ....
+```javascript
+n.queue(myPlan, "http://www.example.com");
+n.isExist("http://www.example.com");    // True
+```
 
-- **$**
+## filter(urls)
 
-    You can use the `$` to select element just like jQuery in browser. It can help you to extract urls and data more easily.
-    ```javascript
-    $('a').text()
-    ```
-    And, there are some new method
+filter() method creates a new array with all unique url elements that don't exist in the queue from provided array.
 
-    - $.fn.url
+| parameter | type |
+| --- | --- |
+| urls | array (of string) |
 
-    - $.fn.todo
+| return |
+| --- |
+| array |
 
-    - $.fn.download
+```javascript
+n.queue(planA, "http://a.com");
+
+var i = n.filter(["http://a.com", "http://b.com", "http://c.com"]);
+console.log(i); // ["http://b.com", "http://c.com"]
+
+var j = n.filter(["http://a.com", "http://aa.com", "http://aa.com"]);
+console.log(j); // ["http://aa.com"]
+```
+
+## end()
+
+close the spider instance.
+
+
+# Event
+
+## "empty"
+When there aren't more task in the queue, the event "empty" will be emitted.
+
+## "queueTask"
+When add a new task to the queue, the event "queueTask" will be emitted with a parameter `taskObject`.
+
+## "vacant"
+When the queue is empty and all tasks has been done, the event "vacant" will be emitted.
+
+# How to contribute
+- Submit an **issue** if you need any help.
+- Of course, feel free to submit **pull requests** with bug fixes or changes.
+- Open source your own plan generator, pipe generator, pretreatment function or queue, etc. More better with a name `nodespider-*` to easily search, such like `nodespider-mysqlpipe`.

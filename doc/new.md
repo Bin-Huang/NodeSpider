@@ -11,9 +11,10 @@ s.add(defaultPlan("plan1", (err, current, s) => {
 }));
 s.queue("plan1", "https://www.wikipedia.org/");
 ```
+There are some build-in plan generators can help you create your own crawling plan.
 
 # default plan
-```
+```javascript
 defaultPlan({
     name,
     callbacks,
@@ -26,7 +27,8 @@ The functions to call one-by-one when fetched response body or throwed error in 
 
 NodeSpider supports promise and async function, so you can write some async code in your callback just wrap into promise and return, or write your callback as async function.
 
-The three parameters are passed in turn between each function. All changes to the parameters will be passed to the next function
+The three parameters will be passed in turn between each function. All changes to the three parameters will be passed to the next function
+
 - `err` when there aren't error , it will be `null`
 - `current` current task's information
 - - `response`
