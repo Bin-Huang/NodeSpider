@@ -20,9 +20,9 @@ s.plan("getTitle", function(err, current) {
     console.log($("title").text());
 });
 s.queue("getTitle", "https://www.google.com");
+```
 
-s.download("./save/to/myFolder", "http://example.com/example.jpg");
-
+```javascript
 s.add(csvPipe({
     name: "myCsv",
     file: "./save/to/my.csv",
@@ -67,7 +67,7 @@ s.add(jsonPipe({
     file: "./path/to/myJson.json",
 }));
 s.save("myJson", {
-    name: "nodespider",
+    title: "nodespider",
     description: "Simple, flexible, delightful web crawler/spider package",
 });
 ```
@@ -106,38 +106,6 @@ s.add(defaultPlan({
 ```
 
 
-```javascript
-const { Spider, jsonPipe } = require("nodespider");
-
-const n = new Spider({
-    rateLimit: 10
-});
-
-// create a pipe to save data
-const jsonFile = n.add(jsonPipe("path/to/my.json"));
-
-// create a plan
-const planA = n.plan(function (err, current) {
-    if (err) {
-        // if throws error, retry the task of not more than 3 times.
-        return n.retry(current, 3);
-    }
-    const $ = current.$;    // you can use jQ
-    console.log($("title").text());
-
-    // easily save the data extracted from web page
-    n.save(jsonFile, {
-        user: $("#user").text(),
-        description: $("#desc").text(),
-        date: "2017-7-7",
-    });
-
-    n.queue(planA, $("#next_page").href());
-});
-
-n.queue(planA, "https://www.nodejs.org");
-```
-
 # Installation & initialization
 
 ```bash
@@ -173,7 +141,7 @@ Maximum number of simultaneous connections. It can be a number or object.
 It means the amount of simultaneous connections can not exceed `maxConnections`.
 
 ```javascript
-const n = new Spider({
+const s = new Spider({
     maxConnections: 10, // the amount of simultaneous connections of not more than 10
 });
 ```
@@ -183,7 +151,7 @@ const n = new Spider({
 Also, you can specify the maximun number of simultaneous connections for tasks with different type of plan.
 
 ```javascript
-const n = new Spider({
+const s = new Spider({
     maxConnections: {
         "download": 5,
         "crawl": 15,    //  the maxConnections of tasks with plan "crawl" of not more than 15
@@ -212,8 +180,8 @@ s.add(defaultPlan({
 s.queue("myNewPlan", "http://www.youtube.com");
 
 // add a csv-pipe
-const csvFilePipe = n.add(csvPipe("path/to/my.csv", ["name", "age"]));
-n.save(csvFilePipe, {   // save data to file my.csv
+const csvFilePipe = s.add(csvPipe("path/to/my.csv", ["name", "age"]));
+s.save(csvFilePipe, {   // save data to file my.csv
     name: "ben",
     age: 20
 });
@@ -249,8 +217,8 @@ Using method `plan` is the easier way to add a default plan.
 const { Spider } = require("nodespider");
 const s = new Spider();
 
-function myCallback {
-    // some code
+function myCallback(err, current) {
+    console.log(current.url);
 }
 
 s.plan("myPlan", myCallback);
@@ -276,13 +244,13 @@ add new task(s) with url and appointed plan to the queue.
 | info | (Optional)the task's special information object, that will be passed to plan's callback as `current` parameter's member | Object |
 
 ```javascript
-const n = new Spider();
-n.plan("myPlan", function (err, current) {
+const s = new Spider();
+s.plan("myPlan", function (err, current) {
     // some crawling rules
 });
 
-n.queue("myPlan", "https://en.wikipedia.org");
-n.queue("myPlan", [
+s.queue("myPlan", "https://en.wikipedia.org");
+s.queue("myPlan", [
     "http://www.github.com",
     "https://stackoverflow.com/",
     "https://nodejs.org"
@@ -300,20 +268,20 @@ Retry a task. The task will be added to the queue again and wait.
 | finalErrorCallback | (Optional)the function when reach maximum number of retries to call | function |
 
 ```javascript
-const myPlan = n.plan(function (err, current) {
+s.plan("myPlan", function (err, current) {
     if (err) {
-        return n.retry(current);
+        return s.retry(current);
     }
 });
-const otherPlan = n.plan(function (err, current) {
+s.plan("otherPlan", function (err, current) {
     if (err) {
         // if there are an error, retry the task
-        return n.retry(current, 10);
+        return s.retry(current, 10);
     }
 });
-const anotherPlan = n.plan(function (err, current) {
+s.plan("anotherPlan", function (err, current) {
     if (err) {
-        return n.retry(current, 5, () => {
+        return s.retry(current, 5, () => {
             // when the number of retries reach the maximun, print the task's url
             console.log(current.url);   
         })
@@ -321,31 +289,30 @@ const anotherPlan = n.plan(function (err, current) {
 });
 ```
 
-## save(pipeKey, data)
+## save(pipeName, data)
 
 save data to appointed pipe.
 
 | parameter | description | type |
 | --- | --- | --- |
-| pipeKey | the key of appointed pipe(the return of method `pipe`) | symbol |
+| pipeName | the name of appointed pipe | string |
 | data | data | object |
 
 ```javascript
 // create the pipe
-const myJson = n.add(jsonPipe("save_path/my.json"));
-const planA = n.plan(function (err, current) {
-    if (err) {
-        return n.retry(current);
-    }
+s.add(jsonPipe({
+    name: "myJson",
+    path: "./my.json",
+}));
+s.plan(function (err, current) {
     const $ = current.$;
-
     // save data to file "my.json" 
-    n.save(myJson, {
-        name: $("#name").text(),
-        age: $("#age").text(),
-        description: $("#desc").text(),
+    s.save("myJson", {
+        title: $("#title").text(),
+        article: $("#article").text(),
+        date: $("#date").text(),
     });
-})
+});
 ```
 
 ## isExist(url)
@@ -361,8 +328,8 @@ Check if you have ever added the url
 | boolean | if the url exists, return `true`
 
 ```javascript
-n.queue(myPlan, "http://www.example.com");
-n.isExist("http://www.example.com");    // True
+s.queue("myPlan", "http://www.example.com");
+console.log(s.isExist("http://www.example.com"));    // True
 ```
 
 ## filter(urls)
@@ -378,13 +345,13 @@ filter() method creates a new array with all unique url elements that don't exis
 | array |
 
 ```javascript
-n.queue(planA, "http://a.com");
+s.queue(planA, "http://a.com");
 
-var i = n.filter(["http://a.com", "http://b.com", "http://c.com"]);
-console.log(i); // ["http://b.com", "http://c.com"]
+var urls = n.filter(["http://a.com", "http://b.com", "http://c.com"]);
+console.log(urls); // ["http://b.com", "http://c.com"]
 
-var j = n.filter(["http://a.com", "http://aa.com", "http://aa.com"]);
-console.log(j); // ["http://aa.com"]
+urls = n.filter(["http://a.com", "http://aa.com", "http://aa.com"]);
+console.log(urls); // ["http://aa.com"]
 ```
 
 ## end()
