@@ -80,7 +80,7 @@ export default class NodeSpider extends EventEmitter {
     /**
      * 终止爬虫
      */
-    public cease() {
+    public end() {
         // 爬虫不再定时从任务队列获得新任务
         if (this._STATE.timer) {
             clearInterval(this._STATE.timer);

@@ -18,7 +18,7 @@ export default class NodeSpider extends EventEmitter {
     /**
      * 终止爬虫
      */
-    cease(): void;
+    end(): void;
     /**
      * Check whether the url has been added
      * @param {string} url
