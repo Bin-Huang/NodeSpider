@@ -45,17 +45,18 @@ export default class NodeSpider extends EventEmitter {
     connect(newPipe: IPipe): void;
     retry(current: ITask, maxRetry: number, finalErrorCallback?: () => any): any;
     /**
-     * add new default plan, and return a corresponding key.
+     * add new default plan
      * @param option default plan's option
      */
     plan(name: string, callback: IDefaultPlanOptionCallback): void;
     /**
-     * 添加待爬取链接到队列，并指定爬取计划。
-     * @param planName 指定的爬取计划
-     * @param url 待爬取的链接（们）
-     * @param special （可选）针对当前链接的特别设置，将覆盖与plan重复的设置
+     * Add url(s) to the queue and specify a plan. These task will be performed as planned when it's turn. Eventually only absolute url(s) can be added to the queue, the other will be returned in an array.
+     * @param planName the name of specified plan
+     * @param url url or array of urls
+     * @param info (Optional). Attached information for this url
+     * @returns {array}
      */
-    queue(planName: string, url: string | string[], info?: any): number;
+    queue(planName: string, url: string | string[], info?: any): any[];
     download(path: string, url: string, filename?: string): void;
     /**
      * Save data through a pipe

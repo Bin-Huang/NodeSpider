@@ -48,13 +48,17 @@ describe("test for method isExist", () => {
             ],
             name: "myPlan",
         }));
-        expect(s.isExist("u1")).toBe(false);
-        s.queue("myPlan", "u1");
-        expect(s.isExist("u1")).toBe(true);
+        expect(s.isExist("http://wwww.example1.com")).toBe(false);
+        s.queue("myPlan", "http://wwww.example1.com");
+        expect(s.isExist("http://wwww.example1.com")).toBe(true);
 
-        expect(s.isExist("u3")).toBe(false);
-        s.queue("myPlan", ["u2", "u3", "u4", "u5"]);
-        expect(s.isExist("u3")).toBe(true);
+        expect(s.isExist("http://www.example3.com")).toBe(false);
+        s.queue("myPlan", [
+            "http://www.example2.com",
+            "http://www.example3.com",
+            "http://www.example4.com",
+        ]);
+        expect(s.isExist("http://www.example3.com")).toBe(true);
     });
 });
 
@@ -121,11 +125,36 @@ describe("test for method filter", () => {
         expect(s.filter(["u1", "u2", "u3"])).toEqual(["u1", "u2", "u3"]);
         expect(s.filter(["u1", "u2", "u3", "u3", "u3"])).toEqual(["u1", "u2", "u3"]);
 
-        s.queue("myPlan", "u1");
-        expect(s.filter(["u1", "u2", "u3"])).toEqual(["u2", "u3"]);
-        expect(s.filter(["u1", "u1", "u2", "u2", "u3"])).toEqual(["u2", "u3"]);
+        s.queue("myPlan", "http://www.example1.com");
+        expect(s.filter([
+            "http://www.example1.com",
+            "http://www.example2.com",
+            "http://www.example3.com",
+        ])).toEqual([
+            "http://www.example2.com",
+            "http://www.example3.com",
+        ]);
+        expect(s.filter([
+            "http://www.example1.com",
+            "http://www.example1.com",
+            "http://www.example2.com",
+            "http://www.example2.com",
+            "http://www.example3.com",
+        ])).toEqual([
+            "http://www.example2.com",
+            "http://www.example3.com",
+        ]);
 
-        s.queue("myPlan", ["u2", "u3"]);
-        expect(s.filter(["u1", "u1", "u2", "u2", "u3"])).toEqual([]);
+        s.queue("myPlan", [
+            "http://www.example2.com",
+            "http://www.example3.com",
+        ]);
+        expect(s.filter([
+            "http://www.example1.com",
+            "http://www.example1.com",
+            "http://www.example2.com",
+            "http://www.example2.com",
+            "http://www.example3.com",
+        ])).toEqual([]);
     });
 });

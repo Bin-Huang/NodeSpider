@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
+const isAbsoluteUrl = require("is-absolute-url");
 const defaultPlan_1 = require("./defaultPlan");
 const downloadPlan_1 = require("./downloadPlan");
 const queue_1 = require("./queue");
@@ -177,7 +178,7 @@ class NodeSpider extends events_1.EventEmitter {
         this._STATE.queue.jumpTask(retryTask, current.planName); // 插队到队列，重新等待执行
     }
     /**
-     * add new default plan, and return a corresponding key.
+     * add new default plan
      * @param option default plan's option
      */
     plan(name, callback) {
@@ -202,36 +203,35 @@ class NodeSpider extends events_1.EventEmitter {
             name,
         }));
     }
+    // tslint:disable-next-line:max-line-length
     /**
-     * 添加待爬取链接到队列，并指定爬取计划。
-     * @param planName 指定的爬取计划
-     * @param url 待爬取的链接（们）
-     * @param special （可选）针对当前链接的特别设置，将覆盖与plan重复的设置
+     * Add url(s) to the queue and specify a plan. These task will be performed as planned when it's turn. Eventually only absolute url(s) can be added to the queue, the other will be returned in an array.
+     * @param planName the name of specified plan
+     * @param url url or array of urls
+     * @param info (Optional). Attached information for this url
+     * @returns {array}
      */
     queue(planName, url, info) {
         const plan = this._STATE.planStore.get(planName);
         if (!plan) {
             throw new TypeError(`method queue: no such plan named "${planName}"`);
         }
-        // 添加到队列
-        const newTasks = [];
+        const noPassList = []; // 因为格式不对、未能添加的成员队列
         if (!Array.isArray(url)) {
-            newTasks.push({ url, planName, info });
+            url = [url];
         }
-        else {
-            url.map((u) => {
-                if (typeof u !== "string") {
-                    throw new TypeError(`the parameter "url" should be a string or an string array`);
-                }
-                newTasks.push({ url: u, planName, info });
-            });
-        }
-        for (const task of newTasks) {
-            this.emit("queueTask", task);
-            this._STATE.queue.addTask(task, planName);
-        }
+        url.map((u) => {
+            if (typeof u !== "string" || !isAbsoluteUrl(u)) {
+                noPassList.push(u);
+            }
+            else {
+                const newTask = { url: u, planName, info };
+                this.emit("queueTask", newTask);
+                this._STATE.queue.addTask(newTask, planName);
+            }
+        });
         this._STATE.working = true;
-        return this._STATE.queue.getTotalUrlsNum();
+        return noPassList;
     }
     download(path, url, filename) {
         if (typeof path !== "string") {

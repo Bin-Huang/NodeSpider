@@ -1,6 +1,6 @@
 {
   "name": "nodespider",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Simple, flexible, delightful web crawler/spider package",
   "main": "./build/index.js",
   "typings": "./build/index.d.ts",
@@ -11,11 +11,13 @@
     "filenamify-url": "^1.0.0",
     "fs-extra": "^2.0.0",
     "iconv-lite": "^0.4.13",
+    "is-absolute-url": "^2.1.0",
     "request": "^2.78.0"
   },
   "devDependencies": {
     "@types/cheerio": "^0.22.2",
     "@types/fs-extra": "^4.0.0",
+    "@types/is-absolute-url": "^2.1.0",
     "@types/node": "^7.0.8",
     "jest": "^19.0.2"
   },

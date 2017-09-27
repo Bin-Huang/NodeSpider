@@ -22,6 +22,8 @@ s.queue("getTitle", "https://www.google.com");
 s.download("./save/to/path", "https://www.npmjs.com/static/images/mountain-dot.svg");
 ```
 
+More examples see: **[examples](https://github.com/Bin-Huang/NodeSpider/tree/master/example)**
+
 # Installation & initialization
 
 ```bash
@@ -88,7 +90,7 @@ Even if you want to decide how to crawl by yourself, you can use the method `add
 
 ## Spider.prototype.queue(planName, url, info)
 
-Add url(s) to the queue and specify a plan. These task will be performed as planned when it's turn.
+Add url(s) to the queue and specify a plan. These task will be performed as planned when it's turn. Eventually only absolute url(s) can be added to the queue, the other will be returned in an array. 
 
 | name | type | description |
 | --- | --- | --- |
@@ -111,6 +113,11 @@ s.queue("myPlan", [
 s.queue("myPlan", "https://www.npmjs.com", {
     from: "google"
 });
+
+s.queue("myPlan", [
+    "it isn't a url",
+    10,
+]); // return ["it isn't a url", 10]
 ```
 
 ## Spider.prototype.download(path, url, fileName)
