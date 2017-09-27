@@ -12,7 +12,7 @@ const planA = n.add(defaultPlan({
         console.log($("img").src());
     },
 }));
-const dl = n.add(downloadPlan({
+.add(downloadPlan({
     callback: (err, current) => {
         console.log(err);
         console.log(current.url);
