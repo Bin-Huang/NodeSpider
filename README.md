@@ -1,12 +1,13 @@
+
 # Features
 - Simple and flexible
 - Funny **jQ** selector you must like it
-- automatically decode body into **UTF8**(as an option), never worry about encoding anymore
-- save extracted data by pipe, just enjoy
-- easy to check and filter existed urls in queue.
-- retry task easily and reliably
-- rate limit & concurrent limit
-- support async function and promise
+- Automatically decode body into **UTF8**(as an option), never worry about encoding anymore
+- Save extracted data by pipe, just enjoy
+- Easy to check and filter existed urls
+- Retry task easily and reliably
+- Rate limit & concurrent limit
+- Support async function and promise
 
 ```javascript
 const { Spider } = require("nodespider");
@@ -36,7 +37,7 @@ const mySpider = new Spider();
 const myOtherSpider = new Spider({
     rateLimit: 20,
     maxConnections: 20,
-    // and more options...
+    // or more...
 })
 ```
 
@@ -67,11 +68,9 @@ Three parameters will be passed to the callback function:
 - - `url`
 - - `planName`
 - - `hasRetried`
-- - `info`
+- - `info`  current task's attached information
 - - `$` the jQ selector that you can use it to extract data
 - `spider`  this spider instance
-
-// TODO $的有趣方法
 
 ```javascript
 const s = new Spider();
@@ -83,9 +82,9 @@ s.plan("myPlan", (err, current, s) => {
 s.queue("myPlan", "http://www.google.com");
 ```
 
-**Tips:**   If you want to cancel jQ loading, close automatic decode, or make more detailed settings (such as modifying request headers), it is recommended to use the method `add` to add the default plan.
+**Tips:**   If you want to cancel jQ loading or close automatic decode, and make more detailed settings (such as modifying request headers), it is recommended to use the method `add` to add the default plan.
 
-Even if you want to decide how to perform the task by yourself, you can use the method `add` to add your own plan. These will be mentioned later.
+Even if you want to decide how to crawl by yourself, you can use the method `add` to add your own plan. These will be mentioned later.
 
 ## Spider.prototype.queue(planName, url, info)
 
@@ -93,9 +92,9 @@ Add url(s) to the queue and specify a plan. These task will be performed as plan
 
 | name | type | description |
 | --- | --- | --- |
-| planName | string | specified plan's name |
+| planName | string | the specified plan's name |
 | url | string or string array | the url(s) need to add |
-| info | * | `(Optional)`. Attached information. The `Info` will be passed to the callback as ` current.info` when the task of adding url is executed |
+| info | * | `(Optional)`. The attached information. The `Info` will be passed to the callback as ` current.info` when the task of adding url is executing |
 
 ```javascript
 s.plan("myPlan", (err, current) => {
@@ -167,7 +166,7 @@ s.plan("anotherPlan", function (err, current) {
 
 ## Spider.prototype.isExist(url)
 
-Check whether the url has been added. If the url is in the queue, is crawling or has been crawled, return `true`.
+Check whether the url has been added. If the url has been crawled, or in crawling and waiting, return `true`.
 
 | parameter | description | type |
 | --- | --- | --- |
@@ -184,7 +183,7 @@ console.log(s.isExist("http://www.example.com"));    // true
 
 ## Spider.prototype.filter(urls)
 
-Method `filter` return a new array of all unique url items which don't exist in the queue from provided array.
+Return a new array of all unique url items which don't exist in the queue from provided array.
 
 | parameter | type |
 | --- | --- |
@@ -288,7 +287,7 @@ s.plan(() => null); // throw error
 When there aren't more task in the queue, the event "empty" will be emitted.
 
 ## "queueTask"
-When add a new task to the queue, the event "queueTask" will be emitted with a parameter `taskObject`.
+When add a new task to the queue, the event "queueTask" will be emitted and parameter `taskObject` will be passed to callback.
 
 ## "vacant"
 When the queue is empty and all tasks has been done, the event "vacant" will be emitted.

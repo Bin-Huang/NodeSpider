@@ -14,6 +14,7 @@ export interface IQueue {
     nextTask: (type: string) => ITask | null;
 }
 export interface IPipe {
+    name: string;
     add: (data: any) => void;
     close: () => void;
 }
@@ -44,11 +45,9 @@ export interface ITask {
     info?: any;
 }
 export interface ICurrent extends ITask {
-    info: {
-        [index: string]: any;
-    };
+    info: any;
 }
 export interface IRequestOptionInput {
     method?: string;
-    header?: any;
+    headers?: any;
 }

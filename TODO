@@ -1,3 +1,13 @@
+- method download 单元测试
+- method add 单元测试
+- downloadPlan 测试[]
+- streamPlan 验收
+- pipe 验收
+- method connect 单元测试
+- method save 单元测试
+
+- pipe generator
+
 - 在执行任务之前，先让url正常化，防止出现缺失协议的情况，使用 normalize-url
 - concurrent control with planName
 - modify document

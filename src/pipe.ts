@@ -9,8 +9,9 @@ class TxtTable {
      * @memberOf TxtTable
      */
     public header: string[];
+    public name: string;
     private stream: fs.WriteStream;
-    constructor(path: string, header: string[]) {
+    constructor(name: string, path: string, header: string[]) {
         if (typeof path !== "string") {
             throw new TypeError('the string-typed parameter "path" is required');
         }
@@ -18,6 +19,7 @@ class TxtTable {
             if (err) {
                 throw err;
             }
+            this.name = name;
             this.header = header;
             this.stream = fs.createWriteStream(path);
 
@@ -58,11 +60,12 @@ class TxtTable {
 
 // tslint:disable-next-line:max-classes-per-file
 class JsonTable {
+    public name: string;
     private stream: fs.WriteStream;
     private space: string;
     private closeSign: boolean;
     private first: boolean;
-    constructor(path: string, space: number = 2) {
+    constructor(name: string, path: string, space: number = 2) {
         if (typeof path !== "string") {
             throw new TypeError('the string-typed parameter "path" is required');
         }
@@ -71,6 +74,7 @@ class JsonTable {
                 throw err;
             }
             this.stream = fs.createWriteStream(path);
+            this.name = name;
             this.space = "";
             while (space > 0) {
                 space --;
@@ -115,8 +119,9 @@ class CsvPipe {
      * @memberOf TxtTable
      */
     public header: string[];
+    public name: string;
     private stream: any;
-    constructor(path: string, header: string[]) {
+    constructor(name: string, path: string, header: string[]) {
         if (typeof path !== "string") {
             throw new Error('the string-typed parameter "path" is required');
         }
@@ -125,6 +130,7 @@ class CsvPipe {
                 throw err;
             }
             this.header = header;
+            this.name = name;
             this.stream = fs.createWriteStream(path);
 
             // 写入表头字段
@@ -162,12 +168,12 @@ class CsvPipe {
     }
 }
 
-export function txtPipe(path: string, header: string[]): IPipe {
-    return new TxtTable(path, header);
+export function txtPipe(name: string, path: string, header: string[]): IPipe {
+    return new TxtTable(name, path, header);
 }
-export function jsonPipe(path: string, space?: number): IPipe {
-    return new JsonTable(path, space);
+export function jsonPipe(name: string, path: string, space?: number): IPipe {
+    return new JsonTable(name, path, space);
 }
-export function csvPipe(path: string, header: string[]): IPipe {
-    return new CsvPipe(path, header);
+export function csvPipe(name: string, path: string, header: string[]): IPipe {
+    return new CsvPipe(name, path, header);
 }

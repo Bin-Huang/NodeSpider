@@ -30,7 +30,7 @@ function defaultPlan(option) {
         }
     }
     option.method = option.method || "GET";
-    option.header = option.header || {};
+    option.headers = option.headers || {};
     return new DefaultPlan(option.name, option);
 }
 exports.defaultPlan = defaultPlan;
@@ -43,14 +43,12 @@ class DefaultPlan {
         return __awaiter(this, void 0, void 0, function* () {
             const { error, response, body } = yield requestAsync({
                 encoding: null,
-                header: this.option.header,
+                header: this.option.headers,
                 method: this.option.method,
                 url: task.url,
             });
-            const current = Object.assign(task, {
-                response,
-                body,
-            });
+            const current = Object.assign({}, task, { body,
+                response });
             // 按顺序执行callback
             try {
                 for (const cb of this.option.callbacks) {

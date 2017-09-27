@@ -22,6 +22,7 @@ export interface IQueue {
 }
 
 export interface IPipe {
+    name: string;
     add: (data: any) => void;
     close: () => void;
 }
@@ -57,11 +58,11 @@ export interface ITask {
 }
 
 export interface ICurrent extends ITask {
-    info: {[index: string]: any};
+    info: any;
 }
 
 // ====== request options ======
 export interface IRequestOptionInput {
     method?: string;
-    header?: any;
+    headers?: any;
 }

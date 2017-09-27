@@ -32,10 +32,17 @@ export default class NodeSpider extends EventEmitter {
      */
     filter(urlArray: string[]): string[];
     /**
-     * add new plan or pipe, and return a corresponding key.
-     * @param item planObject or PipeObject
+     * add new plan
+     * @param  {IPlan}  newPlan plan object
+     * @return {void}
      */
-    add(item: IPlan | IPipe): void;
+    add(newPlan: IPlan): void;
+    /**
+     * connect new pipe
+     * @param  {IPipe}  newPipe pipe object
+     * @return {void}
+     */
+    connect(newPipe: IPipe): void;
     retry(current: ITask, maxRetry: number, finalErrorCallback?: () => any): any;
     /**
      * add new default plan, and return a corresponding key.
@@ -49,5 +56,12 @@ export default class NodeSpider extends EventEmitter {
      * @param special （可选）针对当前链接的特别设置，将覆盖与plan重复的设置
      */
     queue(planName: string, url: string | string[], info?: any): number;
-    save(pipeName: string, data: any): TypeError | undefined;
+    download(path: string, url: string, filename?: string): void;
+    /**
+     * Save data through a pipe
+     * @param  {string} pipeName pipe name
+     * @param  {any}    data     data you need to save
+     * @return {void}
+     */
+    save(pipeName: string, data: any): void;
 }

@@ -19,7 +19,7 @@ export type IDefaultPlanOptionCallback = (err: Error, current: IDefaultPlanCurre
 export interface IDefaultPlanCurrent extends ITask {
     response: any;
     body: string;
-    [propName: string]: any;
+    $?: CheerioStatic;
 }
 
 /**
@@ -39,7 +39,7 @@ export function defaultPlan(option: IDefaultPlanOption) {
         }
     }
     option.method = option.method || "GET";
-    option.header = option.header || {};
+    option.headers = option.headers || {};
     return new DefaultPlan(option.name, option);
 }
 
@@ -53,14 +53,15 @@ export class DefaultPlan implements IPlan {
     public async process(task: ITask, spider: Spider) {
         const {error, response, body}: any = await requestAsync({
             encoding: null,
-            header: this.option.header,
+            header: this.option.headers,
             method: this.option.method,
             url: task.url,
         });
-        const current: IDefaultPlanCurrent = Object.assign(task, {
-            response,
+        const current: IDefaultPlanCurrent = {
+            ... task,
             body,
-        });
+            response,
+        };
 
         // 按顺序执行callback
         try {

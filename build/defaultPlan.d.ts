@@ -1,3 +1,4 @@
+/// <reference types="cheerio" />
 import Spider from "./spider";
 import { IPlan, IRequestOptionInput, ITask } from "./types";
 export interface IDefaultPlanOption extends IRequestOptionInput {
@@ -8,7 +9,7 @@ export declare type IDefaultPlanOptionCallback = (err: Error, current: IDefaultP
 export interface IDefaultPlanCurrent extends ITask {
     response: any;
     body: string;
-    [propName: string]: any;
+    $?: CheerioStatic;
 }
 /**
  * 默认值 type: "default", info: {}, option: {request: {encoding: null}, pre: [preToUtf8(), preLoadJq()], callback }

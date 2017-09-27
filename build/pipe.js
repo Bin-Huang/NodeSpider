@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs-extra");
 class TxtTable {
-    constructor(path, header) {
+    constructor(name, path, header) {
         if (typeof path !== "string") {
             throw new TypeError('the string-typed parameter "path" is required');
         }
@@ -10,6 +10,7 @@ class TxtTable {
             if (err) {
                 throw err;
             }
+            this.name = name;
             this.header = header;
             this.stream = fs.createWriteStream(path);
             // 写入表头字段
@@ -48,7 +49,7 @@ class TxtTable {
 }
 // tslint:disable-next-line:max-classes-per-file
 class JsonTable {
-    constructor(path, space = 2) {
+    constructor(name, path, space = 2) {
         if (typeof path !== "string") {
             throw new TypeError('the string-typed parameter "path" is required');
         }
@@ -57,6 +58,7 @@ class JsonTable {
                 throw err;
             }
             this.stream = fs.createWriteStream(path);
+            this.name = name;
             this.space = "";
             while (space > 0) {
                 space--;
@@ -93,7 +95,7 @@ class JsonTable {
 }
 // tslint:disable-next-line:max-classes-per-file
 class CsvPipe {
-    constructor(path, header) {
+    constructor(name, path, header) {
         if (typeof path !== "string") {
             throw new Error('the string-typed parameter "path" is required');
         }
@@ -102,6 +104,7 @@ class CsvPipe {
                 throw err;
             }
             this.header = header;
+            this.name = name;
             this.stream = fs.createWriteStream(path);
             // 写入表头字段
             let chunk = "";
@@ -137,15 +140,15 @@ class CsvPipe {
         this.stream.close();
     }
 }
-function txtPipe(path, header) {
-    return new TxtTable(path, header);
+function txtPipe(name, path, header) {
+    return new TxtTable(name, path, header);
 }
 exports.txtPipe = txtPipe;
-function jsonPipe(path, space) {
-    return new JsonTable(path, space);
+function jsonPipe(name, path, space) {
+    return new JsonTable(name, path, space);
 }
 exports.jsonPipe = jsonPipe;
-function csvPipe(path, header) {
-    return new CsvPipe(path, header);
+function csvPipe(name, path, header) {
+    return new CsvPipe(name, path, header);
 }
 exports.csvPipe = csvPipe;

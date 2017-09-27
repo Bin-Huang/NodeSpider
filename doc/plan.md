@@ -1,3 +1,7 @@
+---------------------------------------------------------
+# PLAN DOCUMENT
+---------------------------------------------------
+
 There are three built-in plan generators that can help you quickly create a plan:
 - `defaultPlan` requests and passes response body to callbacks(expose to developer)
 - `streamPlan`  requests and passes response stream to callback(expose to developer)
@@ -8,7 +12,7 @@ There are three built-in plan generators that can help you quickly create a plan
 defaultPlan({
     name,
     callbacks,
-    header,    // Optional, default: `{}`
+    headers,    // Optional, default: `{}`
     method, // Optional, default: `GET`
 })
 ```
@@ -52,7 +56,7 @@ s.queue("myPlan", "http://www.baidu.com");
 streamPlan({
     name,
     callback,
-    header,    // Optional, default: `{}`
+    headers,    // Optional, default: `{}`
     method, // Optional, default: `GET`
 })
 ```
@@ -88,7 +92,7 @@ downloadPlan({
     name,
     path,   // the path to save downloaded file
     callback,
-    header,    // Optional, default: `{}`
+    headers,    // Optional, default: `{}`
     method, // Optional, default: `GET`
 })
 ```

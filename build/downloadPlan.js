@@ -12,8 +12,11 @@ const filenamifyUrl = require("filenamify-url");
 const fs = require("fs-extra");
 const path = require("path");
 const request = require("request");
-function downloadPlan(name, opts) {
-    return new DownloadPlan(name, opts);
+function downloadPlan(option) {
+    // TODO C 参数检验
+    option.method = option.method || "GET";
+    option.headers = option.headers || {};
+    return new DownloadPlan(option.name, option);
 }
 exports.default = downloadPlan;
 class DownloadPlan {
@@ -21,7 +24,7 @@ class DownloadPlan {
         this.option = option;
         this.name = name;
     }
-    process(task) {
+    process(task, spider) {
         return __awaiter(this, void 0, void 0, function* () {
             return new Promise((resolve, reject) => {
                 let fileName = filenamifyUrl(task.url); // 将url转化为合法的文件名
@@ -41,8 +44,12 @@ class DownloadPlan {
                         fileName += task.info.ext;
                     }
                 }
-                const requestOpts = Object.assign({ url: task.url }, this.option.request);
-                const req = request(requestOpts); // request stream
+                const req = request({
+                    encoding: null,
+                    headers: this.option.headers,
+                    method: this.option.method,
+                    url: task.url,
+                }); // request stream
                 const savePath = path.resolve(this.option.path, fileName); // 安全地拼接保存路径
                 const file = fs.createWriteStream(savePath);
                 req.pipe(file);
@@ -50,21 +57,21 @@ class DownloadPlan {
                 let firstCall = true; // 只callback一次
                 req.on("complete", () => {
                     if (firstCall) {
-                        this.option.callback(null, task);
+                        this.option.callback(null, task, spider);
                         firstCall = false;
                         resolve();
                     }
                 });
                 req.on("error", (e) => {
                     if (firstCall) {
-                        this.option.callback(e, task);
+                        this.option.callback(e, task, spider);
                         firstCall = false;
                         resolve();
                     }
                 });
                 file.on("error", (e) => {
                     if (firstCall) {
-                        this.option.callback(e, task);
+                        this.option.callback(e, task, spider);
                         firstCall = false;
                         file.close();
                         resolve();
@@ -72,7 +79,7 @@ class DownloadPlan {
                 });
                 file.on("finish", () => {
                     if (firstCall) {
-                        this.option.callback(null, task);
+                        this.option.callback(null, task, spider);
                         firstCall = false;
                         file.close();
                         resolve();

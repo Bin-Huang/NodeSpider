@@ -2,12 +2,8 @@ import * as filenamifyUrl from "filenamify-url";
 import * as fs from "fs-extra";
 import * as path from "path";
 import * as request from "request";
-import NodeSpider from "./spider";
-import { IPlan, ITask } from "./types";
-
-export default function downloadPlan(name: string, opts: IDownloadPlanOpion) {
-    return new DownloadPlan(name, opts);
-}
+import Spider from "./spider";
+import { IPlan, IRequestOptionInput, ITask } from "./types";
 
 /**
  * s.queue(dlPlan, "http://img.com/my.jpg"); ==> img.com!my.jpg
@@ -18,11 +14,19 @@ export default function downloadPlan(name: string, opts: IDownloadPlanOpion) {
  * s.queue(dlPlan, "http://img.com/my.jpg", {ext: ".png"}); ===> img.com!my.jpg.png
  */
 
-export interface IDownloadPlanOpion {
-    request?: any;
-    path: string; // 保存文件夹
-    callback: (err: Error|null, current: ITask) => void; // 当下载完成或出错时调用
+export interface IDownloadPlanOpion extends IRequestOptionInput {
+    callback: (err: Error|null, current: ITask, s: Spider) => void; // 当下载完成或出错时调用
+    name: string;
+    path: string;
 }
+
+export default function downloadPlan(option: IDownloadPlanOpion) {
+    // TODO C 参数检验
+    option.method = option.method || "GET";
+    option.headers = option.headers || {};
+    return new DownloadPlan(option.name, option);
+}
+
 export class DownloadPlan implements IPlan {
     public option: IDownloadPlanOpion;
     public name: string;
@@ -30,7 +34,7 @@ export class DownloadPlan implements IPlan {
         this.option = option;
         this.name = name;
     }
-    public async process(task: ITask) {
+    public async process(task: ITask, spider: Spider) {
         return new Promise((resolve, reject) => {
             let fileName = filenamifyUrl(task.url); // 将url转化为合法的文件名
             if (typeof task.info === "string") {
@@ -49,8 +53,12 @@ export class DownloadPlan implements IPlan {
                 }
             }
 
-            const requestOpts = Object.assign({url: task.url}, this.option.request);
-            const req = request(requestOpts);   // request stream
+            const req = request({
+                encoding: null as any,
+                headers: this.option.headers, // TODO B header不存在于request的设置？可能是一个bug
+                method: this.option.method,
+                url: task.url,
+            });   // request stream
 
             const savePath = path.resolve(this.option.path, fileName);    // 安全地拼接保存路径
             const file = fs.createWriteStream(savePath);
@@ -60,21 +68,21 @@ export class DownloadPlan implements IPlan {
             let firstCall = true;   // 只callback一次
             req.on("complete", () => {
                 if (firstCall) {
-                    this.option.callback(null, task);
+                    this.option.callback(null, task, spider);
                     firstCall = false;
                     resolve();
                 }
             });
-            req.on("error", (e) => {
+            req.on("error", (e: Error) => {
                 if (firstCall) {
-                    this.option.callback(e, task);
+                    this.option.callback(e, task, spider);
                     firstCall = false;
                     resolve();
                 }
             });
             file.on("error", (e: Error) => {
                 if (firstCall) {
-                    this.option.callback(e, task);
+                    this.option.callback(e, task, spider);
                     firstCall = false;
                     file.close();
                     resolve();
@@ -82,13 +90,12 @@ export class DownloadPlan implements IPlan {
             });
             file.on("finish", () => {
                 if (firstCall) {
-                    this.option.callback(null, task);
+                    this.option.callback(null, task, spider);
                     firstCall = false;
                     file.close();
                     resolve();
                 }
             });
-
         });
     }
 }
