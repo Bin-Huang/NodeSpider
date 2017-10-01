@@ -66,13 +66,13 @@ export class DownloadPlan implements IPlan {
 
             // 当请求流结束或错误，即应该认为这次任务是执行完全的
             let firstCall = true;   // 只callback一次
-            req.on("complete", () => {
-                if (firstCall) {
-                    this.option.callback(null, task, spider);
-                    firstCall = false;
-                    resolve();
-                }
-            });
+            // req.on("complete", () => {
+            //     if (firstCall) {
+            //         this.option.callback(null, task, spider);
+            //         firstCall = false;
+            //         resolve();
+            //     }
+            // });
             req.on("error", (e: Error) => {
                 if (firstCall) {
                     this.option.callback(e, task, spider);

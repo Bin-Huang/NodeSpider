@@ -36,7 +36,8 @@ const s = new Spider();
 //         const write = fs.createWriteStream(`./${i++}.html`);
 //         res.pipe(write);
 //     }
-// }))
+// }));
+// s.queue("trySpider", "http://www.baidu.com", "baidu.html");
 
 // done!
 // s.add(downloadPlan({
@@ -46,7 +47,7 @@ const s = new Spider();
 //         if (err) return console.log(err);
 //         console.log("done " + current.url);
 //     }
-// }))
+// }));
 // s.queue("trySpider", "http://www.baidu.com", "baidu.html");
 // s.queue("trySpider", "http://www.iqiyi.com");
 
