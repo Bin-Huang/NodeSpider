@@ -26,7 +26,11 @@ export interface IState {
     currentTotalConnections: number;
 }
 export declare type queueClass = new () => IQueue;
-export interface IDefaultOption {
+export interface IDefaultOptionInput {
+    maxConnections?: number;
+    queue?: queueClass;
+}
+export interface IDefaultOption extends IDefaultOptionInput {
     maxConnections: number;
     queue: queueClass;
 }

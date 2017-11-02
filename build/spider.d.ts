@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { EventEmitter } from "events";
-import { IDefaultPlanOptionCallback, preLoadJq, preToUtf8 } from "./defaultPlan";
-import { IPipe, IPlan, IState, ITask } from "./types";
+import { IDefaultPlanOptionCallback, preLoadJq, preToUtf8 } from "./plan/defaultPlan";
+import { IDefaultOptionInput, IPipe, IPlan, IState, ITask } from "./types";
 /**
  * class of NodeSpider
  * @class NodeSpider
@@ -14,7 +14,7 @@ export default class NodeSpider extends EventEmitter {
      * create an instance of NodeSpider
      * @param opts
      */
-    constructor(opts?: {});
+    constructor(opts?: IDefaultOptionInput);
     /**
      * 终止爬虫
      */

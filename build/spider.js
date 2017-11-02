@@ -2,10 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
 const isAbsoluteUrl = require("is-absolute-url");
-const defaultPlan_1 = require("./defaultPlan");
-const downloadPlan_1 = require("./downloadPlan");
+const defaultPlan_1 = require("./plan/defaultPlan");
+const downloadPlan_1 = require("./plan/downloadPlan");
 const queue_1 = require("./queue");
-// TODO C save as single file
 const defaultOption = {
     maxConnections: 20,
     queue: queue_1.default,
@@ -188,7 +187,9 @@ class NodeSpider extends events_1.EventEmitter {
                 noPassList.push(u);
             }
             else {
-                this._STATE.queue.addTask({ url: u, planName, info });
+                const newTask = { url: u, planName, info };
+                this._STATE.queue.addTask(newTask);
+                this.emit("queueTask", newTask);
                 this.work();
             }
         });
@@ -246,7 +247,7 @@ class NodeSpider extends events_1.EventEmitter {
         }
         const task = this._STATE.queue.nextTask();
         if (!task) {
-            return this.emit("emtpy");
+            return this.emit("empty");
         }
         this._STATE.currentTotalConnections++;
         const plan = this._STATE.planStore.get(task.planName);

@@ -1,12 +1,13 @@
 import { EventEmitter } from "events";
 import * as isAbsoluteUrl from "is-absolute-url";
 import * as request from "request";
-import { defaultPlan, IDefaultPlanOptionCallback, preLoadJq, preToUtf8 } from "./defaultPlan";
-import downloadPlan from "./downloadPlan";
+import { defaultPlan, IDefaultPlanOptionCallback, preLoadJq, preToUtf8 } from "./plan/defaultPlan";
+import downloadPlan from "./plan/downloadPlan";
 import Queue from "./queue";
 import {
     ICurrent,
     IDefaultOption,
+    IDefaultOptionInput,
     IPipe,
     IPlan,
     IQueue,
@@ -14,7 +15,6 @@ import {
     ITask,
 } from "./types";
 
-// TODO C save as single file
 const defaultOption: IDefaultOption = {
     maxConnections: 20,
     queue: Queue,
@@ -32,7 +32,7 @@ export default class NodeSpider extends EventEmitter {
      * create an instance of NodeSpider
      * @param opts
      */
-    constructor(opts = {}) {
+    constructor(opts: IDefaultOptionInput = {}) {
         super();
         ParameterOptsCheck(opts);
         const finalOption = Object.assign({}, defaultOption, opts);
@@ -212,7 +212,9 @@ export default class NodeSpider extends EventEmitter {
             if (typeof u !== "string" || ! isAbsoluteUrl(u)) {
                 noPassList.push(u);
             } else {
-                this._STATE.queue.addTask({ url: u, planName, info });
+                const newTask = { url: u, planName, info };
+                this._STATE.queue.addTask(newTask);
+                this.emit("queueTask", newTask);
                 this.work();
             }
         });
@@ -271,7 +273,7 @@ export default class NodeSpider extends EventEmitter {
             return ;
         }
         const task = this._STATE.queue.nextTask();
-        if (! task) { return this.emit("emtpy"); }
+        if (! task) { return this.emit("empty"); }
 
         this._STATE.currentTotalConnections ++;
         const plan = this._STATE.planStore.get(task.planName) as IPlan;

@@ -102,20 +102,10 @@ class Queue {
         this.urlPool = new Set();
         this.queue = new LinkedQueue();
     }
-    /**
-     * 添加新的任务到指定type队列末尾。如果type队列不存在则新建
-     * @param newTask
-     * @param type
-     */
     addTask(newTask) {
         this.urlPool.add(newTask.url);
         this.queue.add(newTask);
     }
-    /**
-     * 将新的任务插队到指定type队列头部。如果type队列不存在则新建
-     * @param newTask
-     * @param type
-     */
     jumpTask(newTask) {
         this.urlPool.add(newTask.url);
         this.queue.jump(newTask);
@@ -128,7 +118,7 @@ class Queue {
         return this.urlPool.has(url);
     }
     /**
-     * 获得指定type队列的排队任务数量。当type对应的队列不存在，返回0
+     * 获得排队任务数量
      * @param type
      */
     getWaitingTaskNum() {
@@ -141,8 +131,7 @@ class Queue {
         return this.urlPool.size;
     }
     /**
-     * 返回下一个任务。如果type对应的排队不存在，或该排队没有新任务，都会返回 null
-     * @param type 任务类型type
+     * 返回下一个任务。该排队没有新任务，都会返回 null
      */
     nextTask() {
         return this.queue.next() || null;
