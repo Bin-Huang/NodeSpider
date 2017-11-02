@@ -65,4 +65,5 @@ export default class NodeSpider extends EventEmitter {
      * @return {void}
      */
     save(pipeName: string, data: any): void;
+    private work();
 }

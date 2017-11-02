@@ -34,8 +34,6 @@ export interface IState {
     pipeStore: Map<string, IPipe>;
     option: IDefaultOption;
     working: boolean;
-    timer: NodeJS.Timer|null;
-    currentConnections: {[key: string]: number};
     currentTotalConnections: number;
 }
 
@@ -43,9 +41,7 @@ export type queueClass = new () => IQueue;
 
 // for parameter option, when initialize an instance  of NodeSpider.
 export interface IDefaultOption {
-    maxConnections: number|{[key: string]: number};
-
-    rateLimit: number;
+    maxConnections: number;
     queue: queueClass;
 }
 

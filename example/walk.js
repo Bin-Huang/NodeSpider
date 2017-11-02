@@ -6,8 +6,10 @@ const { Spider } = require("../build/index");
 
 const s = new Spider();
 
+let i = 1;
 s.plan("take a walk", (err, current) => {
-    if (err) return console.log(err);
+    console.log(i ++);
+    if (err) return console.log(err.message);
     const $ = current.$;
     console.log($("title").text()); // 每经过一个页面，打印它的标题
     s.queue("take a walk", $("a").url());

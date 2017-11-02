@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import Spider from "./spider";
 export interface IPlan {
     name: string;
@@ -24,18 +23,11 @@ export interface IState {
     pipeStore: Map<string, IPipe>;
     option: IDefaultOption;
     working: boolean;
-    timer: NodeJS.Timer | null;
-    currentConnections: {
-        [key: string]: number;
-    };
     currentTotalConnections: number;
 }
 export declare type queueClass = new () => IQueue;
 export interface IDefaultOption {
-    maxConnections: number | {
-        [key: string]: number;
-    };
-    rateLimit: number;
+    maxConnections: number;
     queue: queueClass;
 }
 export interface ITask {

@@ -6,7 +6,7 @@
   "typings": "./build/index.d.ts",
   "dependencies": {
     "apjson": "^1.0.6",
-    "charset": "^1.0.0",
+    "charset": "^1.0.1",
     "cheerio": "^0.22.0",
     "filenamify-url": "^1.0.0",
     "fs-extra": "^2.0.0",
@@ -29,7 +29,7 @@
     "url": "git+ssh://git@github.com/Bin-Huang/NodeSpider.git"
   },
   "author": "Ben Huang",
-  "license": "LGPL",
+  "license": "Apache License 2.0",
   "bugs": {
     "url": "https://github.com/Bin-Huang/NodeSpider/issues"
   },

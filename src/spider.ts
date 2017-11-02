@@ -18,7 +18,6 @@ import {
 const defaultOption: IDefaultOption = {
     maxConnections: 20,
     queue: Queue,
-    rateLimit: 2,
 };
 
 /**
@@ -38,13 +37,11 @@ export default class NodeSpider extends EventEmitter {
         ParameterOptsCheck(opts);
         const finalOption = Object.assign({}, defaultOption, opts);
         this._STATE = {
-            currentConnections: {},
             currentTotalConnections: 0,
             option: finalOption,
             pipeStore: new Map(),
             planStore: new Map(),
             queue: new finalOption.queue(),
-            timer: null,
             working: true,
         };
 
@@ -54,24 +51,8 @@ export default class NodeSpider extends EventEmitter {
             }
         });
 
-        this.on("vacant", () => {
-            if (this._STATE.timer) {
-                clearInterval(this._STATE.timer);
-                this._STATE.timer = null;
-            }
-        });
-
         this.on("queueTask", (task: ITask) => {
-            if (this._STATE.timer) {
-                return ;
-            }
-            if (typeof this._STATE.option.maxConnections === "number") {
-                this._STATE.timer = setInterval(() => {
-                    timerCallbackWhenMaxIsNumber(this);
-                }, this._STATE.option.rateLimit);
-            } else {
-                throw new Error("option maxConnetion should be a number");
-            }
+            // this.work();
         });
 
     }
@@ -80,10 +61,6 @@ export default class NodeSpider extends EventEmitter {
      * 终止爬虫
      */
     public end() {
-        // 爬虫不再定时从任务队列获得新任务
-        if (this._STATE.timer) {
-            clearInterval(this._STATE.timer);
-        }
         // 关闭注册的pipe
         for (const pipe of this._STATE.pipeStore.values()) {
             pipe.close();
@@ -139,19 +116,6 @@ export default class NodeSpider extends EventEmitter {
         }
         if (this._STATE.planStore.has(newPlan.name)) {
             throw new TypeError(`method add: there already have a plan named "${newPlan.name}"`);
-        }
-
-        // 当设置 maxConnections 是一个对象（即对不同type进行同时连接限制），如果添加的plan的type不存在设置，报错
-        if (typeof this._STATE.option.maxConnections === "object") {
-            if (typeof this._STATE.option.maxConnections[newPlan.name] === "undefined") {
-                throw new Error(`
-                    The plan's name "${newPlan.name}" don't exist in the option maxConnections.
-                `);
-            }
-        }
-        // 如果plan类型是第一次添加，在state中初始化一个该类型的当前连接数信息
-        if (typeof this._STATE.currentConnections[newPlan.name] === "undefined") {
-            this._STATE.currentConnections[newPlan.name] = 0;
         }
         // 添加plan到planStore
         this._STATE.planStore.set(newPlan.name, newPlan);
@@ -248,9 +212,8 @@ export default class NodeSpider extends EventEmitter {
             if (typeof u !== "string" || ! isAbsoluteUrl(u)) {
                 noPassList.push(u);
             } else {
-                const newTask = {url: u, planName, info};
-                this.emit("queueTask", newTask);
-                this._STATE.queue.addTask(newTask);
+                this._STATE.queue.addTask({ url: u, planName, info });
+                this.work();
             }
         });
 
@@ -302,54 +265,31 @@ export default class NodeSpider extends EventEmitter {
             pipe.add(data);
         }
     }
+    private work() {
+        const count = this._STATE.option.maxConnections - this._STATE.currentTotalConnections;
+        if (count <= 0) {
+            return ;
+        }
+        const task = this._STATE.queue.nextTask();
+        if (! task) { return this.emit("emtpy"); }
 
-}
-
-/**
- * 执行新任务，并记录连接数（执行时+1，执行后-1)
- * @param type task 对应plan的type
- * @param task 需要执行的任务
- * @param self nodespider实例（this）
- */
-function startTask(task: ITask, self: NodeSpider) {
-    const plan = self._STATE.planStore.get(task.planName) as IPlan;
-
-    const current: ICurrent = {
-        ... task,
-        info: task.info as any,
-    };
-    task.info = typeof task.info === "undefined" ? {} : task.info;
-
-    self._STATE.currentTotalConnections ++;
-    plan.process(task, self).then(() => {
-        self._STATE.currentTotalConnections --;
-    }).catch((e: Error) => {
-        // 如果计划执行失败，这是非常严重的，因为直接会导致爬虫不能完成开发者制定的任务
-        self._STATE.currentTotalConnections --;
-        self.end(); // 停止爬虫并退出，以提醒并便于开发者debug
-        console.error(`An error is threw from plan execution.
-            Check your callback function, or create an issue in the planGenerator's repository`);
-        throw e;
-    });
-}
-
-/**
- * 注意，使用时需要将this指向nodespider实例 bind(this)
- */
-function timerCallbackWhenMaxIsNumber(self: NodeSpider) {
-    // 检查是否达到最大连接限制，是则终止接下来的操作
-    if (self._STATE.option.maxConnections as number <= self._STATE.currentTotalConnections) {
-        return ;
-    }
-
-    // 尝试获得新任务
-    const task = self._STATE.queue.nextTask();
-
-    // 如果成功获得新任务，则执行。否则，则说明queue中没有新的任务需要执行
-    if (task) {
-        startTask(task, self);
-    } else {
-        self.emit("empty");
+        this._STATE.currentTotalConnections ++;
+        const plan = this._STATE.planStore.get(task.planName) as IPlan;
+        const current: ICurrent = {
+            ... task,
+            info: (typeof task.info === "undefined") ? {} : task.info,
+        };
+        plan.process(task, this).then(() => {
+            this._STATE.currentTotalConnections --;
+            this.work();
+        }).catch((e: Error) => {
+            // 如果计划执行失败，这是非常严重的，因为直接会导致爬虫不能完成开发者制定的任务
+            this._STATE.currentTotalConnections --;
+            this.end(); // 停止爬虫并退出，以提醒并便于开发者debug
+            console.error(`An error is threw from plan execution.
+                Check your callback function, or create an issue in the planGenerator's repository`);
+            throw e;
+        });
     }
 }
 
