@@ -41,11 +41,11 @@ export type queueClass = new () => IQueue;
 
 // for parameter option, when initialize an instance  of NodeSpider.
 export interface IDefaultOptionInput {
-    maxConnections?: number;
+    concurrency?: number;
     queue?: queueClass;
 }
 export interface IDefaultOption extends IDefaultOptionInput {
-    maxConnections: number;
+    concurrency: number;
     queue: queueClass;
 }
 

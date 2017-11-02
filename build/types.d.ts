@@ -27,11 +27,11 @@ export interface IState {
 }
 export declare type queueClass = new () => IQueue;
 export interface IDefaultOptionInput {
-    maxConnections?: number;
+    concurrency?: number;
     queue?: queueClass;
 }
 export interface IDefaultOption extends IDefaultOptionInput {
-    maxConnections: number;
+    concurrency: number;
     queue: queueClass;
 }
 export interface ITask {

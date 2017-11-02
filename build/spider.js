@@ -6,7 +6,7 @@ const defaultPlan_1 = require("./plan/defaultPlan");
 const downloadPlan_1 = require("./plan/downloadPlan");
 const queue_1 = require("./queue");
 const defaultOption = {
-    maxConnections: 20,
+    concurrency: 20,
     queue: queue_1.default,
 };
 /**
@@ -241,7 +241,7 @@ class NodeSpider extends events_1.EventEmitter {
         }
     }
     work() {
-        const count = this._STATE.option.maxConnections - this._STATE.currentTotalConnections;
+        const count = this._STATE.option.concurrency - this._STATE.currentTotalConnections;
         if (count <= 0) {
             return;
         }
@@ -279,20 +279,20 @@ function ParameterOptsCheck(opts) {
             But ${opts} as you passed, it is a ${typeof opts}.
         `);
     }
-    // check property maxConnection
-    const maxConnections = opts.maxConnections;
-    if (maxConnections && typeof maxConnections !== "number" && typeof maxConnections !== "object") {
-        throw new TypeError(`option.maxConnections is no required, but it must be a number.
-            { maxConnections: ${opts.maxConnections} }
+    // check property concurrency
+    const concurrency = opts.concurrency;
+    if (concurrency && typeof concurrency !== "number" && typeof concurrency !== "object") {
+        throw new TypeError(`option.concurrency is no required, but it must be a number.
+            { concurrency: ${opts.concurrency} }
         `);
     }
-    if (maxConnections && typeof maxConnections === "object") {
-        for (const key in opts.maxConnections) {
-            if (opts.maxConnections.hasOwnProperty(key)) {
-                const max = opts.maxConnections[key];
+    if (concurrency && typeof concurrency === "object") {
+        for (const key in opts.concurrency) {
+            if (opts.concurrency.hasOwnProperty(key)) {
+                const max = opts.concurrency[key];
                 if (typeof max !== "number") {
-                    throw new TypeError(`all of option.maxConnection's property's value should be number.
-                        But in you option, it is that: { maxConnections: {..., {${key}: ${max}},...} }
+                    throw new TypeError(`all of option.concurrency's property's value should be number.
+                        But in you option, it is that: { concurrency: {..., {${key}: ${max}},...} }
                     `);
                 }
             }

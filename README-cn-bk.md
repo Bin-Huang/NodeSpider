@@ -1,3 +1,5 @@
+**NOTE** 本文档仅仅是备份，已经无法与新版本兼容
+
 **NOTE**    The package nodespider is still under development. That means frequent changes and potential bug. So it is not suggested to using it in your project.
 
 # Features
@@ -57,7 +59,7 @@ const n = new Spider();
 const nn = new Spider({
     rateLimit: 20,
     maxConnections: 20,
-    // or more 
+    // or more
 })
 ```
 可选的设置：
@@ -191,7 +193,7 @@ nodespider自带两种plan： `defaultPlan`和`streamPlan`，具体文档可见[
 - **info**  当前任务附带的信息
 - **hasRetried**    (可能不存在)当前任务已经重试的次数
 - and more ...  以及可能的更多成员属性
- 
+
  **NOTE**   值得注意的是，当前任务的指定计划，或者是特定设置中的预处理函数，往往会修改`current`中的成员属性，甚至添加更多的成员属性。
 
 ## queue(planKey, url, special)

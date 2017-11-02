@@ -14,7 +14,7 @@ describe("test for parameter check when initalize a spider", () => {
         let spider;
         expect(() => {
             spider = new Spider({
-                maxConnections: 100,
+                concurrency: 100,
                 queue: Queue,
                 rateLimit: 100,
             });
@@ -25,7 +25,7 @@ describe("test for parameter check when initalize a spider", () => {
         let newSpider;
         expect(() => {
             newSpider = new Spider({
-                maxConnections: {
+                concurrency: {
                     "type1": 10,
                     "type2": 20,
                 },
@@ -37,7 +37,7 @@ describe("test for parameter check when initalize a spider", () => {
 
         expect(() => {
             spider = new Spider({
-                maxConnections: {
+                concurrency: {
                     "type1": 10,
                     "type2": 20,
                 },
@@ -84,14 +84,14 @@ describe("test for parameter check when initalize a spider", () => {
         let spider;
         expect(() => {
             spider = new Spider({
-                maxConnections: "string",
+                concurrency: "string",
             });
         }).toThrow(TypeError);
         expect(typeof spider === "undefined").toBe(true);
 
         expect(() => {
             spider = new Spider({
-                maxConnections: "string",
+                concurrency: "string",
                 rateLimit: "string",
             });
         }).toThrow(TypeError);
@@ -99,7 +99,7 @@ describe("test for parameter check when initalize a spider", () => {
 
         expect(() => {
             spider = new Spider({
-                maxConnections: 233,
+                concurrency: 233,
                 rateLimit: () => "a function",
             });
         }).toThrow(TypeError);
@@ -107,7 +107,7 @@ describe("test for parameter check when initalize a spider", () => {
 
         expect(() => {
             spider = new Spider({
-                maxConnections: () => "a function",
+                concurrency: () => "a function",
                 queue: Queue,
                 rateLimit: 29,
             });

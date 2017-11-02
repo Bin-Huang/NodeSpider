@@ -13,7 +13,7 @@
 const { Spider } = require("nodespider");
 const s = new Spider();
 
-s.plan("getTitle", function(err, current) {
+s.plan("getTitle", (err, current) => {
     const $ = current.$;
     console.log($("title").text());
 });
@@ -37,8 +37,7 @@ const mySpider = new Spider();
 
 // or initialize with options
 const myOtherSpider = new Spider({
-    rateLimit: 20,
-    maxConnections: 20,
+    concurrency: 20,
     // or more...
 })
 ```
@@ -47,9 +46,8 @@ Optional settings:
 
 | option | description | type | defaults |
 | --- | ---- | --- | --- |
-| rateLimit | request interval | number | 2(millisecond)
 | queue | task queue | class | NodeSpider.Queue
-| maxConnections | maximum number of simultaneous connections | number | 20 |
+| concurrency | concurrent async task number | number | 20 |
 
 # Method
 
@@ -90,7 +88,7 @@ Even if you want to decide how to crawl by yourself, you can use the method `add
 
 ## Spider.prototype.queue(planName, url, info)
 
-Add url(s) to the queue and specify a plan. These task will be performed as planned when it's turn. Eventually only absolute url(s) can be added to the queue, the other will be returned in an array. 
+Add url(s) to the queue and specify a plan. These task will be performed as planned when it's turn. Eventually only absolute url(s) can be added to the queue, the other will be returned in an array.
 
 | name | type | description |
 | --- | --- | --- |

@@ -1,3 +1,5 @@
+- retry的默认callback
+- download的默认callback
 - method download 单元测试
 - method add 单元测试
 - downloadPlan 测试[]
