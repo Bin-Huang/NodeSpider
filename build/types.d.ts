@@ -6,12 +6,12 @@ export interface IPlan {
     option?: any;
 }
 export interface IQueue {
-    addTask: (newTask: ITask, type: string) => void;
-    jumpTask: (newTask: ITask, type: string) => void;
+    addTask: (newTask: ITask) => void;
+    jumpTask: (newTask: ITask) => void;
     check: (url: string) => boolean;
-    getWaitingTaskNum: (type: string) => number;
+    getWaitingTaskNum: () => number;
     getTotalUrlsNum: () => number;
-    nextTask: (type: string) => ITask | null;
+    nextTask: () => ITask | null;
 }
 export interface IPipe {
     name: string;

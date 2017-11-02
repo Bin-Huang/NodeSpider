@@ -70,9 +70,7 @@ export default class NodeSpider extends EventEmitter {
                     timerCallbackWhenMaxIsNumber(this);
                 }, this._STATE.option.rateLimit);
             } else {
-                this._STATE.timer = setInterval(() => {
-                    timerCallbackWhenMaxIsObject(this);
-                }, this._STATE.option.rateLimit);
+                throw new Error("option maxConnetion should be a number");
             }
         });
 
@@ -199,7 +197,7 @@ export default class NodeSpider extends EventEmitter {
             return finalErrorCallback();
         }
         retryTask.hasRetried ++;
-        this._STATE.queue.jumpTask(retryTask, current.planName);    // 插队到队列，重新等待执行
+        this._STATE.queue.jumpTask(retryTask);    // 插队到队列，重新等待执行
     }
 
     /**
@@ -252,7 +250,7 @@ export default class NodeSpider extends EventEmitter {
             } else {
                 const newTask = {url: u, planName, info};
                 this.emit("queueTask", newTask);
-                this._STATE.queue.addTask(newTask, planName);
+                this._STATE.queue.addTask(newTask);
             }
         });
 
@@ -308,31 +306,12 @@ export default class NodeSpider extends EventEmitter {
 }
 
 /**
- * 尝试从queue获得一个task，使其对应的type存在于规定的type数组。如果存在满足的任务，则返回[type, task]，否则[null, null]
- * @param types 规定的type数组
- * @param queue nodespider的queue
- */
-function getTaskByTypes(types: string[], queue: IQueue): [string, ITask]|[null, null] {
-    let newTask: ITask|null = null;
-    let newTaskType: string|null = null;
-    for (const type of types) {
-        const t = queue.nextTask(type);
-        if (t) {
-            newTask = t;
-            newTaskType = type;
-            break;
-        }
-    }
-    return [newTaskType, newTask] as [string, ITask]|[null, null];
-}
-
-/**
  * 执行新任务，并记录连接数（执行时+1，执行后-1)
  * @param type task 对应plan的type
  * @param task 需要执行的任务
  * @param self nodespider实例（this）
  */
-function startTask(type: string, task: ITask, self: NodeSpider) {
+function startTask(task: ITask, self: NodeSpider) {
     const plan = self._STATE.planStore.get(task.planName) as IPlan;
 
     const current: ICurrent = {
@@ -341,14 +320,11 @@ function startTask(type: string, task: ITask, self: NodeSpider) {
     };
     task.info = typeof task.info === "undefined" ? {} : task.info;
 
-    self._STATE.currentConnections[type] ++;
     self._STATE.currentTotalConnections ++;
     plan.process(task, self).then(() => {
-        self._STATE.currentConnections[type] --;
         self._STATE.currentTotalConnections --;
     }).catch((e: Error) => {
         // 如果计划执行失败，这是非常严重的，因为直接会导致爬虫不能完成开发者制定的任务
-        self._STATE.currentConnections[type] --;
         self._STATE.currentTotalConnections --;
         self.end(); // 停止爬虫并退出，以提醒并便于开发者debug
         console.error(`An error is threw from plan execution.
@@ -366,51 +342,14 @@ function timerCallbackWhenMaxIsNumber(self: NodeSpider) {
         return ;
     }
 
-    // 获得所有 type 组成的数组
-    const types = [];
-    for (const type in self._STATE.currentConnections) {
-        if (self._STATE.currentConnections.hasOwnProperty(type)) {
-            types.push(type);
-        }
-    }
-
     // 尝试获得新任务
-    const [type, task] = getTaskByTypes(types, self._STATE.queue);
+    const task = self._STATE.queue.nextTask();
 
     // 如果成功获得新任务，则执行。否则，则说明queue中没有新的任务需要执行
-    if (type && task) {
-        startTask(type, task, self);
+    if (task) {
+        startTask(task, self);
     } else {
         self.emit("empty");
-    }
-}
-
-function timerCallbackWhenMaxIsObject(self: NodeSpider) {
-    // 获得连接数未达到最大限制的 type 组成的数组
-    const types = [];
-    for (const type in self._STATE.currentConnections) {
-        if (self._STATE.currentConnections.hasOwnProperty(type)) {
-            const current = self._STATE.currentConnections[type];
-            const max = (self._STATE.option.maxConnections as {[key: string]: number})[type];
-            if (current < max) {
-                types.push(type);
-            }
-        }
-    }
-
-    // 如果所有type对应的连接数均已达到最大限制，则终止后面的操作
-    if (types.length === 0) {
-        return ;
-    }
-
-    // 尝试获得新任务
-    const [type, task] = getTaskByTypes(types, self._STATE.queue);
-
-    // 如果成功获得新任务，则执行。否则，则说明queue中没有新的任务需要执行
-    if (type && task) {
-        startTask(type, task, self);
-    } else {
-        self.emit("empty"); // 说明queue已为空，触发事件
     }
 }
 
