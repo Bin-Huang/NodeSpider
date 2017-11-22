@@ -28,7 +28,7 @@ export class StreamPlan implements IPlan {
         this.name = name;
         this.option = option;
     }
-    public async process(task: ITask, spider: Spider) {
+    public process(task: ITask, spider: Spider) {
         return new Promise((resolve, reject) => {
             const requestOpts = Object.assign({url: task.url}, this.option.headers);
 
@@ -45,6 +45,7 @@ export class StreamPlan implements IPlan {
                 (res as request.Request).on("error", resolve);
             } catch (e) {
                 err = e;
+                resolve();
             }
             const current = {
                 ... task,

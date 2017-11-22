@@ -1,3 +1,4 @@
+- fix: streamPlan concurrency control
 - retry的默认callback
 - download的默认callback
 - method download 单元测试
