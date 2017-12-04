@@ -4,12 +4,22 @@ import * as iconv from "iconv-lite";
 import * as request from "request";
 import * as url from "url";
 import Spider from "../spider";
-import { IPlan, IRequestOptionInput, ITask } from "../types";
+import { IDefaultOption, IPlan, ITask } from "../types";
 
 // for 传递给Plan真正的设置
-export interface IDefaultPlanOption extends IRequestOptionInput {
-    callbacks: IDefaultPlanOptionCallback[];
-    name: string;
+export interface IDefaultPlanOptionInput {
+    method?: string;
+    headers?: any;
+    callback: IDefaultPlanOptionCallback;
+    toUtf8?: boolean;
+    jQ?: boolean;
+}
+export interface IDefaultPlanOption {
+    method: string;
+    headers: any;
+    callback: IDefaultPlanOptionCallback;
+    toUtf8: boolean;
+    jQ: boolean;
 }
 
 // for defaultPlan设置中的callback
@@ -22,34 +32,25 @@ export interface IDefaultPlanCurrent extends ITask {
     $?: CheerioStatic;
 }
 
-/**
- * 默认值 type: "default", info: {}, option: {request: {encoding: null}, pre: [preToUtf8(), preLoadJq()], callback }
- * @param planOptionInput
- */
-export function defaultPlan(option: IDefaultPlanOption) {
-    if (typeof option.name !== "string") {
-        throw new TypeError(`the option's member "name" should be a string`);
-    }
-    if (! Array.isArray(option.callbacks)) {
-        throw new TypeError(`the option's member "callbacks" should be an array of function`);
-    }
-    for (const cb of option.callbacks) {
-        if (typeof cb !== "function") {
-            throw new TypeError(`the option's member "callbacks" should be an array of function`);
-        }
-    }
-    option.method = option.method || "GET";
-    option.headers = option.headers || {};
-    return new DefaultPlan(option.name, option);
+export function defaultPlan(option: IDefaultPlanOptionInput) {
+    return new DefaultPlan(option);
 }
 
 export class DefaultPlan implements IPlan {
     public option: IDefaultPlanOption;
-    public name: string;
-    constructor(name: string, option: IDefaultPlanOption) {
-        this.option = option;
-        this.name = name;
+    constructor(opts: IDefaultPlanOptionInput) {
+        if (typeof opts.callback !== "function") {
+            throw new TypeError("defaultplna设置必须包含callback");
+        }
+        this.option = {
+            method: (typeof opts.method !== "string") ? "GET" : opts.method,
+            headers: (typeof opts.headers !== "object") ? {} : opts.headers,
+            toUtf8: (typeof opts.toUtf8 !== "boolean") ? true : opts.toUtf8,
+            jQ: (typeof opts.jQ !== "boolean") ? true : opts.jQ,
+            callback: opts.callback,
+        };
     }
+
     public async process(task: ITask, spider: Spider) {
         const {error, response, body}: any = await requestAsync({
             encoding: null,
@@ -63,17 +64,18 @@ export class DefaultPlan implements IPlan {
             response,
         };
 
-        // 按顺序执行callback
-        try {
-            for (const cb of this.option.callbacks) {
-                const result = cb(error, current, spider);
-                if (result instanceof Promise) {
-                    await result;
-                }
-            }
-        } catch (e) {
-            console.error("defaultPlan: there are an error from callback function");
-            throw e;
+        // 预处理
+        if (this.option.toUtf8) {
+            toUtf8(error, current);
+        }
+        if (this.option.jQ) {
+            loadJq(error, current);
+        }
+
+        // 为什么不捕捉用户callback中的错误？这个交给用户
+        const result = this.option.callback(error, current, spider);
+        if (result instanceof Promise) {
+            await result;
         }
 
     }
@@ -90,7 +92,7 @@ function requestAsync(opts: any) {
 /**
  * 根据currentTask.body加载jQ对象，并扩展url、todo、download方法，以第三个参数$的形式传递
  */
-export function preLoadJq(error: Error, currentTask: IDefaultPlanCurrent): void {
+export function loadJq(error: Error, currentTask: IDefaultPlanCurrent): void {
     if (error) { return ; }
 
     const $ = cheerio.load(currentTask.body);
@@ -144,7 +146,7 @@ export function preLoadJq(error: Error, currentTask: IDefaultPlanCurrent): void 
 /**
  * 根据当前任务的response.header和response.body中的编码格式，将currentTask.body转码为utf8格式
  */
-export function preToUtf8(error: Error, currentTask: IDefaultPlanCurrent): void {
+export function toUtf8(error: Error, currentTask: IDefaultPlanCurrent): void {
     if (error) { return ; }
     const encoding = charset(currentTask.response.headers, currentTask.response.body.toString());
     // 有些时候会无法获得当前网站的编码，原因往往是网站内容过于简单，比如最简单的404界面。此时无需转码

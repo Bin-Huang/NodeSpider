@@ -1,11 +1,12 @@
 import * as request from "request";
 import * as stream from "stream";
 import Spider from "../spider";
-import { IPlan, IRequestOptionInput, ITask } from "../types";
+import { IPlan, ITask } from "../types";
 
-export interface IStreamPlanOption extends IRequestOptionInput {
+export interface IStreamPlanOption {
+    method?: string;
+    headers?: any;
     callback: (err: Error|null, current: IStreamPlanCurrent, s: Spider) => void;
-    name: string;
 }
 
 // current crawl task; for `rule` function in the plan
@@ -18,14 +19,12 @@ export default function streamPlan(option: IStreamPlanOption) {
     // TODO C 参数验证
     option.method = option.method || "GET";
     option.headers = option.headers || {};
-    return new StreamPlan(option.name, option);
+    return new StreamPlan(option);
 }
 
 export class StreamPlan implements IPlan {
     public option: IStreamPlanOption;
-    public name: string;
-    constructor(name: string, option: IStreamPlanOption) {
-        this.name = name;
+    constructor(option: IStreamPlanOption) {
         this.option = option;
     }
     public process(task: ITask, spider: Spider) {

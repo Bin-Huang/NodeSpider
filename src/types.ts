@@ -3,22 +3,8 @@ import Spider from "./spider";
 
 export interface IPlan {
     // process 不能抛出错误，否则将导致爬虫终止。所有错误应该以参数传递到callback，由开发者自行处理
-    name: string;
     process: (task: ITask, spider: Spider) => Promise<{}|null|void>;
-    option?: any;
-}
-
-// nodespider's queue;
-export interface IQueue {
-    addTask: (newTask: ITask) => void;
-    jumpTask: (newTask: ITask) => void;
-
-    check: (url: string) => boolean;
-
-    getWaitingTaskNum: () => number;
-    getTotalUrlsNum: () => number;
-
-    nextTask: () => ITask|null;
+    option: any;
 }
 
 export interface IPipe {
@@ -33,8 +19,7 @@ export interface IState {
     planStore: Map<string, IPlan>;
     pipeStore: Map<string, IPipe>;
     option: IDefaultOption;
-    working: boolean;
-    currentTotalConnections: number;
+    currentTotalConnections: ITask[];
 }
 
 export type queueClass = new () => IQueue;
@@ -57,12 +42,15 @@ export interface ITask {
     info?: any;
 }
 
-export interface ICurrent extends ITask {
-    info: any;
-}
+// nodespider's queue;
+export interface IQueue {
+    add: (newTask: ITask) => void;
+    jump: (newTask: ITask) => void;
 
-// ====== request options ======
-export interface IRequestOptionInput {
-    method?: string;
-    headers?: any;
+    check: (url: string) => boolean;
+
+    getWaitingTaskNum: () => number;
+    getTotalUrlsNum: () => number;
+
+    next: () => ITask|null;
 }

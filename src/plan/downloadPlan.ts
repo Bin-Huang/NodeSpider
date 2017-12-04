@@ -3,7 +3,7 @@ import * as fs from "fs-extra";
 import * as path from "path";
 import * as request from "request";
 import Spider from "../spider";
-import { IPlan, IRequestOptionInput, ITask } from "../types";
+import { IPlan, ITask } from "../types";
 
 /**
  * s.queue(dlPlan, "http://img.com/my.jpg"); ==> img.com!my.jpg
@@ -14,9 +14,10 @@ import { IPlan, IRequestOptionInput, ITask } from "../types";
  * s.queue(dlPlan, "http://img.com/my.jpg", {ext: ".png"}); ===> img.com!my.jpg.png
  */
 
-export interface IDownloadPlanOpion extends IRequestOptionInput {
+export interface IDownloadPlanOpion {
+    method?: string;
+    headers?: any;
     callback: (err: Error|null, current: ITask, s: Spider) => void; // 当下载完成或出错时调用
-    name: string;
     path: string;
 }
 
@@ -24,15 +25,13 @@ export default function downloadPlan(option: IDownloadPlanOpion) {
     // TODO C 参数检验
     option.method = option.method || "GET";
     option.headers = option.headers || {};
-    return new DownloadPlan(option.name, option);
+    return new DownloadPlan(option);
 }
 
 export class DownloadPlan implements IPlan {
     public option: IDownloadPlanOpion;
-    public name: string;
-    constructor(name: string, option: IDownloadPlanOpion) {
+    constructor(option: IDownloadPlanOpion) {
         this.option = option;
-        this.name = name;
     }
     public async process(task: ITask, spider: Spider) {
         return new Promise((resolve, reject) => {

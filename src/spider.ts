@@ -1,11 +1,10 @@
 import { EventEmitter } from "events";
 import * as isAbsoluteUrl from "is-absolute-url";
 import * as request from "request";
-import { defaultPlan, IDefaultPlanOptionCallback, preLoadJq, preToUtf8 } from "./plan/defaultPlan";
+import { defaultPlan, IDefaultPlanOptionCallback } from "./plan/defaultPlan";
 import downloadPlan from "./plan/downloadPlan";
 import Queue from "./queue";
 import {
-    ICurrent,
     IDefaultOption,
     IDefaultOptionInput,
     IPipe,
@@ -25,8 +24,6 @@ const defaultOption: IDefaultOption = {
  * @class NodeSpider
  */
 export default class NodeSpider extends EventEmitter {
-    public static preToUtf8 = preToUtf8;
-    public static preLoadJq = preLoadJq;
     public _STATE: IState;
     /**
      * create an instance of NodeSpider
@@ -37,16 +34,15 @@ export default class NodeSpider extends EventEmitter {
         ParameterOptsCheck(opts);
         const finalOption = Object.assign({}, defaultOption, opts);
         this._STATE = {
-            currentTotalConnections: 0,
+            currentTotalConnections: [],
             option: finalOption,
             pipeStore: new Map(),
             planStore: new Map(),
             queue: new finalOption.queue(),
-            working: true,
         };
 
         this.on("empty", () => {
-            if (this._STATE.currentTotalConnections === 0) {
+            if (this._STATE.currentTotalConnections.length === 0) {
                 this.emit("vacant");   // queue为空，当前异步连接为0，说明爬虫已经空闲，触发事件
             }
         });
@@ -110,24 +106,37 @@ export default class NodeSpider extends EventEmitter {
      * @param  {IPlan}  newPlan plan object
      * @return {void}
      */
-    public add(newPlan: IPlan) {
-        if (! newPlan.name || ! newPlan.process) {
+    public plan(name: string, newPlan: IPlan): NodeSpider {
+        if (! name || ! newPlan) {
+            // TODO: 修改参数检验
             throw new TypeError("method add: the parameter isn't a plan object");
         }
-        if (this._STATE.planStore.has(newPlan.name)) {
-            throw new TypeError(`method add: there already have a plan named "${newPlan.name}"`);
+        if (this._STATE.planStore.has(name)) {
+            throw new TypeError(`method add: there already have a plan named "${name}"`);
         }
-        // 添加plan到planStore
-        this._STATE.planStore.set(newPlan.name, newPlan);
-        return ;
+
+        if (typeof newPlan === "object") {
+            if(typeof newPlan.process === "function") {
+                // 添加plan到planStore
+                this._STATE.planStore.set(name, newPlan);
+            } else {
+                throw new TypeError("不是一个plan对象")
+            }
+        } else if (typeof newPlan === "function") {
+            return this.plan(name, defaultPlan({ callback: newPlan }));
+        } else {
+            throw new TypeError("newplan 必须是一个plan对象，或者函数")
+        }
+
+        return this;
     }
 
     /**
      * connect new pipe
      * @param  {IPipe}  newPipe pipe object
-     * @return {void}
+     * @return {this}
      */
-    public connect(newPipe: IPipe) {
+    public pipe(newPipe: IPipe): NodeSpider {
         if (! newPipe.name) {
             throw new TypeError("method connect: the parameter isn't a pipe object");
         }
@@ -136,7 +145,7 @@ export default class NodeSpider extends EventEmitter {
         }
         // 如果参数iten是一个pipe
         this._STATE.pipeStore.set(newPipe.name, newPipe);
-        return ;
+        return this;
     }
 
     public retry(current: ITask, maxRetry: number, finalErrorCallback?: () => any) {
@@ -161,34 +170,7 @@ export default class NodeSpider extends EventEmitter {
             return finalErrorCallback();
         }
         retryTask.hasRetried ++;
-        this._STATE.queue.jumpTask(retryTask);    // 插队到队列，重新等待执行
-    }
-
-    /**
-     * add new default plan
-     * @param option default plan's option
-     */
-    public plan(name: string, callback: IDefaultPlanOptionCallback) {
-        if (typeof name !== "string") {
-            throw new TypeError(`method plan: failed to add new plan.
-            then parameter "name" should be a string`);
-        }
-        if (typeof callback !== "function") {
-            throw new TypeError(`method plan: failed to add new plan.
-            then parameter "callback" should be a function`);
-        }
-        if (this._STATE.planStore.has(name)) {
-            throw new TypeError(`method plan: Can not add new plan named "${name}".
-            There are already a plan called "${name}".`);
-        }
-        return this.add(defaultPlan({
-            callbacks: [
-                NodeSpider.preToUtf8,
-                NodeSpider.preLoadJq,
-                callback,
-            ],
-            name,
-        }));
+        this._STATE.queue.jump(retryTask);    // 插队到队列，重新等待执行
     }
 
     // tslint:disable-next-line:max-line-length
@@ -199,7 +181,7 @@ export default class NodeSpider extends EventEmitter {
      * @param info (Optional). Attached information for this url
      * @returns {array}
      */
-    public queue(planName: string, url: string | string[], info?: any): any[] {
+    public add(planName: string, url: string | string[], info?: any): any[] {
         const plan = this._STATE.planStore.get(planName);
         if (! plan) {
             throw new TypeError(`method queue: no such plan named "${planName}"`);
@@ -213,13 +195,12 @@ export default class NodeSpider extends EventEmitter {
                 noPassList.push(u);
             } else {
                 const newTask = { url: u, planName, info };
-                this._STATE.queue.addTask(newTask);
+                this._STATE.queue.add(newTask);
                 this.emit("queueTask", newTask);
                 this.work();
             }
         });
 
-        this._STATE.working = true;
         return noPassList;
     }
 
@@ -238,13 +219,12 @@ export default class NodeSpider extends EventEmitter {
                         return s.retry(current, 3, () => console.log(err));
                     }
                 },
-                name: path,
                 path,
             });
-            this.add(newPlan);
+            this.plan(path, newPlan);
         }
         // 添加下载链接 url 到队列
-        this.queue(path, url, filename);
+        this.add(path, url, filename);
     }
 
     /**
@@ -268,25 +248,25 @@ export default class NodeSpider extends EventEmitter {
         }
     }
     private work() {
-        const count = this._STATE.option.concurrency - this._STATE.currentTotalConnections;
+        const count = this._STATE.option.concurrency - this._STATE.currentTotalConnections.length;
         if (count <= 0) {
             return ;
         }
-        const task = this._STATE.queue.nextTask();
+        const task = this._STATE.queue.next();
         if (! task) { return this.emit("empty"); }
 
-        this._STATE.currentTotalConnections ++;
+        this._STATE.currentTotalConnections.push(task);
         const plan = this._STATE.planStore.get(task.planName) as IPlan;
-        const current: ICurrent = {
-            ... task,
-            info: (typeof task.info === "undefined") ? {} : task.info,
-        };
         plan.process(task, this).then(() => {
-            this._STATE.currentTotalConnections --;
+            const ix = this._STATE.currentTotalConnections.findIndex(t => t.url === task.url);
+            this._STATE.currentTotalConnections.splice(ix, 1);
+
             this.work();
         }).catch((e: Error) => {
             // 如果计划执行失败，这是非常严重的，因为直接会导致爬虫不能完成开发者制定的任务
-            this._STATE.currentTotalConnections --;
+            const ix = this._STATE.currentTotalConnections.findIndex(t => t.url === task.url);
+            this._STATE.currentTotalConnections.splice(ix, 1);
+
             this.end(); // 停止爬虫并退出，以提醒并便于开发者debug
             console.error(`An error is threw from plan execution.
                 Check your callback function, or create an issue in the planGenerator's repository`);
