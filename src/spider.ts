@@ -5,18 +5,20 @@ import { defaultPlan, IDefaultPlanOptionCallback } from "./plan/defaultPlan";
 import downloadPlan from "./plan/downloadPlan";
 import Queue from "./queue";
 import {
-    IDefaultOption,
-    IDefaultOptionInput,
+    IOption,
+    IOptionInput,
     IPipe,
     IPlan,
     IQueue,
     IState,
     ITask,
 } from "./types";
+import { clearInterval } from "timers";
 
-const defaultOption: IDefaultOption = {
+const defaultOption: IOption = {
     concurrency: 20,
     queue: Queue,
+    alive: false,
 };
 
 /**
@@ -29,7 +31,7 @@ export default class NodeSpider extends EventEmitter {
      * create an instance of NodeSpider
      * @param opts
      */
-    constructor(opts: IDefaultOptionInput = {}) {
+    constructor(opts: IOptionInput = {}) {
         super();
         ParameterOptsCheck(opts);
         const finalOption = Object.assign({}, defaultOption, opts);
@@ -39,6 +41,10 @@ export default class NodeSpider extends EventEmitter {
             pipeStore: new Map(),
             planStore: new Map(),
             queue: new finalOption.queue(),
+            status: "active",
+            startAt: new Date(),
+            endIn: null,
+            heartbeat: (finalOption.alive) ? setInterval(() => this.emit("heartbeat"), 5000) : null,
         };
 
         this.on("empty", () => {
@@ -51,17 +57,6 @@ export default class NodeSpider extends EventEmitter {
             // this.work();
         });
 
-    }
-
-    /**
-     * 终止爬虫
-     */
-    public end() {
-        // 关闭注册的pipe
-        for (const pipe of this._STATE.pipeStore.values()) {
-            pipe.close();
-        }
-        // TODO C 更多，比如修改所有method来提醒开发者已经end
     }
 
     /**
@@ -116,7 +111,7 @@ export default class NodeSpider extends EventEmitter {
         }
 
         if (typeof newPlan === "object") {
-            if(typeof newPlan.process === "function") {
+            if (typeof newPlan.process === "function") {
                 // 添加plan到planStore
                 this._STATE.planStore.set(name, newPlan);
             } else {
@@ -136,35 +131,31 @@ export default class NodeSpider extends EventEmitter {
      * @param  {IPipe}  newPipe pipe object
      * @return {this}
      */
-    public pipe(newPipe: IPipe): NodeSpider {
-        if (! newPipe.name) {
+    public pipe(name: string, newPipe: IPipe): NodeSpider {
+        if (! name) {
             throw new TypeError("method connect: the parameter isn't a pipe object");
         }
-        if (this._STATE.pipeStore.has(newPipe.name)) {
-            throw new TypeError(`method connect: there already have a pipe named "${newPipe.name}"`);
+        if (this._STATE.pipeStore.has(name)) {
+            throw new TypeError(`method connect: there already have a pipe named "${name}"`);
         }
         // 如果参数iten是一个pipe
-        this._STATE.pipeStore.set(newPipe.name, newPipe);
+        this._STATE.pipeStore.set(name, newPipe);
         return this;
     }
 
     public retry(current: ITask, maxRetry: number, finalErrorCallback?: () => any) {
         // 过滤出current重要的task基本信息
-        const retryTask = {
+        const retryTask: ITask = {
             hasRetried: current.hasRetried,
             info: current.info,
             planName: current.planName,
             url: current.url,
         };
-        if (! retryTask.hasRetried) {
+        if (typeof retryTask.hasRetried !== "number") {
             retryTask.hasRetried = 0;
         }
         if (! finalErrorCallback) {
-            finalErrorCallback = () => {
-                throw new Error(`
-                    ${current.url}达到最大重试次数，但依然出错
-                `);
-            };
+            finalErrorCallback = () =>  { throw new Error(` ${current.url}达到最大重试次数，但依然出错`); }
         }
         if (retryTask.hasRetried >= maxRetry) {
             return finalErrorCallback();
@@ -244,10 +235,53 @@ export default class NodeSpider extends EventEmitter {
         if (! pipe) {
             throw new TypeError(`method save: no such pipe named ${pipeName}`);
         } else {
-            pipe.add(data);
+            pipe.write(data);
         }
     }
+
+    public active() {
+        if (this._STATE.status === "pause") {
+            this._STATE.status = "active";
+            this.work();
+        }
+    }
+
+    public pause() {
+        if (this._STATE.status === "active") {
+            this._STATE.status = "pause";
+        }
+    }
+
+    /**
+     * 终止爬虫
+     */
+    public end() {
+        this._STATE.status = "end";
+        // 关闭注册的pipe
+        for (const pipe of this._STATE.pipeStore.values()) {
+            pipe.close();
+        }
+        // TODO C 更多，比如修改所有method来提醒开发者已经end
+    }
+
     private work() {
+        if (this._STATE.status !== "active") {
+            if (this._STATE.currentTotalConnections.length === 0) {
+                if (this._STATE.status === "pause") {
+                    console.log("\nnodespider is pausing\n");
+                    // TODO
+                } else if (this._STATE.status === "end") {
+                    if (this._STATE.heartbeat) {
+                        clearInterval(this._STATE.heartbeat);
+                        this._STATE.heartbeat = null;
+                    }
+                    this._STATE.endIn = new Date();
+                    console.log("\nnodespider has ended\n");
+                }
+            }
+            return ;
+        }
+
         const count = this._STATE.option.concurrency - this._STATE.currentTotalConnections.length;
         if (count <= 0) {
             return ;
@@ -258,7 +292,7 @@ export default class NodeSpider extends EventEmitter {
         this._STATE.currentTotalConnections.push(task);
         const plan = this._STATE.planStore.get(task.planName) as IPlan;
         plan.process(task, this).then(() => {
-            const ix = this._STATE.currentTotalConnections.findIndex(t => t.url === task.url);
+            const ix = this._STATE.currentTotalConnections.findIndex((t) => t.url === task.url);
             this._STATE.currentTotalConnections.splice(ix, 1);
 
             this.work();
@@ -279,7 +313,7 @@ export default class NodeSpider extends EventEmitter {
  * to check whether the parameter option is legal to initialize a spider, if not return the error
  * @param opts the option object
  */
-function ParameterOptsCheck(opts: IDefaultOptionInput): null {
+function ParameterOptsCheck(opts: IOptionInput): null {
     // check type of parameter opts
     if (typeof opts !== "object") {
         throw new TypeError(`Paramter option is no required, and it should be a object.

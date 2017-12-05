@@ -4,20 +4,18 @@ import { IPipe } from "../types";
 
 // TODO C 加个header？
 export interface IJsonPipeOption {
-    name: string;
     path: string;
     space: number;
 }
 
 class JsonPipe {
-    public name: string;
     private stream: fs.WriteStream;
     private space: string;
     private closeSign: boolean;
     private first: boolean;
 
     constructor(opts: IJsonPipeOption) {
-        let { name, path, space } = opts;
+        let { path, space } = opts;
         if (typeof path !== "string") {
             throw new TypeError('the string-typed parameter "path" is required');
         }
@@ -26,7 +24,6 @@ class JsonPipe {
                 throw err;
             }
             this.stream = fs.createWriteStream(path);
-            this.name = name;
             this.space = "";
             while (space > 0) {
                 space --;
@@ -37,7 +34,7 @@ class JsonPipe {
             this.first = true;
         });
     }
-    public add(data: any) {
+    public write(data: any) {
         if (this.closeSign) {
             throw new Error("Apjson WARN: can not append any more, because it has been closed.");
         }

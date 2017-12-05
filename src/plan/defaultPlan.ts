@@ -4,7 +4,7 @@ import * as iconv from "iconv-lite";
 import * as request from "request";
 import * as url from "url";
 import Spider from "../spider";
-import { IDefaultOption, IPlan, ITask } from "../types";
+import { IOption, IPlan, ITask } from "../types";
 
 // for 传递给Plan真正的设置
 export interface IDefaultPlanOptionInput {
@@ -94,7 +94,6 @@ function requestAsync(opts: any) {
  */
 export function loadJq(error: Error, currentTask: IDefaultPlanCurrent): void {
     if (error) { return ; }
-
     const $ = cheerio.load(currentTask.body);
 
     // 扩展：添加 url 方法
@@ -103,8 +102,8 @@ export function loadJq(error: Error, currentTask: IDefaultPlanCurrent): void {
     // TODO B 存在不合法链接的返回
     $.prototype.url = function() {
         const result: string[] = [];
-        $(this).each(function() {
-            let newUrl = $(this).attr("href");
+        $(this).each((ix: number, ele: CheerioElement) => {
+            let newUrl = $(ele).attr("href");
             // 如果为空，或是类似 'javascirpt: void(0)' 的 js 代码，直接跳过
             if (! newUrl || /^javascript/.test(newUrl)) {
                 return false;

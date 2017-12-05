@@ -1,38 +1,35 @@
+/// <reference types="node" />
 import Spider from "./spider";
 export interface IPlan {
-    name: string;
     process: (task: ITask, spider: Spider) => Promise<{} | null | void>;
-    option?: any;
-}
-export interface IQueue {
-    addTask: (newTask: ITask) => void;
-    jumpTask: (newTask: ITask) => void;
-    check: (url: string) => boolean;
-    getWaitingTaskNum: () => number;
-    getTotalUrlsNum: () => number;
-    nextTask: () => ITask | null;
+    option: any;
 }
 export interface IPipe {
-    name: string;
-    add: (data: any) => void;
+    format: (data: any) => any;
+    write: (data: any) => void;
     close: () => void;
 }
 export interface IState {
     queue: IQueue;
     planStore: Map<string, IPlan>;
     pipeStore: Map<string, IPipe>;
-    option: IDefaultOption;
-    working: boolean;
-    currentTotalConnections: number;
+    option: IOption;
+    currentTotalConnections: ITask[];
+    status: "active" | "pause" | "end";
+    startAt: Date;
+    endIn: Date | null;
+    heartbeat: NodeJS.Timer | null;
 }
 export declare type queueClass = new () => IQueue;
-export interface IDefaultOptionInput {
+export interface IOptionInput {
     concurrency?: number;
     queue?: queueClass;
+    alive?: boolean;
 }
-export interface IDefaultOption extends IDefaultOptionInput {
+export interface IOption {
     concurrency: number;
     queue: queueClass;
+    alive: boolean;
 }
 export interface ITask {
     url: string;
@@ -40,10 +37,11 @@ export interface ITask {
     hasRetried?: number;
     info?: any;
 }
-export interface ICurrent extends ITask {
-    info: any;
-}
-export interface IRequestOptionInput {
-    method?: string;
-    headers?: any;
+export interface IQueue {
+    add: (newTask: ITask) => void;
+    jump: (newTask: ITask) => void;
+    check: (url: string) => boolean;
+    getWaitingTaskNum: () => number;
+    getTotalUrlsNum: () => number;
+    next: () => ITask | null;
 }

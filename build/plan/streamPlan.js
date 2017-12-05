@@ -5,12 +5,11 @@ function streamPlan(option) {
     // TODO C 参数验证
     option.method = option.method || "GET";
     option.headers = option.headers || {};
-    return new StreamPlan(option.name, option);
+    return new StreamPlan(option);
 }
 exports.default = streamPlan;
 class StreamPlan {
-    constructor(name, option) {
-        this.name = name;
+    constructor(option) {
         this.option = option;
     }
     process(task, spider) {

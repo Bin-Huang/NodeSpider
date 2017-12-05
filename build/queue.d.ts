@@ -6,8 +6,8 @@ export default class Queue implements IQueue {
     protected urlPool: Set<string>;
     private queue;
     constructor();
-    addTask(newTask: ITask): void;
-    jumpTask(newTask: ITask): void;
+    add(newTask: ITask): void;
+    jump(newTask: ITask): void;
     /**
      * 检测一个url是否添加过，是则返回true
      * @param url
@@ -25,5 +25,5 @@ export default class Queue implements IQueue {
     /**
      * 返回下一个任务。该排队没有新任务，都会返回 null
      */
-    nextTask(): any;
+    next(): any;
 }

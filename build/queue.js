@@ -102,11 +102,11 @@ class Queue {
         this.urlPool = new Set();
         this.queue = new LinkedQueue();
     }
-    addTask(newTask) {
+    add(newTask) {
         this.urlPool.add(newTask.url);
         this.queue.add(newTask);
     }
-    jumpTask(newTask) {
+    jump(newTask) {
         this.urlPool.add(newTask.url);
         this.queue.jump(newTask);
     }
@@ -133,7 +133,7 @@ class Queue {
     /**
      * 返回下一个任务。该排队没有新任务，都会返回 null
      */
-    nextTask() {
+    next() {
         return this.queue.next() || null;
     }
 }

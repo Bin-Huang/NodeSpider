@@ -3,18 +3,16 @@ import * as fs from "fs-extra";
 import { IPipe } from "../types";
 
 export interface ITxtPipeOption {
-    name: string;
     path: string;
     header: {[index: string]: (v: string) => string};
 }
 
 class TxtPipe {
     public header: {[index: string]: (v: string) => string};
-    public name: string;
     private stream: fs.WriteStream;
 
     constructor(opts: ITxtPipeOption) {
-        const { name, path, header } = opts;
+        const { path, header } = opts;
         if (typeof path !== "string") {
             throw new TypeError('the string-typed parameter "path" is required');
         }
@@ -22,7 +20,6 @@ class TxtPipe {
             if (err) {
                 throw err;
             }
-            this.name = name;
             this.header = header;
             this.stream = fs.createWriteStream(path);
 
@@ -44,7 +41,7 @@ class TxtPipe {
      * 根据表头写入新数据
      * @param {Object} data
      */
-    public add(data: any) {
+    public write(data: any) {
         let chunk = "";
         // 按顺序写入符合关键字段的数据，不存在于关键字列表的数据将被无视
         for (const key in this.header) {

@@ -8,8 +8,8 @@ export interface IPlan {
 }
 
 export interface IPipe {
-    name: string;
-    add: (data: any) => void;
+    format: (data: any) => any;
+    write: (data: any) => void;
     close: () => void;
 }
 
@@ -18,20 +18,26 @@ export interface IState {
     queue: IQueue;
     planStore: Map<string, IPlan>;
     pipeStore: Map<string, IPipe>;
-    option: IDefaultOption;
+    option: IOption;
     currentTotalConnections: ITask[];
+    status: "active"|"pause"|"end";
+    startAt: Date;
+    endIn: Date|null;
+    heartbeat: NodeJS.Timer|null;
 }
 
 export type queueClass = new () => IQueue;
 
 // for parameter option, when initialize an instance  of NodeSpider.
-export interface IDefaultOptionInput {
+export interface IOptionInput {
     concurrency?: number;
     queue?: queueClass;
+    alive?: boolean;
 }
-export interface IDefaultOption extends IDefaultOptionInput {
+export interface IOption {
     concurrency: number;
     queue: queueClass;
+    alive: boolean;
 }
 
 // for task object in the queue;在queue保存的task

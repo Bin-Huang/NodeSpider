@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs-extra");
 class CsvPipe {
     constructor(opts) {
-        const { path, name, header } = opts;
+        const { path, header } = opts;
         if (typeof path !== "string") {
             throw new Error('the string-typed parameter "path" is required');
         }
@@ -12,7 +12,6 @@ class CsvPipe {
                 throw err;
             }
             this.header = header;
-            this.name = name;
             this.stream = fs.createWriteStream(path);
             // 写入表头字段
             let chunk = "";
@@ -32,7 +31,7 @@ class CsvPipe {
      * 根据表头写入新数据
      * @param {Object} data
      */
-    add(data) {
+    write(data) {
         // 按顺序写入符合关键字段的数据并作对应的处理，不存在于关键字列表的数据将被无视
         let chunk = "";
         for (const item in this.header) {

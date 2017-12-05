@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs-extra");
 class JsonPipe {
     constructor(opts) {
-        let { name, path, space } = opts;
+        let { path, space } = opts;
         if (typeof path !== "string") {
             throw new TypeError('the string-typed parameter "path" is required');
         }
@@ -12,7 +12,6 @@ class JsonPipe {
                 throw err;
             }
             this.stream = fs.createWriteStream(path);
-            this.name = name;
             this.space = "";
             while (space > 0) {
                 space--;
@@ -23,7 +22,7 @@ class JsonPipe {
             this.first = true;
         });
     }
-    add(data) {
+    write(data) {
         if (this.closeSign) {
             throw new Error("Apjson WARN: can not append any more, because it has been closed.");
         }

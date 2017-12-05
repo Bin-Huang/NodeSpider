@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs-extra");
 class TxtPipe {
     constructor(opts) {
-        const { name, path, header } = opts;
+        const { path, header } = opts;
         if (typeof path !== "string") {
             throw new TypeError('the string-typed parameter "path" is required');
         }
@@ -11,7 +11,6 @@ class TxtPipe {
             if (err) {
                 throw err;
             }
-            this.name = name;
             this.header = header;
             this.stream = fs.createWriteStream(path);
             // 写入表头字段
@@ -32,7 +31,7 @@ class TxtPipe {
      * 根据表头写入新数据
      * @param {Object} data
      */
-    add(data) {
+    write(data) {
         let chunk = "";
         // 按顺序写入符合关键字段的数据，不存在于关键字列表的数据将被无视
         for (const key in this.header) {
