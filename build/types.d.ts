@@ -5,7 +5,7 @@ export interface IPlan {
     option: any;
 }
 export interface IPipe {
-    format: (data: any) => any;
+    format?: (data: any) => any;
     write: (data: any) => void;
     close: () => void;
 }

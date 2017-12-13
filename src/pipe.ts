@@ -1,15 +1,14 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const fs = require("fs-extra");
-function csvPipe(path) {
+import * as fs from "fs-extra";
+import { IPipe } from "./types";
+
+export function csvPipe(path: string): IPipe {
     const pipe = fs.createWriteStream(path);
-    pipe.format = csvFormat;
+    (pipe as IPipe).format = csvFormat;
     return pipe;
 }
-exports.csvPipe = csvPipe;
 const csvFormat = (() => {
     let isFirst = true;
-    return (items) => {
+    return (items: object): string => {
         let chunk = "";
         if (isFirst) {
             isFirst = false;
@@ -19,15 +18,15 @@ const csvFormat = (() => {
         return chunk;
     };
 })();
-function txtPipe(path) {
+
+export function txtPipe(path: string): IPipe {
     const pipe = fs.createWriteStream(path);
-    pipe.format = txtFormat;
+    (pipe as IPipe).format = txtFormat;
     return pipe;
 }
-exports.txtPipe = txtPipe;
 const txtFormat = (() => {
     let isFirst = true;
-    return (items) => {
+    return (items: object): string => {
         let chunk = "";
         if (isFirst) {
             isFirst = false;
@@ -37,9 +36,10 @@ const txtFormat = (() => {
         return chunk;
     };
 })();
-function jsonPipe(path) {
+
+export function jsonPipe(path: string): IPipe {
     const pipe = fs.createWriteStream(path);
-    pipe.format = jsonFormat;
+    (pipe as IPipe).format = jsonFormat;
     const streamClose = pipe.close;
     pipe.close = () => {
         pipe.write("\n]");
@@ -47,26 +47,26 @@ function jsonPipe(path) {
     };
     return pipe;
 }
-exports.jsonPipe = jsonPipe;
 const jsonFormat = (() => {
     let first = true;
-    return (items) => {
+    return (items: object): string => {
         let chunk = "";
         if (first) {
             first = false;
             chunk += "[\n";
-        }
-        else {
+        } else {
             chunk = ",\n";
         }
         chunk += JSON.stringify(items);
         return chunk;
     };
 })();
+
 // export interface IVsvPipeOption {
 //     path: string;
 //     header: {[index: string]: (v: string) => string};
 // }
+
 // class VsvPipe {
 //     /**
 //      * Creates an instance of csv pipe.
@@ -86,6 +86,7 @@ const jsonFormat = (() => {
 //             }
 //             this.header = header;
 //             this.stream = fs.createWriteStream(path);
+
 //             // 写入表头字段
 //             let chunk = "";
 //             for (const item in this.header) {
@@ -124,10 +125,12 @@ const jsonFormat = (() => {
 //         this.stream.close();
 //     }
 // }
+
 // export default function csvPipe(opts: ICsvPipeOption): IPipe {
 //     return new CsvPipe(opts);
 // }
-function entries(obj) {
+
+function entries(obj: {[index: string]: any}): [string[], any[]] {
     const keys = [];
     const values = [];
     for (const key in obj) {

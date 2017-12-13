@@ -1,6 +1,7 @@
 import { EventEmitter } from "events";
 import * as isAbsoluteUrl from "is-absolute-url";
 import * as request from "request";
+import { clearInterval } from "timers";
 import { defaultPlan, IDefaultPlanOptionCallback } from "./plan/defaultPlan";
 import downloadPlan from "./plan/downloadPlan";
 import Queue from "./queue";
@@ -13,7 +14,6 @@ import {
     IState,
     ITask,
 } from "./types";
-import { clearInterval } from "timers";
 
 const defaultOption: IOption = {
     concurrency: 20,
@@ -115,12 +115,12 @@ export default class NodeSpider extends EventEmitter {
                 // 添加plan到planStore
                 this._STATE.planStore.set(name, newPlan);
             } else {
-                throw new TypeError("不是一个plan对象")
+                throw new TypeError("不是一个plan对象");
             }
         } else if (typeof newPlan === "function") {
             return this.plan(name, defaultPlan({ callback: newPlan }));
         } else {
-            throw new TypeError("newplan 必须是一个plan对象，或者函数")
+            throw new TypeError("newplan 必须是一个plan对象，或者函数");
         }
 
         return this;
@@ -155,7 +155,7 @@ export default class NodeSpider extends EventEmitter {
             retryTask.hasRetried = 0;
         }
         if (! finalErrorCallback) {
-            finalErrorCallback = () =>  { throw new Error(` ${current.url}达到最大重试次数，但依然出错`); }
+            finalErrorCallback = () =>  { throw new Error(` ${current.url}达到最大重试次数，但依然出错`); };
         }
         if (retryTask.hasRetried >= maxRetry) {
             return finalErrorCallback();
@@ -298,7 +298,7 @@ export default class NodeSpider extends EventEmitter {
             this.work();
         }).catch((e: Error) => {
             // 如果计划执行失败，这是非常严重的，因为直接会导致爬虫不能完成开发者制定的任务
-            const ix = this._STATE.currentTotalConnections.findIndex(t => t.url === task.url);
+            const ix = this._STATE.currentTotalConnections.findIndex((t) => t.url === task.url);
             this._STATE.currentTotalConnections.splice(ix, 1);
 
             this.end(); // 停止爬虫并退出，以提醒并便于开发者debug

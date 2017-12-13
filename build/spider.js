@@ -2,10 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
 const isAbsoluteUrl = require("is-absolute-url");
+const timers_1 = require("timers");
 const defaultPlan_1 = require("./plan/defaultPlan");
 const downloadPlan_1 = require("./plan/downloadPlan");
 const queue_1 = require("./queue");
-const timers_1 = require("timers");
 const defaultOption = {
     concurrency: 20,
     queue: queue_1.default,
@@ -273,7 +273,7 @@ class NodeSpider extends events_1.EventEmitter {
             this.work();
         }).catch((e) => {
             // 如果计划执行失败，这是非常严重的，因为直接会导致爬虫不能完成开发者制定的任务
-            const ix = this._STATE.currentTotalConnections.findIndex(t => t.url === task.url);
+            const ix = this._STATE.currentTotalConnections.findIndex((t) => t.url === task.url);
             this._STATE.currentTotalConnections.splice(ix, 1);
             this.end(); // 停止爬虫并退出，以提醒并便于开发者debug
             console.error(`An error is threw from plan execution.
