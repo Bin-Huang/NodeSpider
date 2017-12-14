@@ -6,6 +6,7 @@ const timers_1 = require("timers");
 const defaultPlan_1 = require("./plan/defaultPlan");
 const downloadPlan_1 = require("./plan/downloadPlan");
 const queue_1 = require("./queue");
+const tools_1 = require("./tools");
 const defaultOption = {
     concurrency: 20,
     queue: queue_1.default,
@@ -114,14 +115,35 @@ class NodeSpider extends events_1.EventEmitter {
      * @return {this}
      */
     pipe(name, newPipe) {
-        if (!name) {
+        if (typeof name !== "string") {
             throw new TypeError("method connect: the parameter isn't a pipe object");
         }
         if (this._STATE.pipeStore.has(name)) {
             throw new TypeError(`method connect: there already have a pipe named "${name}"`);
         }
+        if (typeof newPipe !== "object") {
+            throw new TypeError("// TODO:");
+        }
+        if (Array.isArray(newPipe.items)) {
+            for (const item of newPipe.items) {
+                if (typeof item !== "string") {
+                    throw new Error("// TODO:");
+                }
+            }
+            this._STATE.pipeStore.set(name, newPipe);
+        }
+        else if (typeof newPipe.items === "object") {
+            for (const f of tools_1.entries(newPipe.items)[1]) {
+                if (typeof f !== "function") {
+                    throw new Error("// TODO:");
+                }
+            }
+            this._STATE.pipeStore.set(name, newPipe);
+        }
+        else {
+            throw new Error("// TODO:");
+        }
         // 如果参数iten是一个pipe
-        this._STATE.pipeStore.set(name, newPipe);
         return this;
     }
     retry(current, maxRetry, finalErrorCallback) {
@@ -211,10 +233,22 @@ class NodeSpider extends events_1.EventEmitter {
         }
         const pipe = this._STATE.pipeStore.get(pipeName);
         if (!pipe) {
-            throw new TypeError(`method save: no such pipe named ${pipeName}`);
+            throw new TypeError("//TODO:");
+        }
+        const { items, store } = pipe;
+        let processedData = {};
+        if (Array.isArray(items)) {
+            processedData = items.map((item) => data[item]);
         }
         else {
-            pipe.write(data);
+            const keys = tools_1.entries(items)[0];
+            processedData = keys.map((key) => items[key](data[key]));
+        }
+        if (store.format) {
+            store.write(store.format(processedData));
+        }
+        else {
+            store.write(processedData.toString());
         }
     }
     active() {
@@ -235,7 +269,7 @@ class NodeSpider extends events_1.EventEmitter {
         this._STATE.status = "end";
         // 关闭注册的pipe
         for (const pipe of this._STATE.pipeStore.values()) {
-            pipe.close();
+            pipe.store.close();
         }
         // TODO C 更多，比如修改所有method来提醒开发者已经end
     }

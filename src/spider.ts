@@ -5,6 +5,7 @@ import { clearInterval } from "timers";
 import { defaultPlan, IDefaultPlanOptionCallback } from "./plan/defaultPlan";
 import downloadPlan from "./plan/downloadPlan";
 import Queue from "./queue";
+import { entries } from "./tools";
 import {
     IOption,
     IOptionInput,
@@ -131,15 +132,32 @@ export default class NodeSpider extends EventEmitter {
      * @param  {IPipe}  newPipe pipe object
      * @return {this}
      */
-    public pipe(name: string, newPipe: IPipe): NodeSpider {
-        if (! name) {
+    public pipe(name: string, newPipe: {store: IPipe, items: string[]|{[index: string]: (v: any) => any}}): NodeSpider {
+        if (typeof name !== "string") {
             throw new TypeError("method connect: the parameter isn't a pipe object");
         }
         if (this._STATE.pipeStore.has(name)) {
             throw new TypeError(`method connect: there already have a pipe named "${name}"`);
         }
+
+        if (typeof newPipe !== "object") {
+            throw new TypeError("// TODO:");
+        }
+        if (Array.isArray(newPipe.items)) {
+            for (const item of newPipe.items) {
+                if (typeof item !== "string") { throw new Error("// TODO:"); }
+            }
+            this._STATE.pipeStore.set(name, newPipe);
+        } else if (typeof newPipe.items === "object") {
+            for (const f of entries(newPipe.items)[1]) {
+                if (typeof f !== "function") { throw new Error("// TODO:"); }
+            }
+            this._STATE.pipeStore.set(name, newPipe);
+        } else {
+            throw new Error("// TODO:");
+        }
+
         // 如果参数iten是一个pipe
-        this._STATE.pipeStore.set(name, newPipe);
         return this;
     }
 
@@ -224,7 +242,7 @@ export default class NodeSpider extends EventEmitter {
      * @param  {any}    data     data you need to save
      * @return {void}
      */
-    public save(pipeName: string, data: any) {
+    public save(pipeName: string, data: {[index: string]: any}) {
         if (typeof pipeName !== "string") {
             throw new TypeError(`methdo save: the parameter "pipeName" should be a string`);
         }
@@ -232,10 +250,23 @@ export default class NodeSpider extends EventEmitter {
             throw new TypeError(`method save: the parameter "data" should be an object`);
         }
         const pipe = this._STATE.pipeStore.get(pipeName);
-        if (! pipe) {
-            throw new TypeError(`method save: no such pipe named ${pipeName}`);
+        if (!pipe) {
+            throw new TypeError("//TODO:");
+        }
+
+        const { items, store } = pipe;
+        let processedData: {[index: string]: any} = {};
+        if (Array.isArray(items)) {
+            processedData = items.map((item) => data[item]);
         } else {
-            pipe.write(data);
+            const keys = entries(items)[0];
+            processedData = keys.map((key) => items[key](data[key]));
+        }
+
+        if (store.format) {
+            store.write(store.format(processedData));
+        } else {
+            store.write(processedData.toString());
         }
     }
 
@@ -259,7 +290,7 @@ export default class NodeSpider extends EventEmitter {
         this._STATE.status = "end";
         // 关闭注册的pipe
         for (const pipe of this._STATE.pipeStore.values()) {
-            pipe.close();
+            pipe.store.close();
         }
         // TODO C 更多，比如修改所有method来提醒开发者已经end
     }

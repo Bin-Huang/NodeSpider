@@ -35,7 +35,12 @@ export default class NodeSpider extends EventEmitter {
      * @param  {IPipe}  newPipe pipe object
      * @return {this}
      */
-    pipe(name: string, newPipe: IPipe): NodeSpider;
+    pipe(name: string, newPipe: {
+        store: IPipe;
+        items: string[] | {
+            [index: string]: (v: any) => any;
+        };
+    }): NodeSpider;
     retry(current: ITask, maxRetry: number, finalErrorCallback?: () => any): any;
     /**
      * Add url(s) to the queue and specify a plan. These task will be performed as planned when it's turn. Eventually only absolute url(s) can be added to the queue, the other will be returned in an array.
@@ -52,7 +57,9 @@ export default class NodeSpider extends EventEmitter {
      * @param  {any}    data     data you need to save
      * @return {void}
      */
-    save(pipeName: string, data: any): void;
+    save(pipeName: string, data: {
+        [index: string]: any;
+    }): void;
     active(): void;
     pause(): void;
     /**

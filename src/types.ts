@@ -17,7 +17,10 @@ export interface IPipe {
 export interface IState {
     queue: IQueue;
     planStore: Map<string, IPlan>;
-    pipeStore: Map<string, IPipe>;
+    pipeStore: Map<string, {
+        items: string[]|{[index: string]: (v: any) => any},
+        store: IPipe,
+    }>;
     option: IOption;
     currentTotalConnections: ITask[];
     status: "active"|"pause"|"end";
