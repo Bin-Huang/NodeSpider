@@ -2,12 +2,13 @@
 - retry的默认callback
 // TODO: 修可能的问题：当utf8为false，body可能是buffer
 - download的默认callback
+
 - method download 单元测试
 - method add 单元测试
 - downloadPlan 测试[]
 - streamPlan 验收
 - pipe 验收
-- method connect 单元测试
+- method pipe 单元测试
 - method save 单元测试
 
 - pipe generator
