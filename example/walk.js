@@ -5,14 +5,15 @@
 const { Spider } = require("../build/index");
 
 const s = new Spider({
-    alive: true
+    alive: true,
+    concurrency: 3,
 });
 
 let i = 1;
 s.plan("take a walk", (err, current) => {
     console.log(i ++);
     if (err) {
-        s.end();
+        s.end();    // 遇到错误，则终止爬取
         return console.log(err.message);
     }
     const $ = current.$;

@@ -6,7 +6,7 @@ import * as url from "url";
 import Spider from "../spider";
 import { IOption, IPlan, ITask } from "../types";
 
-// for 传递给Plan真正的设置
+// 传递给Plan真正的设置
 export interface IDefaultPlanOptionInput {
     method?: string;
     headers?: any;

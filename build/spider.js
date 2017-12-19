@@ -236,13 +236,17 @@ class NodeSpider extends events_1.EventEmitter {
             throw new TypeError("//TODO:");
         }
         const { items, store } = pipe;
-        let processedData = {};
+        const processedData = {};
         if (Array.isArray(items)) {
-            processedData = items.map((item) => data[item]);
+            items.map((item) => {
+                processedData[item] = data[item];
+            });
         }
         else {
             const keys = tools_1.entries(items)[0];
-            processedData = keys.map((key) => items[key](data[key]));
+            keys.map((key) => {
+                processedData[key] = items[key](data[key]);
+            });
         }
         if (store.format) {
             store.write(store.format(processedData));

@@ -14,6 +14,7 @@ class StreamPlan {
     }
     process(task, spider) {
         return new Promise((resolve, reject) => {
+            const done = () => resolve();
             const requestOpts = Object.assign({ url: task.url }, this.option.headers);
             let res;
             let err = null;
@@ -24,19 +25,16 @@ class StreamPlan {
                     method: this.option.method,
                     url: task.url,
                 });
-                res.on("complete", resolve);
-                res.on("error", resolve);
             }
             catch (e) {
                 err = e;
-                resolve();
+                res = null;
             }
-            const current = Object.assign({}, task, { res });
+            const current = Object.assign({}, task, { done, stream: res });
             // 为什么不直接监听request的close事件以resolve？
             // 当req流关闭时，下游可能还有操作，此时不能直接resolve进入下一个任务
             // 所以要把resovle当前任务的工作交给开发者自行决定
             this.option.callback(err, current, spider);
-            // 当请求流结束或错误，即应该认为这次任务是执行完全的
         });
     }
 }

@@ -7,7 +7,8 @@ export interface IStreamPlanOption {
     callback: (err: Error | null, current: IStreamPlanCurrent, s: Spider) => void;
 }
 export interface IStreamPlanCurrent extends ITask {
-    res: request.Request;
+    stream: request.Request | null;
+    done: () => void;
     [propName: string]: any;
 }
 export default function streamPlan(option: IStreamPlanOption): StreamPlan;

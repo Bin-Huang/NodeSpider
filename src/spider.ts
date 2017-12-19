@@ -255,12 +255,16 @@ export default class NodeSpider extends EventEmitter {
         }
 
         const { items, store } = pipe;
-        let processedData: {[index: string]: any} = {};
+        const processedData: {[index: string]: any} = {};
         if (Array.isArray(items)) {
-            processedData = items.map((item) => data[item]);
+             items.map((item) => {
+                processedData[item] = data[item];
+            });
         } else {
             const keys = entries(items)[0];
-            processedData = keys.map((key) => items[key](data[key]));
+            keys.map((key) => {
+                processedData[key] = items[key](data[key]);
+            });
         }
 
         if (store.format) {
