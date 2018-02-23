@@ -10,76 +10,53 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const charset = require("charset");
 const cheerio = require("cheerio");
+const got = require("got");
 const iconv = require("iconv-lite");
-const request = require("request");
 const url = require("url");
-/**
- * 默认值 type: "default", info: {}, option: {request: {encoding: null}, pre: [preToUtf8(), preLoadJq()], callback }
- * @param planOptionInput
- */
+const defaultOpts = {
+    toUtf8: true,
+    jQ: true,
+    requestOpts: { encoding: null },
+};
 function defaultPlan(option) {
-    if (typeof option.name !== "string") {
-        throw new TypeError(`the option's member "name" should be a string`);
+    if (typeof option === "function") {
+        option = { callback: option };
     }
-    if (!Array.isArray(option.callbacks)) {
-        throw new TypeError(`the option's member "callbacks" should be an array of function`);
-    }
-    for (const cb of option.callbacks) {
-        if (typeof cb !== "function") {
-            throw new TypeError(`the option's member "callbacks" should be an array of function`);
-        }
-    }
-    option.method = option.method || "GET";
-    option.headers = option.headers || {};
-    return new DefaultPlan(option.name, option);
-}
-exports.defaultPlan = defaultPlan;
-class DefaultPlan {
-    constructor(name, option) {
-        this.option = option;
-        this.name = name;
-    }
-    process(task, spider) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const { error, response, body } = yield requestAsync({
-                encoding: null,
-                header: this.option.headers,
-                method: this.option.method,
-                url: task.url,
-            });
-            const current = Object.assign({}, task, { body,
-                response });
-            // 按顺序执行callback
+    const opts = Object.assign({}, defaultOpts, option);
+    return (task, spider) => __awaiter(this, void 0, void 0, function* () {
+        let res;
+        try {
+            res = yield got(task.url, opts.requestOpts);
+            const current = Object.assign({}, task, { response: res, body: res.body.toString() });
+            if (opts.toUtf8) {
+                preToUtf8(current);
+            }
+            if (opts.jQ) {
+                preLoadJq(current);
+            }
             try {
-                for (const cb of this.option.callbacks) {
-                    const result = cb(error, current, spider);
-                    if (result instanceof Promise) {
-                        yield result;
-                    }
-                }
+                return yield opts.callback(null, current, spider);
             }
             catch (e) {
-                console.error("defaultPlan: there are an error from callback function");
-                throw e;
+                console.log(`callback error: ${e}`);
             }
-        });
-    }
-}
-exports.DefaultPlan = DefaultPlan;
-function requestAsync(opts) {
-    return new Promise((resolve, reject) => {
-        request(opts, (error, response, body) => {
-            resolve({ error, response, body });
-        });
+        }
+        catch (err) {
+            const current = Object.assign({}, task, { response: {}, body: "" });
+            try {
+                return yield opts.callback(err, current, spider);
+            }
+            catch (e) {
+                console.log(`callback error: ${e}`);
+            }
+        }
     });
 }
+exports.default = defaultPlan;
 /**
  * 根据currentTask.body加载jQ对象，并扩展url、todo、download方法，以第三个参数$的形式传递
  */
-function preLoadJq(error, currentTask) {
-    if (error) {
-        return;
-    }
+function preLoadJq(currentTask) {
     const $ = cheerio.load(currentTask.body);
     // 扩展：添加 url 方法
     // 返回当前节点（们）链接的的绝对路径(array)
@@ -128,10 +105,7 @@ exports.preLoadJq = preLoadJq;
 /**
  * 根据当前任务的response.header和response.body中的编码格式，将currentTask.body转码为utf8格式
  */
-function preToUtf8(error, currentTask) {
-    if (error) {
-        return;
-    }
+function preToUtf8(currentTask) {
     const encoding = charset(currentTask.response.headers, currentTask.response.body.toString());
     // 有些时候会无法获得当前网站的编码，原因往往是网站内容过于简单，比如最简单的404界面。此时无需转码
     // TODO: 有没有可能，在需要转码的网站无法获得 encoding？

@@ -1,12 +1,7 @@
 import * as fs from "fs";
 import Spider from "./spider";
 
-export interface IPlan {
-    // process 不能抛出错误，否则将导致爬虫终止。所有错误应该以参数传递到callback，由开发者自行处理
-    name: string;
-    process: (task: ITask, spider: Spider) => Promise<{}|null|void>;
-    option?: any;
-}
+export type IPlan = (task: ITask, spider: Spider) => Promise<any>;
 
 // nodespider's queue;
 export interface IQueue {
@@ -59,10 +54,4 @@ export interface ITask {
 
 export interface ICurrent extends ITask {
     info: any;
-}
-
-// ====== request options ======
-export interface IRequestOptionInput {
-    method?: string;
-    headers?: any;
 }

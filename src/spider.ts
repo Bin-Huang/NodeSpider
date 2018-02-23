@@ -1,7 +1,7 @@
 import { EventEmitter } from "events";
 import * as isAbsoluteUrl from "is-absolute-url";
 import * as request from "request";
-import { defaultPlan, IDefaultPlanOptionCallback, preLoadJq, preToUtf8 } from "./plan/defaultPlan";
+import { defaultPlan, IDefaultPlanCallback, preLoadJq, preToUtf8 } from "./plan/defaultPlan";
 import downloadPlan from "./plan/downloadPlan";
 import Queue from "./queue";
 import {
@@ -90,7 +90,7 @@ export default class NodeSpider extends EventEmitter {
             throw new TypeError("the parameter of the method filter is required, and can only be an array of strings");
         } else {
             const s = new Set(urlArray);
-            const result = [];
+            const result: string[] = [];
             for (const url of s) {
                 if (typeof url !== "string") {
                     throw new TypeError(
@@ -107,19 +107,15 @@ export default class NodeSpider extends EventEmitter {
 
     /**
      * add new plan
-     * @param  {IPlan}  newPlan plan object
+     * @param  {IPlan}  plan plan object
      * @return {void}
      */
-    public add(newPlan: IPlan) {
-        if (! newPlan.name || ! newPlan.process) {
-            throw new TypeError("method add: the parameter isn't a plan object");
-        }
-        if (this._STATE.planStore.has(newPlan.name)) {
-            throw new TypeError(`method add: there already have a plan named "${newPlan.name}"`);
+    public add(name: string, plan: IPlan) {
+        if (this._STATE.planStore.has(name)) {
+            throw new TypeError(`method add: there already have a plan named "${plan.name}"`);
         }
         // 添加plan到planStore
-        this._STATE.planStore.set(newPlan.name, newPlan);
-        return ;
+        this._STATE.planStore.set(name, plan);
     }
 
     /**
@@ -168,7 +164,7 @@ export default class NodeSpider extends EventEmitter {
      * add new default plan
      * @param option default plan's option
      */
-    public plan(name: string, callback: IDefaultPlanOptionCallback) {
+    public plan(name: string, callback: IDefaultPlanCallback) {
         if (typeof name !== "string") {
             throw new TypeError(`method plan: failed to add new plan.
             then parameter "name" should be a string`);
@@ -181,7 +177,7 @@ export default class NodeSpider extends EventEmitter {
             throw new TypeError(`method plan: Can not add new plan named "${name}".
             There are already a plan called "${name}".`);
         }
-        return this.add(defaultPlan({
+        return this.add(name, defaultPlan({
             callbacks: [
                 NodeSpider.preToUtf8,
                 NodeSpider.preLoadJq,
@@ -241,7 +237,7 @@ export default class NodeSpider extends EventEmitter {
                 name: path,
                 path,
             });
-            this.add(newPlan);
+            this.add(name, newPlan);
         }
         // 添加下载链接 url 到队列
         this.queue(path, url, filename);
@@ -281,7 +277,7 @@ export default class NodeSpider extends EventEmitter {
             ... task,
             info: (typeof task.info === "undefined") ? {} : task.info,
         };
-        plan.process(task, this).then(() => {
+        plan(task, this).then(() => {
             this._STATE.currentTotalConnections --;
             this.work();
         }).catch((e: Error) => {

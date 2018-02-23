@@ -1,9 +1,5 @@
 import Spider from "./spider";
-export interface IPlan {
-    name: string;
-    process: (task: ITask, spider: Spider) => Promise<{} | null | void>;
-    option?: any;
-}
+export declare type IPlan = (task: ITask, spider: Spider) => Promise<any>;
 export interface IQueue {
     addTask: (newTask: ITask) => void;
     jumpTask: (newTask: ITask) => void;
@@ -42,8 +38,4 @@ export interface ITask {
 }
 export interface ICurrent extends ITask {
     info: any;
-}
-export interface IRequestOptionInput {
-    method?: string;
-    headers?: any;
 }

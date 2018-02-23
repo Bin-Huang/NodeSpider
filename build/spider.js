@@ -85,19 +85,15 @@ class NodeSpider extends events_1.EventEmitter {
     }
     /**
      * add new plan
-     * @param  {IPlan}  newPlan plan object
+     * @param  {IPlan}  plan plan object
      * @return {void}
      */
-    add(newPlan) {
-        if (!newPlan.name || !newPlan.process) {
-            throw new TypeError("method add: the parameter isn't a plan object");
-        }
-        if (this._STATE.planStore.has(newPlan.name)) {
-            throw new TypeError(`method add: there already have a plan named "${newPlan.name}"`);
+    add(name, plan) {
+        if (this._STATE.planStore.has(name)) {
+            throw new TypeError(`method add: there already have a plan named "${plan.name}"`);
         }
         // 添加plan到planStore
-        this._STATE.planStore.set(newPlan.name, newPlan);
-        return;
+        this._STATE.planStore.set(name, plan);
     }
     /**
      * connect new pipe
@@ -156,7 +152,7 @@ class NodeSpider extends events_1.EventEmitter {
             throw new TypeError(`method plan: Can not add new plan named "${name}".
             There are already a plan called "${name}".`);
         }
-        return this.add(defaultPlan_1.defaultPlan({
+        return this.add(name, defaultPlan_1.defaultPlan({
             callbacks: [
                 NodeSpider.preToUtf8,
                 NodeSpider.preLoadJq,
@@ -214,7 +210,7 @@ class NodeSpider extends events_1.EventEmitter {
                 name: path,
                 path,
             });
-            this.add(newPlan);
+            this.add(name, newPlan);
         }
         // 添加下载链接 url 到队列
         this.queue(path, url, filename);
@@ -252,7 +248,7 @@ class NodeSpider extends events_1.EventEmitter {
         this._STATE.currentTotalConnections++;
         const plan = this._STATE.planStore.get(task.planName);
         const current = Object.assign({}, task, { info: (typeof task.info === "undefined") ? {} : task.info });
-        plan.process(task, this).then(() => {
+        plan(task, this).then(() => {
             this._STATE.currentTotalConnections--;
             this.work();
         }).catch((e) => {

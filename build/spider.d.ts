@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { EventEmitter } from "events";
-import { IDefaultPlanOptionCallback, preLoadJq, preToUtf8 } from "./plan/defaultPlan";
+import { IDefaultPlanCallback, preLoadJq, preToUtf8 } from "./plan/defaultPlan";
 import { IDefaultOptionInput, IPipe, IPlan, IState, ITask } from "./types";
 /**
  * class of NodeSpider
@@ -33,10 +33,10 @@ export default class NodeSpider extends EventEmitter {
     filter(urlArray: string[]): string[];
     /**
      * add new plan
-     * @param  {IPlan}  newPlan plan object
+     * @param  {IPlan}  plan plan object
      * @return {void}
      */
-    add(newPlan: IPlan): void;
+    add(name: string, plan: IPlan): void;
     /**
      * connect new pipe
      * @param  {IPipe}  newPipe pipe object
@@ -48,7 +48,7 @@ export default class NodeSpider extends EventEmitter {
      * add new default plan
      * @param option default plan's option
      */
-    plan(name: string, callback: IDefaultPlanOptionCallback): void;
+    plan(name: string, callback: IDefaultPlanCallback): void;
     /**
      * Add url(s) to the queue and specify a plan. These task will be performed as planned when it's turn. Eventually only absolute url(s) can be added to the queue, the other will be returned in an array.
      * @param planName the name of specified plan
