@@ -1,3 +1,14 @@
+- streamPlan, downloadPlan 适应 IPlan
+- 修改queue为queue 和 pool，为task增加uid，修改相应方法
+- 增加 nodespider 生命周期
+- 完善事件体系与并发体系
+- 修改和思考 pipe 接口
+- 修改方法名称
+- 修改文档
+
+
+-------------------------
+
 - retry的默认callback
 - download的默认callback
 - method download 单元测试

@@ -9,19 +9,14 @@ import Spider from "../spider";
 import NodeSpider from "../spider";
 import { IPlan, ITask } from "../types";
 
-export interface IDefaultPlanCurrentSucceed extends ITask {
-    response: got.Response<Buffer>;
-    body: string;
-    $?: CheerioStatic;
-}
-export interface IDefaultPlanCurrentFailed extends ITask {
-    response: {};
+export interface IDefaultPlanCurrent extends ITask {
+    response: got.Response<Buffer>|{};
     body: string;
     $?: CheerioStatic;
 }
 
 export type IDefaultPlanCallback =
-    (err: Error|null, current: IDefaultPlanCurrentSucceed|IDefaultPlanCurrentFailed, spider: Spider)
+    (err: Error|null, current: IDefaultPlanCurrent, spider: Spider)
     => any|Promise<any>;
 
 export interface IDefaultPlanOption {
@@ -44,32 +39,33 @@ export default function defaultPlan(option: IDefaultPlanOption|IDefaultPlanCallb
     const opts = { ...defaultOpts, ...option };
     return async (task, spider) => {
         let res: got.Response<Buffer>;
+        let err: Error|null = null;
+        let current: IDefaultPlanCurrent;
         try {
             res = await got(task.url, opts.requestOpts);
-            const current = { ...task, response: res, body: res.body.toString() };
-            if (opts.toUtf8) { preToUtf8(current); }
-            if (opts.jQ) { preLoadJq(current); }
-            try {
-                return await opts.callback(null, current, spider);
-            } catch (e) {
-                console.log(`callback error: ${e}`);
-            }
-        } catch (err) {
-            const current = { ...task, response: {}, body: "" };
-            try {
-                return await opts.callback(err, current, spider);
-            } catch (e) {
-                console.log(`callback error: ${e}`);
-            }
+            current = { ...task, response: res, body: res.body.toString() };
+        } catch (e) {
+            err = e;
+            current = { ...task, response: {}, body: "" };
         }
 
+        if (! err) {
+            if (opts.toUtf8) { current.body = preToUtf8(current.response as got.Response<Buffer>); }
+            if (opts.jQ) { preLoadJq(current); }
+        }
+
+        try {
+            return await opts.callback(err, current, spider);
+        } catch (e) {
+            console.log(`callback failed: ${e}`);
+        }
     };
 }
 
 /**
  * 根据currentTask.body加载jQ对象，并扩展url、todo、download方法，以第三个参数$的形式传递
  */
-export function preLoadJq(currentTask: IDefaultPlanCurrentSucceed): void {
+export function preLoadJq(currentTask: IDefaultPlanCurrent): void {
     const $ = cheerio.load(currentTask.body);
 
     // 扩展：添加 url 方法
@@ -121,11 +117,13 @@ export function preLoadJq(currentTask: IDefaultPlanCurrentSucceed): void {
 /**
  * 根据当前任务的response.header和response.body中的编码格式，将currentTask.body转码为utf8格式
  */
-export function preToUtf8(currentTask: IDefaultPlanCurrentSucceed): void {
-    const encoding = charset(currentTask.response.headers, currentTask.response.body.toString());
+export function preToUtf8(res: got.Response<Buffer>): string {
+    const encoding = charset(res.headers, res.body.toString());
     // 有些时候会无法获得当前网站的编码，原因往往是网站内容过于简单，比如最简单的404界面。此时无需转码
     // TODO: 有没有可能，在需要转码的网站无法获得 encoding？
     if (encoding) {
-        currentTask.body = iconv.decode(currentTask.response.body, encoding);
+        return iconv.decode(res.body, encoding);
+    } else {
+        return res.body.toString();
     }
 }

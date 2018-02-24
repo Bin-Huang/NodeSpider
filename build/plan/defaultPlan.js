@@ -25,30 +25,29 @@ function defaultPlan(option) {
     const opts = Object.assign({}, defaultOpts, option);
     return (task, spider) => __awaiter(this, void 0, void 0, function* () {
         let res;
+        let err = null;
+        let current;
         try {
             res = yield got(task.url, opts.requestOpts);
-            const current = Object.assign({}, task, { response: res, body: res.body.toString() });
+            current = Object.assign({}, task, { response: res, body: res.body.toString() });
+        }
+        catch (e) {
+            err = e;
+            current = Object.assign({}, task, { response: {}, body: "" });
+        }
+        if (!err) {
             if (opts.toUtf8) {
-                preToUtf8(current);
+                current.body = preToUtf8(current.response);
             }
             if (opts.jQ) {
                 preLoadJq(current);
             }
-            try {
-                return yield opts.callback(null, current, spider);
-            }
-            catch (e) {
-                console.log(`callback error: ${e}`);
-            }
         }
-        catch (err) {
-            const current = Object.assign({}, task, { response: {}, body: "" });
-            try {
-                return yield opts.callback(err, current, spider);
-            }
-            catch (e) {
-                console.log(`callback error: ${e}`);
-            }
+        try {
+            return yield opts.callback(err, current, spider);
+        }
+        catch (e) {
+            console.log(`callback failed: ${e}`);
         }
     });
 }
@@ -105,12 +104,15 @@ exports.preLoadJq = preLoadJq;
 /**
  * 根据当前任务的response.header和response.body中的编码格式，将currentTask.body转码为utf8格式
  */
-function preToUtf8(currentTask) {
-    const encoding = charset(currentTask.response.headers, currentTask.response.body.toString());
+function preToUtf8(res) {
+    const encoding = charset(res.headers, res.body.toString());
     // 有些时候会无法获得当前网站的编码，原因往往是网站内容过于简单，比如最简单的404界面。此时无需转码
     // TODO: 有没有可能，在需要转码的网站无法获得 encoding？
     if (encoding) {
-        currentTask.body = iconv.decode(currentTask.response.body, encoding);
+        return iconv.decode(res.body, encoding);
+    }
+    else {
+        return res.body.toString();
     }
 }
 exports.preToUtf8 = preToUtf8;
