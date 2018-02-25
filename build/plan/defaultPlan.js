@@ -66,7 +66,7 @@ function preLoadJq(currentTask) {
         $(this).each(function () {
             let newUrl = $(this).attr("href");
             // 如果为空，或是类似 'javascirpt: void(0)' 的 js 代码，直接跳过
-            if (!newUrl || /^javascript/.test(newUrl)) {
+            if (!newUrl || /^javascript:/.test(newUrl)) {
                 return false;
             }
             // 如果是相对路径，补全路径为绝对路径

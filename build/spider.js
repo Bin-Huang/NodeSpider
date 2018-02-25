@@ -207,7 +207,6 @@ class NodeSpider extends events_1.EventEmitter {
                         return s.retry(current, 3, () => console.log(err));
                     }
                 },
-                name: path,
                 path,
             });
             this.add(name, newPlan);

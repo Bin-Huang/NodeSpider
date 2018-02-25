@@ -6,7 +6,7 @@ import * as http from "http";
 import Spider from "../spider";
 import { IPlan, ITask } from "../types";
 export interface IDefaultPlanCurrent extends ITask {
-    response: got.Response<Buffer> | {};
+    response: got.Response<Buffer>;
     body: string;
     $?: CheerioStatic;
 }

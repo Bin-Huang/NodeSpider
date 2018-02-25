@@ -1,9 +1,10 @@
 import * as filenamifyUrl from "filenamify-url";
 import * as fs from "fs-extra";
+import * as got from "got";
+import * as http from "http";
 import * as path from "path";
-import * as request from "request";
 import Spider from "../spider";
-import { IPlan, IRequestOptionInput, ITask } from "../types";
+import { IPlan, ITask } from "../types";
 
 /**
  * s.queue(dlPlan, "http://img.com/my.jpg"); ==> img.com!my.jpg
@@ -14,88 +15,59 @@ import { IPlan, IRequestOptionInput, ITask } from "../types";
  * s.queue(dlPlan, "http://img.com/my.jpg", {ext: ".png"}); ===> img.com!my.jpg.png
  */
 
-export interface IDownloadPlanOpion extends IRequestOptionInput {
-    callback: (err: Error|null, current: ITask, s: Spider) => void; // 当下载完成或出错时调用
-    name: string;
+export interface ICurrent extends ITask {
+    filepath: string;
+}
+
+export interface IOption {
     path: string;
+    callback?: (err: Error|null, current: ICurrent, s: Spider) => Promise<any>|any; // 当下载完成或出错时调用
+    requestOpts?: http.RequestOptions;
 }
 
-export default function downloadPlan(option: IDownloadPlanOpion) {
-    // TODO C 参数检验
-    option.method = option.method || "GET";
-    option.headers = option.headers || {};
-    return new DownloadPlan(option.name, option);
-}
+const defaultOpts = {
+    callback: (err: Error|null, current: ICurrent, s: Spider): Promise<any>|any => {
+        if (err) {
+            console.error(err);
+        }
+        return ;
+    },
+};
 
-export class DownloadPlan implements IPlan {
-    public option: IDownloadPlanOpion;
-    public name: string;
-    constructor(name: string, option: IDownloadPlanOpion) {
-        this.option = option;
-        this.name = name;
+export default function downloadPlan(option: IOption|string) {
+    if (typeof option === "string") {
+        option = { path: option };
     }
-    public async process(task: ITask, spider: Spider) {
+    const opts = { ...defaultOpts, ...option };
+    return (task: ITask, spider: Spider) => {
         return new Promise((resolve, reject) => {
-            let fileName = filenamifyUrl(task.url); // 将url转化为合法的文件名
-            if (typeof task.info === "string") {
-                if (task.info[0] === "*") {
-                    fileName = task.info.replace("*", filenamifyUrl);
-                } else {
-                    fileName = task.info;
-                }
+            let filename: string; // 将url转化为合法的文件名
+            if (task.info && typeof task.info.filename === "string") {
+                filename = task.info.filename;
+            } else {
+                filename = filenamifyUrl(task.url); // 将url转化为合法的文件名
             }
-            if (typeof task.info === "object") {
-                if (typeof task.info.fileName === "string") {
-                    fileName = task.info.fileName;
-                }
-                if (typeof task.info.ext === "string") {
-                    fileName += task.info.ext;
-                }
-            }
+            const filepath = path.resolve(opts.path, filename);    // 安全地拼接保存路径
 
-            const req = request({
-                encoding: null as any,
-                headers: this.option.headers, // TODO B header不存在于request的设置？可能是一个bug
-                method: this.option.method,
-                url: task.url,
-            });   // request stream
-
-            const savePath = path.resolve(this.option.path, fileName);    // 安全地拼接保存路径
-            const file = fs.createWriteStream(savePath);
+            const req = got.stream(task.url, opts.requestOpts);
+            const file = fs.createWriteStream(filepath);
             req.pipe(file);
 
-            // 当请求流结束或错误，即应该认为这次任务是执行完全的
-            let firstCall = true;   // 只callback一次
-            // req.on("complete", () => {
-            //     if (firstCall) {
-            //         this.option.callback(null, task, spider);
-            //         firstCall = false;
-            //         resolve();
-            //     }
-            // });
-            req.on("error", (e: Error) => {
-                if (firstCall) {
-                    this.option.callback(e, task, spider);
-                    firstCall = false;
-                    resolve();
+            const current = { ...task, filepath };
+
+            // TODO: handle callback error
+            const handle = (e: Error|null, c: ICurrent, s: Spider) => {
+                const result = opts.callback(e, c, s);
+                if (result instanceof Promise) {
+                    result.then((r) => resolve(r));
+                } else {
+                    resolve(result);
                 }
-            });
-            file.on("error", (e: Error) => {
-                if (firstCall) {
-                    this.option.callback(e, task, spider);
-                    firstCall = false;
-                    file.close();
-                    resolve();
-                }
-            });
-            file.on("finish", () => {
-                if (firstCall) {
-                    this.option.callback(null, task, spider);
-                    firstCall = false;
-                    file.close();
-                    resolve();
-                }
-            });
+            };
+            req.on("error", (e) => handle(e, current, spider));
+            file.on("error", (e: Error) => handle(e, current, spider));
+            file.on("error", (e: Error) => handle(e, current, spider));
+            file.on("finish", () => handle(null, current, spider));
         });
-    }
+    };
 }
