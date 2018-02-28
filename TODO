@@ -1,4 +1,4 @@
-- streamPlan, downloadPlan 适应 IPlan
+x streamPlan, downloadPlan 适应 IPlan
 - 修改queue为queue 和 pool，为task增加uid，修改相应方法
 - 增加 nodespider 生命周期
 - 完善事件体系与并发体系

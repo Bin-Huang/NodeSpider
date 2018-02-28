@@ -1,18 +1,16 @@
-import * as request from "request";
+/// <reference types="got" />
+/// <reference types="node" />
+import * as got from "got";
+import * as http from "http";
+import * as stream from "stream";
 import Spider from "../spider";
-import { IPlan, IRequestOptionInput, ITask } from "../types";
-export interface IStreamPlanOption extends IRequestOptionInput {
-    callback: (err: Error | null, current: IStreamPlanCurrent, s: Spider) => void;
-    name: string;
+import { IPlan, ITask } from "../types";
+export interface ICurrent extends ITask {
+    done: () => any;
 }
-export interface IStreamPlanCurrent extends ITask {
-    res: request.Request;
-    [propName: string]: any;
+export declare type ICallback = (stream: got.GotEmitter & stream.Duplex, current: ICurrent, s: Spider) => any;
+export interface IOption {
+    callback: ICallback;
+    requestOpts?: http.RequestOptions;
 }
-export default function streamPlan(option: IStreamPlanOption): StreamPlan;
-export declare class StreamPlan implements IPlan {
-    option: IStreamPlanOption;
-    name: string;
-    constructor(name: string, option: IStreamPlanOption);
-    process(task: ITask, spider: Spider): Promise<{}>;
-}
+export default function streamPlan(option: IOption | ICallback): IPlan;
