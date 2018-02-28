@@ -1,12 +1,13 @@
 import { EventEmitter } from "events";
 import * as isAbsoluteUrl from "is-absolute-url";
 import * as request from "request";
+import * as uuid from "uuid";
 import defaultPlan from "./plan/defaultPlan";
 import downloadPlan from "./plan/downloadPlan";
 import Queue from "./queue";
 import {
-    ICurrent,
-    IDefaultOptionInput,
+    IOptions,
+    IOpts,
     IPipe,
     IPlan,
     IQueue,
@@ -14,7 +15,7 @@ import {
     ITask,
 } from "./types";
 
-const defaultOption = {
+const defaultOption: IOpts = {
     concurrency: 20,
     queue: new Queue(),
     pool: new Set<string>(),
@@ -28,15 +29,15 @@ export default class NodeSpider extends EventEmitter {
     public _STATE: IState;
     /**
      * create an instance of NodeSpider
-     * @param opts
+     * @param option
      */
-    constructor(opts: IDefaultOptionInput = {}) {
+    constructor(option: IOptions = {}) {
         super();
-        ParameterOptsCheck(opts);
-        const finalOption = Object.assign({}, defaultOption, opts);
+        ParameterOptsCheck(option);
+        const finalOption = { ...defaultOption, ...option };
         this._STATE = {
-            currentTotalConnections: 0,
-            option: finalOption,
+            currentTasks: [],
+            opts: finalOption,
             pipeStore: new Map(),
             planStore: new Map(),
             queue: finalOption.queue,
@@ -45,7 +46,7 @@ export default class NodeSpider extends EventEmitter {
         };
 
         this.on("empty", () => {
-            if (this._STATE.currentTotalConnections === 0) {
+            if (this._STATE.currentTasks.length === 0) {
                 this.emit("vacant");   // queue为空，当前异步连接为0，说明爬虫已经空闲，触发事件
             }
         });
@@ -137,6 +138,7 @@ export default class NodeSpider extends EventEmitter {
     public retry(current: ITask, maxRetry: number, finalErrorCallback?: () => any) {
         // 过滤出current重要的task基本信息
         const retryTask = {
+            uid: current.uid,
             hasRetried: current.hasRetried,
             info: current.info,
             planName: current.planName,
@@ -207,7 +209,7 @@ export default class NodeSpider extends EventEmitter {
             if (typeof u !== "string" || ! isAbsoluteUrl(u)) {
                 noPassList.push(u);
             } else {
-                const newTask = { url: u, planName, info };
+                const newTask = { uid: uuid(), url: u, planName, info };
                 this._STATE.queue.add(newTask);
                 this._STATE.pool.add(newTask.url);
                 this.emit("queueTask", newTask);
@@ -262,31 +264,31 @@ export default class NodeSpider extends EventEmitter {
             pipe.add(data);
         }
     }
-    private work() {
-        const count = this._STATE.option.concurrency - this._STATE.currentTotalConnections;
+    private async work() {
+        const count = this._STATE.opts.concurrency - this._STATE.currentTasks.length;
         if (count <= 0) {
             return ;
         }
         const task = this._STATE.queue.next();
         if (! task) { return this.emit("empty"); }
-
-        this._STATE.currentTotalConnections ++;
         const plan = this._STATE.planStore.get(task.planName) as IPlan;
-        const current: ICurrent = {
+        const current = {
             ... task,
             info: (typeof task.info === "undefined") ? {} : task.info,
         };
-        plan(task, this).then(() => {
-            this._STATE.currentTotalConnections --;
-            this.work();
-        }).catch((e: Error) => {
-            // 如果计划执行失败，这是非常严重的，因为直接会导致爬虫不能完成开发者制定的任务
-            this._STATE.currentTotalConnections --;
+
+        this._STATE.currentTasks.push(task);
+        try {
+          await plan(task, this);
+        } catch (e) {
             this.end(); // 停止爬虫并退出，以提醒并便于开发者debug
             console.error(`An error is threw from plan execution.
                 Check your callback function, or create an issue in the planGenerator's repository`);
             throw e;
-        });
+        }
+        const ix = this._STATE.currentTasks.findIndex(({uid}) => uid === task.uid);
+        this._STATE.currentTasks.splice(ix, 1);
+        this.work();
     }
 }
 
@@ -294,7 +296,7 @@ export default class NodeSpider extends EventEmitter {
  * to check whether the parameter option is legal to initialize a spider, if not return the error
  * @param opts the option object
  */
-function ParameterOptsCheck(opts: IDefaultOptionInput): null {
+function ParameterOptsCheck(opts: IOptions): null {
     // check type of parameter opts
     if (typeof opts !== "object") {
         throw new TypeError(`Paramter option is no required, and it should be a object.

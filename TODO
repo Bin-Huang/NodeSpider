@@ -1,7 +1,8 @@
 x streamPlan, downloadPlan 适应 IPlan
-- 修改queue为queue 和 pool，为task增加uid，修改相应方法
+x 修改queue为queue 和 pool，为task增加uid，修改相应方法
+x 重写并发机制
 - 增加 nodespider 生命周期
-- 完善事件体系与并发体系
+- 完善事件体系
 - 修改和思考 pipe 接口
 - 修改方法名称
 - 修改文档

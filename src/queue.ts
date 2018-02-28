@@ -8,9 +8,9 @@ export interface ILinkNode<T> {
 /**
  * 可遍历的链表类
  */
-export default class LinkedQueue<T> {
-    protected _HEAD: ILinkNode<T>|null;
-    protected _END: ILinkNode<T>|null;
+export default class LinkedQueue implements IQueue {
+    protected _HEAD: ILinkNode<ITask>|null;
+    protected _END: ILinkNode<ITask>|null;
     protected _LENGTH: number;
 
     constructor() {
@@ -24,8 +24,8 @@ export default class LinkedQueue<T> {
      * @param {*} value
      * @memberOf LinkedQueue
      */
-    public add(value: T) {
-        const newLinkNode: ILinkNode<T> = {
+    public add(value: ITask) {
+        const newLinkNode: ILinkNode<ITask> = {
             value,
             next: null,
         };
@@ -69,8 +69,8 @@ export default class LinkedQueue<T> {
      * @param {any} value
      * @memberOf LinkedQueue
      */
-    public jump(value: T) {
-        const newLinkNode: ILinkNode<T> = {
+    public jump(value: ITask) {
+        const newLinkNode: ILinkNode<ITask> = {
             value,
             next: null,
         };

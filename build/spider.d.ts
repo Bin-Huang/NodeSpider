@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { EventEmitter } from "events";
-import { IDefaultOptionInput, IPipe, IPlan, IState, ITask } from "./types";
+import { IOptions, IPipe, IPlan, IState, ITask } from "./types";
 /**
  * class of NodeSpider
  * @class NodeSpider
@@ -9,9 +9,9 @@ export default class NodeSpider extends EventEmitter {
     _STATE: IState;
     /**
      * create an instance of NodeSpider
-     * @param opts
+     * @param option
      */
-    constructor(opts?: IDefaultOptionInput);
+    constructor(option?: IOptions);
     /**
      * 终止爬虫
      */

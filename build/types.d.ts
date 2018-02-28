@@ -4,12 +4,12 @@ export interface IQueue {
     add: (task: ITask) => void;
     jump: (task: ITask) => void;
     next: () => ITask | null;
-    getNum: () => number;
+    getLength: () => number;
 }
 export interface IPool {
     add: (url: string) => void;
     has: (url: string) => boolean;
-    size: () => number;
+    size: number;
 }
 export interface IPipe {
     name: string;
@@ -21,21 +21,26 @@ export interface IState {
     pool: IPool;
     planStore: Map<string, IPlan>;
     pipeStore: Map<string, IPipe>;
-    option: IDefaultOptionInput;
+    opts: IOpts;
     working: boolean;
-    currentTotalConnections: number;
+    currentTasks: ITask[];
 }
-export interface IDefaultOptionInput {
+export interface IOptions {
     concurrency?: number;
     queue?: IQueue;
     pool?: IPool;
 }
+export interface IOpts {
+    concurrency: number;
+    queue: IQueue;
+    pool: IPool;
+}
 export interface ITask {
+    uid: string;
     url: string;
     planName: string;
     hasRetried?: number;
-    info?: any;
-}
-export interface ICurrent extends ITask {
-    info: any;
+    info?: {
+        [index: string]: any;
+    };
 }

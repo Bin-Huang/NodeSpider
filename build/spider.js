@@ -1,7 +1,16 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
 const isAbsoluteUrl = require("is-absolute-url");
+const uuid = require("uuid");
 const downloadPlan_1 = require("./plan/downloadPlan");
 const queue_1 = require("./queue");
 const defaultOption = {
@@ -16,15 +25,15 @@ const defaultOption = {
 class NodeSpider extends events_1.EventEmitter {
     /**
      * create an instance of NodeSpider
-     * @param opts
+     * @param option
      */
-    constructor(opts = {}) {
+    constructor(option = {}) {
         super();
-        ParameterOptsCheck(opts);
-        const finalOption = Object.assign({}, defaultOption, opts);
+        ParameterOptsCheck(option);
+        const finalOption = Object.assign({}, defaultOption, option);
         this._STATE = {
-            currentTotalConnections: 0,
-            option: finalOption,
+            currentTasks: [],
+            opts: finalOption,
             pipeStore: new Map(),
             planStore: new Map(),
             queue: finalOption.queue,
@@ -32,7 +41,7 @@ class NodeSpider extends events_1.EventEmitter {
             working: true,
         };
         this.on("empty", () => {
-            if (this._STATE.currentTotalConnections === 0) {
+            if (this._STATE.currentTasks.length === 0) {
                 this.emit("vacant"); // queue为空，当前异步连接为0，说明爬虫已经空闲，触发事件
             }
         });
@@ -115,6 +124,7 @@ class NodeSpider extends events_1.EventEmitter {
     retry(current, maxRetry, finalErrorCallback) {
         // 过滤出current重要的task基本信息
         const retryTask = {
+            uid: current.uid,
             hasRetried: current.hasRetried,
             info: current.info,
             planName: current.planName,
@@ -184,7 +194,7 @@ class NodeSpider extends events_1.EventEmitter {
                 noPassList.push(u);
             }
             else {
-                const newTask = { url: u, planName, info };
+                const newTask = { uid: uuid(), url: u, planName, info };
                 this._STATE.queue.add(newTask);
                 this._STATE.pool.add(newTask.url);
                 this.emit("queueTask", newTask);
@@ -238,27 +248,30 @@ class NodeSpider extends events_1.EventEmitter {
         }
     }
     work() {
-        const count = this._STATE.option.concurrency - this._STATE.currentTotalConnections;
-        if (count <= 0) {
-            return;
-        }
-        const task = this._STATE.queue.next();
-        if (!task) {
-            return this.emit("empty");
-        }
-        this._STATE.currentTotalConnections++;
-        const plan = this._STATE.planStore.get(task.planName);
-        const current = Object.assign({}, task, { info: (typeof task.info === "undefined") ? {} : task.info });
-        plan(task, this).then(() => {
-            this._STATE.currentTotalConnections--;
-            this.work();
-        }).catch((e) => {
-            // 如果计划执行失败，这是非常严重的，因为直接会导致爬虫不能完成开发者制定的任务
-            this._STATE.currentTotalConnections--;
-            this.end(); // 停止爬虫并退出，以提醒并便于开发者debug
-            console.error(`An error is threw from plan execution.
+        return __awaiter(this, void 0, void 0, function* () {
+            const count = this._STATE.opts.concurrency - this._STATE.currentTasks.length;
+            if (count <= 0) {
+                return;
+            }
+            const task = this._STATE.queue.next();
+            if (!task) {
+                return this.emit("empty");
+            }
+            const plan = this._STATE.planStore.get(task.planName);
+            const current = Object.assign({}, task, { info: (typeof task.info === "undefined") ? {} : task.info });
+            this._STATE.currentTasks.push(task);
+            try {
+                yield plan(task, this);
+            }
+            catch (e) {
+                this.end(); // 停止爬虫并退出，以提醒并便于开发者debug
+                console.error(`An error is threw from plan execution.
                 Check your callback function, or create an issue in the planGenerator's repository`);
-            throw e;
+                throw e;
+            }
+            const ix = this._STATE.currentTasks.findIndex(({ uid }) => uid === task.uid);
+            this._STATE.currentTasks.splice(ix, 1);
+            this.work();
         });
     }
 }
