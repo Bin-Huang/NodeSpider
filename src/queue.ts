@@ -1,16 +1,16 @@
 import { IQueue, ITask } from "./types";
 
-interface ILinkNode {
-    value: any;
-    next: ILinkNode|null;
+export interface ILinkNode<T> {
+    value: T;
+    next: ILinkNode<T>|null;
 }
 
 /**
  * 可遍历的链表类
  */
-class LinkedQueue {
-    protected _HEAD: ILinkNode|null;
-    protected _END: ILinkNode|null;
+export default class LinkedQueue<T> {
+    protected _HEAD: ILinkNode<T>|null;
+    protected _END: ILinkNode<T>|null;
     protected _LENGTH: number;
 
     constructor() {
@@ -24,8 +24,8 @@ class LinkedQueue {
      * @param {*} value
      * @memberOf LinkedQueue
      */
-    public add(value: any) {
-        const newLinkNode: ILinkNode = {
+    public add(value: T) {
+        const newLinkNode: ILinkNode<T> = {
             value,
             next: null,
         };
@@ -69,8 +69,8 @@ class LinkedQueue {
      * @param {any} value
      * @memberOf LinkedQueue
      */
-    public jump(value: any) {
-        const newLinkNode: ILinkNode = {
+    public jump(value: T) {
+        const newLinkNode: ILinkNode<T> = {
             value,
             next: null,
         };
@@ -91,65 +91,5 @@ class LinkedQueue {
      */
     public getLength() {
         return this._LENGTH;
-    }
-
-    /**
-     * 判断队列是否为空
-     * @returns {boolean} 当没有节点时，返回 true
-     * @memberOf LinkedQueue
-     */
-    public isEmpty() {
-        if (this._HEAD) {
-            return false;
-        } else {
-            return true;
-        }
-    }
-}
-
-/**
- * 为NodeSpider量身定做的taskqueue
- */
-// tslint:disable-next-line:max-classes-per-file
-export default class Queue implements IQueue {
-    protected urlPool: Set<string>;
-    private queue: LinkedQueue;
-    constructor() {
-        this.urlPool = new Set();
-        this.queue = new LinkedQueue();
-    }
-    public addTask(newTask: ITask) {
-        this.urlPool.add(newTask.url);
-        this.queue.add(newTask);
-    }
-    public jumpTask(newTask: ITask) {
-        this.urlPool.add(newTask.url);
-        this.queue.jump(newTask);
-    }
-    /**
-     * 检测一个url是否添加过，是则返回true
-     * @param url
-     */
-    public check(url: string) {
-        return this.urlPool.has(url);
-    }
-    /**
-     * 获得排队任务数量
-     * @param type
-     */
-    public getWaitingTaskNum() {
-        return this.queue.getLength();
-    }
-    /**
-     * 获得所有添加到排队的url数（不包含重复添加）
-     */
-    public getTotalUrlsNum() {
-        return this.urlPool.size;
-    }
-    /**
-     * 返回下一个任务。该排队没有新任务，都会返回 null
-     */
-    public nextTask() {
-        return this.queue.next() || null;
     }
 }

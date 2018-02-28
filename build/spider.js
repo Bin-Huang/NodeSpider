@@ -2,12 +2,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
 const isAbsoluteUrl = require("is-absolute-url");
-const defaultPlan_1 = require("./plan/defaultPlan");
 const downloadPlan_1 = require("./plan/downloadPlan");
 const queue_1 = require("./queue");
 const defaultOption = {
     concurrency: 20,
-    queue: queue_1.default,
+    queue: new queue_1.default(),
+    pool: new Set(),
 };
 /**
  * class of NodeSpider
@@ -27,7 +27,8 @@ class NodeSpider extends events_1.EventEmitter {
             option: finalOption,
             pipeStore: new Map(),
             planStore: new Map(),
-            queue: new finalOption.queue(),
+            queue: finalOption.queue,
+            pool: finalOption.pool,
             working: true,
         };
         this.on("empty", () => {
@@ -58,7 +59,7 @@ class NodeSpider extends events_1.EventEmitter {
         if (typeof url !== "string") {
             throw new TypeError(`the parameter of method isExist should be a string`);
         }
-        return this._STATE.queue.check(url);
+        return this._STATE.pool.has(url);
     }
     /**
      * 过滤掉一个数组中的重复链接，以及所有已被添加的链接，返回一个新数组
@@ -133,34 +134,34 @@ class NodeSpider extends events_1.EventEmitter {
             return finalErrorCallback();
         }
         retryTask.hasRetried++;
-        this._STATE.queue.jumpTask(retryTask); // 插队到队列，重新等待执行
+        this._STATE.queue.jump(retryTask); // 插队到队列，重新等待执行
     }
     /**
      * add new default plan
      * @param option default plan's option
      */
-    plan(name, callback) {
-        if (typeof name !== "string") {
-            throw new TypeError(`method plan: failed to add new plan.
-            then parameter "name" should be a string`);
-        }
-        if (typeof callback !== "function") {
-            throw new TypeError(`method plan: failed to add new plan.
-            then parameter "callback" should be a function`);
-        }
-        if (this._STATE.planStore.has(name)) {
-            throw new TypeError(`method plan: Can not add new plan named "${name}".
-            There are already a plan called "${name}".`);
-        }
-        return this.add(name, defaultPlan_1.defaultPlan({
-            callbacks: [
-                NodeSpider.preToUtf8,
-                NodeSpider.preLoadJq,
-                callback,
-            ],
-            name,
-        }));
-    }
+    // public plan(name: string, callback: IDefaultPlanCallback) {
+    //     if (typeof name !== "string") {
+    //         throw new TypeError(`method plan: failed to add new plan.
+    //         then parameter "name" should be a string`);
+    //     }
+    //     if (typeof callback !== "function") {
+    //         throw new TypeError(`method plan: failed to add new plan.
+    //         then parameter "callback" should be a function`);
+    //     }
+    //     if (this._STATE.planStore.has(name)) {
+    //         throw new TypeError(`method plan: Can not add new plan named "${name}".
+    //         There are already a plan called "${name}".`);
+    //     }
+    //     return this.add(name, defaultPlan({
+    //         callbacks: [
+    //             NodeSpider.preToUtf8,
+    //             NodeSpider.preLoadJq,
+    //             callback,
+    //         ],
+    //         name,
+    //     }));
+    // }
     // tslint:disable-next-line:max-line-length
     /**
      * Add url(s) to the queue and specify a plan. These task will be performed as planned when it's turn. Eventually only absolute url(s) can be added to the queue, the other will be returned in an array.
@@ -184,7 +185,8 @@ class NodeSpider extends events_1.EventEmitter {
             }
             else {
                 const newTask = { url: u, planName, info };
-                this._STATE.queue.addTask(newTask);
+                this._STATE.queue.add(newTask);
+                this._STATE.pool.add(newTask.url);
                 this.emit("queueTask", newTask);
                 this.work();
             }
@@ -240,7 +242,7 @@ class NodeSpider extends events_1.EventEmitter {
         if (count <= 0) {
             return;
         }
-        const task = this._STATE.queue.nextTask();
+        const task = this._STATE.queue.next();
         if (!task) {
             return this.emit("empty");
         }
@@ -260,8 +262,6 @@ class NodeSpider extends events_1.EventEmitter {
         });
     }
 }
-NodeSpider.preToUtf8 = defaultPlan_1.preToUtf8;
-NodeSpider.preLoadJq = defaultPlan_1.preLoadJq;
 exports.default = NodeSpider;
 /**
  * to check whether the parameter option is legal to initialize a spider, if not return the error
@@ -301,7 +301,5 @@ function ParameterOptsCheck(opts) {
     }
     // check property queue
     // TODO C how to check the queue? queue should be a class, and maybe need parameter to init?
-    if (opts.queue) {
-    }
     return null;
 }

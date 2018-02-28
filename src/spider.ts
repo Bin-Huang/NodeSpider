@@ -1,12 +1,11 @@
 import { EventEmitter } from "events";
 import * as isAbsoluteUrl from "is-absolute-url";
 import * as request from "request";
-import { defaultPlan, IDefaultPlanCallback, preLoadJq, preToUtf8 } from "./plan/defaultPlan";
+import defaultPlan from "./plan/defaultPlan";
 import downloadPlan from "./plan/downloadPlan";
 import Queue from "./queue";
 import {
     ICurrent,
-    IDefaultOption,
     IDefaultOptionInput,
     IPipe,
     IPlan,
@@ -15,9 +14,10 @@ import {
     ITask,
 } from "./types";
 
-const defaultOption: IDefaultOption = {
+const defaultOption = {
     concurrency: 20,
-    queue: Queue,
+    queue: new Queue(),
+    pool: new Set<string>(),
 };
 
 /**
@@ -25,8 +25,6 @@ const defaultOption: IDefaultOption = {
  * @class NodeSpider
  */
 export default class NodeSpider extends EventEmitter {
-    public static preToUtf8 = preToUtf8;
-    public static preLoadJq = preLoadJq;
     public _STATE: IState;
     /**
      * create an instance of NodeSpider
@@ -41,7 +39,8 @@ export default class NodeSpider extends EventEmitter {
             option: finalOption,
             pipeStore: new Map(),
             planStore: new Map(),
-            queue: new finalOption.queue(),
+            queue: finalOption.queue,
+            pool: finalOption.pool,
             working: true,
         };
 
@@ -77,7 +76,7 @@ export default class NodeSpider extends EventEmitter {
         if (typeof url !== "string") {
             throw new TypeError(`the parameter of method isExist should be a string`);
         }
-        return this._STATE.queue.check(url);
+        return this._STATE.pool.has(url);
     }
 
     /**
@@ -157,35 +156,35 @@ export default class NodeSpider extends EventEmitter {
             return finalErrorCallback();
         }
         retryTask.hasRetried ++;
-        this._STATE.queue.jumpTask(retryTask);    // 插队到队列，重新等待执行
+        this._STATE.queue.jump(retryTask);    // 插队到队列，重新等待执行
     }
 
     /**
      * add new default plan
      * @param option default plan's option
      */
-    public plan(name: string, callback: IDefaultPlanCallback) {
-        if (typeof name !== "string") {
-            throw new TypeError(`method plan: failed to add new plan.
-            then parameter "name" should be a string`);
-        }
-        if (typeof callback !== "function") {
-            throw new TypeError(`method plan: failed to add new plan.
-            then parameter "callback" should be a function`);
-        }
-        if (this._STATE.planStore.has(name)) {
-            throw new TypeError(`method plan: Can not add new plan named "${name}".
-            There are already a plan called "${name}".`);
-        }
-        return this.add(name, defaultPlan({
-            callbacks: [
-                NodeSpider.preToUtf8,
-                NodeSpider.preLoadJq,
-                callback,
-            ],
-            name,
-        }));
-    }
+    // public plan(name: string, callback: IDefaultPlanCallback) {
+    //     if (typeof name !== "string") {
+    //         throw new TypeError(`method plan: failed to add new plan.
+    //         then parameter "name" should be a string`);
+    //     }
+    //     if (typeof callback !== "function") {
+    //         throw new TypeError(`method plan: failed to add new plan.
+    //         then parameter "callback" should be a function`);
+    //     }
+    //     if (this._STATE.planStore.has(name)) {
+    //         throw new TypeError(`method plan: Can not add new plan named "${name}".
+    //         There are already a plan called "${name}".`);
+    //     }
+    //     return this.add(name, defaultPlan({
+    //         callbacks: [
+    //             NodeSpider.preToUtf8,
+    //             NodeSpider.preLoadJq,
+    //             callback,
+    //         ],
+    //         name,
+    //     }));
+    // }
 
     // tslint:disable-next-line:max-line-length
     /**
@@ -209,7 +208,8 @@ export default class NodeSpider extends EventEmitter {
                 noPassList.push(u);
             } else {
                 const newTask = { url: u, planName, info };
-                this._STATE.queue.addTask(newTask);
+                this._STATE.queue.add(newTask);
+                this._STATE.pool.add(newTask.url);
                 this.emit("queueTask", newTask);
                 this.work();
             }
@@ -267,7 +267,7 @@ export default class NodeSpider extends EventEmitter {
         if (count <= 0) {
             return ;
         }
-        const task = this._STATE.queue.nextTask();
+        const task = this._STATE.queue.next();
         if (! task) { return this.emit("empty"); }
 
         this._STATE.currentTotalConnections ++;
@@ -328,8 +328,5 @@ function ParameterOptsCheck(opts: IDefaultOptionInput): null {
     }
     // check property queue
     // TODO C how to check the queue? queue should be a class, and maybe need parameter to init?
-    if (opts.queue) {
-
-    }
     return null;
 }

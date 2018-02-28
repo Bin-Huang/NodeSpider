@@ -1,29 +1,38 @@
-import { IQueue, ITask } from "./types";
+export interface ILinkNode<T> {
+    value: T;
+    next: ILinkNode<T> | null;
+}
 /**
- * 为NodeSpider量身定做的taskqueue
+ * 可遍历的链表类
  */
-export default class Queue implements IQueue {
-    protected urlPool: Set<string>;
-    private queue;
+export default class LinkedQueue<T> {
+    protected _HEAD: ILinkNode<T> | null;
+    protected _END: ILinkNode<T> | null;
+    protected _LENGTH: number;
     constructor();
-    addTask(newTask: ITask): void;
-    jumpTask(newTask: ITask): void;
     /**
-     * 检测一个url是否添加过，是则返回true
-     * @param url
+     * 将新的值作为尾结点添加到链表
+     * @param {*} value
+     * @memberOf LinkedQueue
      */
-    check(url: string): boolean;
+    add(value: T): void;
     /**
-     * 获得排队任务数量
-     * @param type
+     * 返回当前头节点的值，并抛弃头节点
+     * @returns
+     * @returns {*} value
+     * @memberOf LinkedQueue
      */
-    getWaitingTaskNum(): number;
+    next(): T | null;
     /**
-     * 获得所有添加到排队的url数（不包含重复添加）
+     * 将新的值作为头节点添加到链表（插队）
+     * @param {any} value
+     * @memberOf LinkedQueue
      */
-    getTotalUrlsNum(): number;
+    jump(value: T): void;
     /**
-     * 返回下一个任务。该排队没有新任务，都会返回 null
+     * 返回链表的长度
+     * @returns
+     * @memberOf LinkedQueue
      */
-    nextTask(): any;
+    getLength(): number;
 }

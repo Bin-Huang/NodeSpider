@@ -1,12 +1,15 @@
 import Spider from "./spider";
 export declare type IPlan = (task: ITask, spider: Spider) => Promise<any>;
 export interface IQueue {
-    addTask: (newTask: ITask) => void;
-    jumpTask: (newTask: ITask) => void;
-    check: (url: string) => boolean;
-    getWaitingTaskNum: () => number;
-    getTotalUrlsNum: () => number;
-    nextTask: () => ITask | null;
+    add: (task: ITask) => void;
+    jump: (task: ITask) => void;
+    next: () => ITask | null;
+    getNum: () => number;
+}
+export interface IPool {
+    add: (url: string) => void;
+    has: (url: string) => boolean;
+    size: () => number;
 }
 export interface IPipe {
     name: string;
@@ -15,20 +18,17 @@ export interface IPipe {
 }
 export interface IState {
     queue: IQueue;
+    pool: IPool;
     planStore: Map<string, IPlan>;
     pipeStore: Map<string, IPipe>;
-    option: IDefaultOption;
+    option: IDefaultOptionInput;
     working: boolean;
     currentTotalConnections: number;
 }
-export declare type queueClass = new () => IQueue;
 export interface IDefaultOptionInput {
     concurrency?: number;
-    queue?: queueClass;
-}
-export interface IDefaultOption extends IDefaultOptionInput {
-    concurrency: number;
-    queue: queueClass;
+    queue?: IQueue;
+    pool?: IPool;
 }
 export interface ITask {
     url: string;

@@ -3,17 +3,18 @@ import Spider from "./spider";
 
 export type IPlan = (task: ITask, spider: Spider) => Promise<any>;
 
-// nodespider's queue;
 export interface IQueue {
-    addTask: (newTask: ITask) => void;
-    jumpTask: (newTask: ITask) => void;
+  add: (task: ITask) => void;
+  jump: (task: ITask) => void;
+  next: () => ITask|null;
+  getNum: () => number;
+}
 
-    check: (url: string) => boolean;
-
-    getWaitingTaskNum: () => number;
-    getTotalUrlsNum: () => number;
-
-    nextTask: () => ITask|null;
+// TODO: 除了url，还可以是其他的嘛
+export interface IPool {
+  add: (url: string) => void;
+  has: (url: string) => boolean;
+  size: () => number;
 }
 
 export interface IPipe {
@@ -25,23 +26,19 @@ export interface IPipe {
 // NodeSpider' state
 export interface IState {
     queue: IQueue;
+    pool: IPool;
     planStore: Map<string, IPlan>;
     pipeStore: Map<string, IPipe>;
-    option: IDefaultOption;
+    option: IDefaultOptionInput;
     working: boolean;
     currentTotalConnections: number;
 }
 
-export type queueClass = new () => IQueue;
-
 // for parameter option, when initialize an instance  of NodeSpider.
 export interface IDefaultOptionInput {
     concurrency?: number;
-    queue?: queueClass;
-}
-export interface IDefaultOption extends IDefaultOptionInput {
-    concurrency: number;
-    queue: queueClass;
+    queue?: IQueue;
+    pool?: IPool;
 }
 
 // for task object in the queue;在queue保存的task

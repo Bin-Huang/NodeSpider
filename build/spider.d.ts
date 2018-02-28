@@ -1,14 +1,11 @@
 /// <reference types="node" />
 import { EventEmitter } from "events";
-import { IDefaultPlanCallback, preLoadJq, preToUtf8 } from "./plan/defaultPlan";
 import { IDefaultOptionInput, IPipe, IPlan, IState, ITask } from "./types";
 /**
  * class of NodeSpider
  * @class NodeSpider
  */
 export default class NodeSpider extends EventEmitter {
-    static preToUtf8: typeof preToUtf8;
-    static preLoadJq: typeof preLoadJq;
     _STATE: IState;
     /**
      * create an instance of NodeSpider
@@ -48,7 +45,6 @@ export default class NodeSpider extends EventEmitter {
      * add new default plan
      * @param option default plan's option
      */
-    plan(name: string, callback: IDefaultPlanCallback): void;
     /**
      * Add url(s) to the queue and specify a plan. These task will be performed as planned when it's turn. Eventually only absolute url(s) can be added to the queue, the other will be returned in an array.
      * @param planName the name of specified plan
