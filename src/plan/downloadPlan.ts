@@ -27,9 +27,7 @@ export interface IOption {
 
 const defaultOpts = {
     callback: (err: Error|null, current: ICurrent, s: Spider): Promise<any>|any => {
-        if (err) {
-            console.error(err);
-        }
+        if (err) { console.error(err); }
         return ;
     },
 };
