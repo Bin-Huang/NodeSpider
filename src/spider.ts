@@ -9,6 +9,7 @@ import {
     IOptions,
     IOpts,
     IPipe,
+    IPipeItems,
     IPlan,
     IQueue,
     IState,
@@ -76,8 +77,8 @@ export default class NodeSpider extends EventEmitter {
     public end() {
         // 关闭注册的pipe
         changeStatus("end", this);
-        for (const pipe of this._STATE.pipeStore.values()) {
-            pipe.close();
+        for (const { pipe } of this._STATE.pipeStore.values()) {
+            pipe.end();
         }
         clearInterval(this._STATE.heartbeat);
         this.emit(e.goodbye);
@@ -138,16 +139,11 @@ export default class NodeSpider extends EventEmitter {
      * @param  {IPipe}  newPipe pipe object
      * @return {void}
      */
-    public connect(newPipe: IPipe) {
-        if (! newPipe.name) {
-            throw new TypeError("method connect: the parameter isn't a pipe object");
+    public connect(name: string, newPipe: IPipe, items: IPipeItems = []) {
+        if (this._STATE.pipeStore.has(name)) {
+            throw new TypeError(`method connect: there already have a pipe named "${name}"`);
         }
-        if (this._STATE.pipeStore.has(newPipe.name)) {
-            throw new TypeError(`method connect: there already have a pipe named "${newPipe.name}"`);
-        }
-        // 如果参数iten是一个pipe
-        this._STATE.pipeStore.set(newPipe.name, newPipe);
-        return ;
+        this._STATE.pipeStore.set(name, { items, pipe: newPipe });
     }
 
     public retry(current: ITask, maxRetry: number, finalErrorCallback?: () => any) {
@@ -267,18 +263,46 @@ export default class NodeSpider extends EventEmitter {
      * @param  {any}    data     data you need to save
      * @return {void}
      */
-    public save(pipeName: string, data: any) {
+    public save(pipeName: string, data: {[index: string]: any}) {
         if (typeof pipeName !== "string") {
             throw new TypeError(`methdo save: the parameter "pipeName" should be a string`);
         }
         if (typeof data !== "object") {
             throw new TypeError(`method save: the parameter "data" should be an object`);
         }
-        const pipe = this._STATE.pipeStore.get(pipeName);
-        if (! pipe) {
+        const store = this._STATE.pipeStore.get(pipeName);
+        if (! store) {
             throw new TypeError(`method save: no such pipe named ${pipeName}`);
         } else {
-            pipe.add(data);
+            let { pipe, items } = store;
+            const d: {[index: string]: any} = {};
+            if (Array.isArray(items)) {
+                if (items.length === 0) {
+                    store.items = Object.keys(data);
+                    items = store.items;
+                }
+                for (const key of items) {
+                    if (typeof data[key] === "undefined") {
+                        d[key] = null;
+                    } else {
+                        d[key] = data[key];
+                    }
+                }
+            } else {
+                for (const key of Object.keys(items)) {
+                    const fn = items[key];
+                    if (typeof data[key] === "undefined") {
+                        d[key] = null;
+                    } else {
+                        d[key] = fn(data[key]);
+                    }
+                }
+            }
+            if (pipe.convert) {
+                pipe.write(pipe.convert(d));
+            } else {
+                pipe.write(JSON.stringify(d));
+            }
         }
     }
     private async work() {

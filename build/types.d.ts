@@ -13,16 +13,24 @@ export interface IPool {
     size: number;
 }
 export interface IPipe {
-    name: string;
-    add: (data: any) => void;
-    close: () => void;
+    write: (data: any) => any;
+    end: (data?: any) => any;
+    convert?: (data: {
+        [index: string]: any;
+    }) => any;
 }
 export declare type IStatus = "active" | "end" | "pause" | "vacant";
+export declare type IPipeItems = string[] | {
+    [index: string]: (data: any) => any;
+};
 export interface IState {
     queue: IQueue;
     pool: IPool;
     planStore: Map<string, IPlan>;
-    pipeStore: Map<string, IPipe>;
+    pipeStore: Map<string, {
+        items: IPipeItems;
+        pipe: IPipe;
+    }>;
     opts: IOpts;
     currentTasks: ITask[];
     status: IStatus;

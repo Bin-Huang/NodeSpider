@@ -67,8 +67,8 @@ class NodeSpider extends events_1.EventEmitter {
     end() {
         // 关闭注册的pipe
         changeStatus("end", this);
-        for (const pipe of this._STATE.pipeStore.values()) {
-            pipe.close();
+        for (const { pipe } of this._STATE.pipeStore.values()) {
+            pipe.end();
         }
         clearInterval(this._STATE.heartbeat);
         this.emit(e.goodbye);
@@ -124,16 +124,11 @@ class NodeSpider extends events_1.EventEmitter {
      * @param  {IPipe}  newPipe pipe object
      * @return {void}
      */
-    connect(newPipe) {
-        if (!newPipe.name) {
-            throw new TypeError("method connect: the parameter isn't a pipe object");
+    connect(name, newPipe, items = []) {
+        if (this._STATE.pipeStore.has(name)) {
+            throw new TypeError(`method connect: there already have a pipe named "${name}"`);
         }
-        if (this._STATE.pipeStore.has(newPipe.name)) {
-            throw new TypeError(`method connect: there already have a pipe named "${newPipe.name}"`);
-        }
-        // 如果参数iten是一个pipe
-        this._STATE.pipeStore.set(newPipe.name, newPipe);
-        return;
+        this._STATE.pipeStore.set(name, { items, pipe: newPipe });
     }
     retry(current, maxRetry, finalErrorCallback) {
         // 过滤出current重要的task基本信息
@@ -254,12 +249,44 @@ class NodeSpider extends events_1.EventEmitter {
         if (typeof data !== "object") {
             throw new TypeError(`method save: the parameter "data" should be an object`);
         }
-        const pipe = this._STATE.pipeStore.get(pipeName);
-        if (!pipe) {
+        const store = this._STATE.pipeStore.get(pipeName);
+        if (!store) {
             throw new TypeError(`method save: no such pipe named ${pipeName}`);
         }
         else {
-            pipe.add(data);
+            let { pipe, items } = store;
+            const d = {};
+            if (Array.isArray(items)) {
+                if (items.length === 0) {
+                    store.items = Object.keys(data);
+                    items = store.items;
+                }
+                for (const key of items) {
+                    if (typeof data[key] === "undefined") {
+                        d[key] = null;
+                    }
+                    else {
+                        d[key] = data[key];
+                    }
+                }
+            }
+            else {
+                for (const key of Object.keys(items)) {
+                    const fn = items[key];
+                    if (typeof data[key] === "undefined") {
+                        d[key] = null;
+                    }
+                    else {
+                        d[key] = fn(data[key]);
+                    }
+                }
+            }
+            if (pipe.convert) {
+                pipe.write(pipe.convert(d));
+            }
+            else {
+                pipe.write(JSON.stringify(d));
+            }
         }
     }
     work() {

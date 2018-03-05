@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { EventEmitter } from "events";
-import { IOptions, IPipe, IPlan, IState, ITask } from "./types";
+import { IOptions, IPipe, IPipeItems, IPlan, IState, ITask } from "./types";
 /**
  * class of NodeSpider
  * @class NodeSpider
@@ -39,7 +39,7 @@ export default class NodeSpider extends EventEmitter {
      * @param  {IPipe}  newPipe pipe object
      * @return {void}
      */
-    connect(newPipe: IPipe): void;
+    connect(name: string, newPipe: IPipe, items?: IPipeItems): void;
     retry(current: ITask, maxRetry: number, finalErrorCallback?: () => any): any;
     /**
      * add new default plan
@@ -62,6 +62,8 @@ export default class NodeSpider extends EventEmitter {
      * @param  {any}    data     data you need to save
      * @return {void}
      */
-    save(pipeName: string, data: any): void;
+    save(pipeName: string, data: {
+        [index: string]: any;
+    }): void;
     private work();
 }
