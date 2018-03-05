@@ -21,7 +21,7 @@ export default class NodeSpider extends EventEmitter {
      * @param {string} url
      * @returns {boolean}
      */
-    isExist(url: string): boolean;
+    has(url: string): boolean;
     /**
      * 过滤掉一个数组中的重复链接，以及所有已被添加的链接，返回一个新数组
      * @param urlArray {array}
@@ -33,29 +33,17 @@ export default class NodeSpider extends EventEmitter {
      * @param  {IPlan}  plan plan object
      * @return {void}
      */
-    add(name: string, plan: IPlan): void;
+    plan(name: string, plan: IPlan): void;
     /**
      * connect new pipe
      * @param  {IPipe}  newPipe pipe object
      * @return {void}
      */
-    connect(name: string, newPipe: IPipe, items?: IPipeItems): void;
-    retry(current: ITask, maxRetry: number, finalErrorCallback?: () => any): any;
-    /**
-     * add new default plan
-     * @param option default plan's option
-     */
-    /**
-     * Add url(s) to the queue and specify a plan.
-     * These task will be performed as planned when it's turn.
-     * Eventually only absolute url(s) can be added to the queue, the other will be returned in an array.
-     * @param planName the name of specified plan
-     * @param url url or array of urls
-     * @param info (Optional). Attached information for this url
-     * @returns {array}
-     */
-    queue(planName: string, url: string | string[], info?: any): any[];
-    download(path: string, url: string, filename?: string): void;
+    pipe(name: string, newPipe: IPipe, items?: IPipeItems): void;
+    retry(current: ITask, maxRetry: number, finalErrorCallback?: () => any): void;
+    add(planName: string, url: string | string[], info?: {
+        [index: string]: any;
+    }): void;
     /**
      * Save data through a pipe
      * @param  {string} pipeName pipe name
@@ -65,5 +53,4 @@ export default class NodeSpider extends EventEmitter {
     save(pipeName: string, data: {
         [index: string]: any;
     }): void;
-    private work();
 }

@@ -13,32 +13,32 @@ s.on("statusChange", (c, p) => console.log(`${p} -> ${c}`));
 // s.on("queueEmpty", () => console.log("empty"));
 
 let i = 0;
-s.add("take a walk", defaultPlan((err, current) => {
+s.plan("take a walk", defaultPlan((err, current) => {
     if (err) return console.log(err.message);
     const $ = current.$;
     console.log($("title").text()); // 每经过一个页面，打印它的标题
     console.log(i++);
     if (i < 2) {
-        s.queue("take a walk", $("a").url());
+        s.add("take a walk", $("a").url());
     }
 }));
 
-s.queue("take a walk", "http://www.baidu.com");
+s.add("take a walk", "http://www.baidu.com");
 
 
 setTimeout(() => {
     i = 0;
     console.log("============")
-    s.queue("take a walk", "http://www.baidu.com");
+    s.add("take a walk", "http://www.baidu.com");
 }, 6000);
 
 setTimeout(() => {
     i = 0;
     console.log("============")
     s.end();
-    s.queue("take a walk", "http://www.baidu.com");
+    s.add("take a walk", "http://www.baidu.com");
 }, 12000);
 
 setTimeout(() => {
-    s.queue("take a walk", "http://www.baidu.com");
+    s.add("take a walk", "http://www.baidu.com");
 }, 15000);
