@@ -12,6 +12,7 @@ import {
     IPlan,
     IQueue,
     IState,
+    IStatus,
     ITask,
 } from "./types";
 
@@ -19,6 +20,14 @@ const defaultOption: IOpts = {
     concurrency: 20,
     queue: new Queue(),
     pool: new Set<string>(),
+};
+
+const e = {
+    statusChange: "statusChange",
+    addTask: "addTask",
+    queueEmpty: "queueEmpty",
+    heartbeat: "heartbeat",
+    goodbye: "goodbye",
 };
 
 /**
@@ -42,18 +51,22 @@ export default class NodeSpider extends EventEmitter {
             planStore: new Map(),
             queue: finalOption.queue,
             pool: finalOption.pool,
-            working: true,
+            status: "vacant",   // 初始化后，在获得新任务前，将保持“空闲”状态
+            heartbeat: setInterval(() => this.emit(e.heartbeat), 4000),
         };
 
-        this.on("empty", () => {
+        this.on(e.queueEmpty, () => {
             if (this._STATE.currentTasks.length === 0) {
-                this.emit("vacant");   // queue为空，当前异步连接为0，说明爬虫已经空闲，触发事件
+                changeStatus("vacant", this);
             }
         });
-
-        this.on("queueTask", (task: ITask) => {
-            // this.work();
+        this.on(e.addTask, () => {
+            if (this._STATE.status === "vacant") {
+                changeStatus("active", this);
+            }
+            this.work();
         });
+        this.on(e.heartbeat, this.work);
 
     }
 
@@ -62,10 +75,12 @@ export default class NodeSpider extends EventEmitter {
      */
     public end() {
         // 关闭注册的pipe
+        changeStatus("end", this);
         for (const pipe of this._STATE.pipeStore.values()) {
             pipe.close();
         }
-        // TODO C 更多，比如修改所有method来提醒开发者已经end
+        clearInterval(this._STATE.heartbeat);
+        this.emit(e.goodbye);
     }
 
     /**
@@ -159,6 +174,7 @@ export default class NodeSpider extends EventEmitter {
         }
         retryTask.hasRetried ++;
         this._STATE.queue.jump(retryTask);    // 插队到队列，重新等待执行
+        this.emit(e.addTask, retryTask);    // TODO: 确定让重试任务也触发“addTask”事件？
     }
 
     /**
@@ -190,7 +206,9 @@ export default class NodeSpider extends EventEmitter {
 
     // tslint:disable-next-line:max-line-length
     /**
-     * Add url(s) to the queue and specify a plan. These task will be performed as planned when it's turn. Eventually only absolute url(s) can be added to the queue, the other will be returned in an array.
+     * Add url(s) to the queue and specify a plan.
+     * These task will be performed as planned when it's turn.
+     * Eventually only absolute url(s) can be added to the queue, the other will be returned in an array.
      * @param planName the name of specified plan
      * @param url url or array of urls
      * @param info (Optional). Attached information for this url
@@ -205,6 +223,7 @@ export default class NodeSpider extends EventEmitter {
         if (! Array.isArray(url)) {
             url = [ url ];
         }
+
         url.map((u) => {
             if (typeof u !== "string" || ! isAbsoluteUrl(u)) {
                 noPassList.push(u);
@@ -212,12 +231,10 @@ export default class NodeSpider extends EventEmitter {
                 const newTask = { uid: uuid(), url: u, planName, info };
                 this._STATE.queue.add(newTask);
                 this._STATE.pool.add(newTask.url);
-                this.emit("queueTask", newTask);
-                this.work();
+                this.emit(e.addTask, newTask);
             }
         });
 
-        this._STATE.working = true;
         return noPassList;
     }
 
@@ -265,30 +282,30 @@ export default class NodeSpider extends EventEmitter {
         }
     }
     private async work() {
-        const count = this._STATE.opts.concurrency - this._STATE.currentTasks.length;
-        if (count <= 0) {
-            return ;
-        }
-        const task = this._STATE.queue.next();
-        if (! task) { return this.emit("empty"); }
-        const plan = this._STATE.planStore.get(task.planName) as IPlan;
-        const current = {
-            ... task,
-            info: (typeof task.info === "undefined") ? {} : task.info,
-        };
+        if (this._STATE.status === "active") {
+            const maxConcurrency = this._STATE.opts.concurrency;
+            const currentTasksNum = this._STATE.currentTasks.length;
+            if (maxConcurrency - currentTasksNum > 0) {
+                const currentTask = this._STATE.queue.next();
+                if (! currentTask) {
+                    this.emit(e.queueEmpty);
+                } else {
+                    this._STATE.currentTasks.push(currentTask);
+                    this.work();    // 不断递归，使爬虫并发任务数量尽可能达到最大限制
 
-        this._STATE.currentTasks.push(task);
-        try {
-          await plan(task, this);
-        } catch (e) {
-            this.end(); // 停止爬虫并退出，以提醒并便于开发者debug
-            console.error(`An error is threw from plan execution.
-                Check your callback function, or create an issue in the planGenerator's repository`);
-            throw e;
+                    const plan = this._STATE.planStore.get(currentTask.planName) as IPlan;
+                    try {
+                        await plan(currentTask, this);
+                    } catch (e) {
+                        this.end(); // 停止爬虫并退出，以提醒并便于开发者debug
+                        console.error(`An error is threw from plan execution.
+                            Check your callback function, or create an issue in the planGenerator's repository`);
+                        throw e;
+                    }
+                    this._STATE.currentTasks = this._STATE.currentTasks.filter(({uid}) => uid !== currentTask.uid);
+                }
+            }
         }
-        const ix = this._STATE.currentTasks.findIndex(({uid}) => uid === task.uid);
-        this._STATE.currentTasks.splice(ix, 1);
-        this.work();
     }
 }
 
@@ -331,4 +348,10 @@ function ParameterOptsCheck(opts: IOptions): null {
     // check property queue
     // TODO C how to check the queue? queue should be a class, and maybe need parameter to init?
     return null;
+}
+
+function changeStatus(status: IStatus, spider: NodeSpider) {
+    const preStatus = spider._STATE.status;
+    spider._STATE.status = status;
+    spider.emit(e.statusChange, status, preStatus);
 }

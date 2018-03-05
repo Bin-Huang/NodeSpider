@@ -46,7 +46,9 @@ export default class NodeSpider extends EventEmitter {
      * @param option default plan's option
      */
     /**
-     * Add url(s) to the queue and specify a plan. These task will be performed as planned when it's turn. Eventually only absolute url(s) can be added to the queue, the other will be returned in an array.
+     * Add url(s) to the queue and specify a plan.
+     * These task will be performed as planned when it's turn.
+     * Eventually only absolute url(s) can be added to the queue, the other will be returned in an array.
      * @param planName the name of specified plan
      * @param url url or array of urls
      * @param info (Optional). Attached information for this url

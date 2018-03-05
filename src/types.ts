@@ -22,6 +22,8 @@ export interface IPipe {
     close: () => void;
 }
 
+export type IStatus = "active"|"end"|"pause"|"vacant";
+
 // NodeSpider' state
 export interface IState {
     queue: IQueue;
@@ -29,8 +31,10 @@ export interface IState {
     planStore: Map<string, IPlan>;
     pipeStore: Map<string, IPipe>;
     opts: IOpts;
-    working: boolean;
     currentTasks: ITask[];
+
+    status: IStatus;
+    heartbeat: NodeJS.Timer;
 }
 
 // 用于初始化时的函数参数

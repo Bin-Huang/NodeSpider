@@ -6,6 +6,7 @@ const got = require("got");
 const path = require("path");
 const defaultOpts = {
     callback: (err, current, s) => {
+        // tslint:disable-next-line:no-console
         if (err) {
             console.error(err);
         }

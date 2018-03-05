@@ -47,6 +47,7 @@ function defaultPlan(option) {
             return yield opts.callback(err, current, spider);
         }
         catch (e) {
+            // tslint:disable-next-line:no-console
             console.log(`callback failed: ${e}`);
         }
     });

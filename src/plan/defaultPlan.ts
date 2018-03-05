@@ -9,18 +9,18 @@ import Spider from "../spider";
 import NodeSpider from "../spider";
 import { IPlan, ITask } from "../types";
 
-export interface IDefaultPlanCurrent extends ITask {
+export interface ICurrent extends ITask {
     response: got.Response<Buffer>;
     body: string;
     $?: CheerioStatic;
 }
 
-export type IDefaultPlanCallback =
-    (err: Error|null, current: IDefaultPlanCurrent, spider: Spider)
+export type ICallback =
+    (err: Error|null, current: ICurrent, spider: Spider)
     => any|Promise<any>;
 
-export interface IDefaultPlanOption {
-    callback: IDefaultPlanCallback;
+export interface IOption {
+    callback: ICallback;
     toUtf8?: boolean;
     jQ?: boolean;
     requestOpts?: http.RequestOptions;
@@ -32,7 +32,7 @@ const defaultOpts = {
     requestOpts: { encoding: null },
 };
 
-export default function defaultPlan(option: IDefaultPlanOption|IDefaultPlanCallback): IPlan {
+export default function defaultPlan(option: IOption|ICallback): IPlan {
     if (typeof option === "function") {
         option = { callback: option };
     }
@@ -40,7 +40,7 @@ export default function defaultPlan(option: IDefaultPlanOption|IDefaultPlanCallb
     return async (task, spider) => {
         let res: got.Response<Buffer>;
         let err: Error|null = null;
-        let current: IDefaultPlanCurrent;
+        let current: ICurrent;
         try {
             res = await got(task.url, opts.requestOpts);
             current = { ...task, response: res, body: res.body.toString() };
@@ -57,6 +57,7 @@ export default function defaultPlan(option: IDefaultPlanOption|IDefaultPlanCallb
         try {
             return await opts.callback(err, current, spider);
         } catch (e) {
+            // tslint:disable-next-line:no-console
             console.log(`callback failed: ${e}`);
         }
     };
@@ -65,7 +66,7 @@ export default function defaultPlan(option: IDefaultPlanOption|IDefaultPlanCallb
 /**
  * 根据currentTask.body加载jQ对象，并扩展url、todo、download方法，以第三个参数$的形式传递
  */
-export function preLoadJq(currentTask: IDefaultPlanCurrent): void {
+export function preLoadJq(currentTask: ICurrent): void {
     const $ = cheerio.load(currentTask.body);
 
     // 扩展：添加 url 方法

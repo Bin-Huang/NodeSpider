@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import Spider from "./spider";
 export declare type IPlan = (task: ITask, spider: Spider) => Promise<any>;
 export interface IQueue {
@@ -16,14 +17,16 @@ export interface IPipe {
     add: (data: any) => void;
     close: () => void;
 }
+export declare type IStatus = "active" | "end" | "pause" | "vacant";
 export interface IState {
     queue: IQueue;
     pool: IPool;
     planStore: Map<string, IPlan>;
     pipeStore: Map<string, IPipe>;
     opts: IOpts;
-    working: boolean;
     currentTasks: ITask[];
+    status: IStatus;
+    heartbeat: NodeJS.Timer;
 }
 export interface IOptions {
     concurrency?: number;

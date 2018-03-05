@@ -27,6 +27,7 @@ export interface IOption {
 
 const defaultOpts = {
     callback: (err: Error|null, current: ICurrent, s: Spider): Promise<any>|any => {
+        // tslint:disable-next-line:no-console
         if (err) { console.error(err); }
         return ;
     },
