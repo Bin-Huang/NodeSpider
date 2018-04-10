@@ -134,14 +134,14 @@ export default class NodeSpider extends EventEmitter {
 
     /**
      * connect new pipe
-     * @param  {IPipe}  newPipe pipe object
+     * @param  {IPipe}  target pipe object
      * @return {void}
      */
-    public pipe(name: string, newPipe: IPipe, items: IPipeItems = []): void {
+    public pipe(name: string, target: IPipe, items: IPipeItems = []): void {
         if (this._STATE.pipeStore.has(name)) {
             throw new TypeError(`method connect: there already have a pipe named "${name}"`);
         }
-        this._STATE.pipeStore.set(name, { items, pipe: newPipe });
+        this._STATE.pipeStore.set(name, { items, pipe: target });
     }
 
     public retry(current: ITask, maxRetry: number, finalErrorCallback?: () => any): void {

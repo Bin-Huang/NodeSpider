@@ -1,26 +1,50 @@
-**NOTE** 本文档仅仅是备份，已经无法与新版本兼容
-
-# Features
-- Simple and flexible
-- Funny **jQ** selector you must like it
-- automatically decode body into **UTF8**(as an option), never worry about encoding anymore
-- save extracted data by pipe, just enjoy
-- easy to check and filter existed urls in queue.
-- retry task easily and reliably
-- rate limit & concurrent limit
-- support async function and promise
+[beta]  现仅处于开发状态
 
 ```javascript
-const { Spider } = require("nodespider");
+const { Spider, defaultPlan } = require("nodespider");
+
 const s = new Spider();
 
-s.plan("getTitle", function(err, current) {
-    const $ = current.$;
-    console.log($("title").text());
-});
-s.queue("getTitle", "https://www.google.com");
+s.plan("printTitle", defaultPlan((err, current) => {
+    if (err) {
+        s.retry(current, 3);
+    } else {
+        const $ = current.$;
+        console.log($("title").text());
+        s.add("printTitle", $("a").url());
+    }
+}));
+s.add("printTitle", "https://github.com/explore");
 
-s.download("./save/to/path", "https://www.npmjs.com/static/images/mountain-dot.svg");
+
+const { csvPipe } = require("nodespider");
+
+s.pipe("localCsv", csvPipe("./data.csv"));
+s.plan("extract", defaultPlan((err, current) => {
+    if (err) {
+        s.retry(current, 3);
+    } else {
+        const $ = current.$;
+        s.save("localCsv", {
+            name: $(".package-name a").text(),
+            readme: $("#readme").html().slice(0, 100),
+        });
+    }
+}));
+s.add("extract", [
+    "https://www.npmjs.com/package/nodespider",
+    "https://www.npmjs.com/package/got",
+    "https://www.npmjs.com/package/tyty",
+]);
+
+
+const { downloadPlan } = require("nodespider");
+
+s.plan("saveImg", downloadPlan("./download/myImg"));
+s.add("saveImg", "https://www.npmjs.com/static/images/mountain-dot.svg");
+
+
+s.end();
 ```
 
 # Installation & initialization
@@ -32,63 +56,77 @@ npm install nodespider --save
 ```javascript
 const { Spider } = require("nodespider");
 
-const mySpider = new Spider();
+const Spider = new Spider();
 
-// or initialize with options
-const myOtherSpider = new Spider({
-    rateLimit: 20,
-    maxConnections: 20,
-    // and more options...
+const otherSpider = new Spider({
+    concurrency: 20,
+    // more options...
 })
 ```
 
-Optional settings:
+## options
 
-| option | description | type | defaults |
-| --- | ---- | --- | --- |
-| rateLimit | request interval | number | 2(millisecond)
-| queue | task queue | class | NodeSpider.Queue
-| maxConnections | maximum number of simultaneous connections | number | 20 |
+### concurrency
+可同时执行异步任务的最大数量，默认 `20`。
+
+### queue
+爬虫任务队列对象。
+
+你可以通过实现`IQueue`接口，自定义队列的保存方式和位置，比如保存在 redis 以实现简单的分布式爬取
+
+```typescript
+interface IQueue {
+  add: (task: ITask) => void;
+  jump: (task: ITask) => void;
+  next: () => ITask|null;
+  getLength: () => number;
+}
+
+interface ITask {
+    uid: string;
+    url: string;
+    planName: string;
+    hasRetried?: number;
+    info?: {[index: string]: any};
+}
+```
+
+### pool
+爬虫的已添加链接池对象。
+
+你可以通过实现`IPool`接口，自定义队列的保存方式和位置，比如保存在 redis 以实现简单的分布式爬取。
+
+```javascript
+interface IPool {
+  add: (url: string) => void;
+  has: (url: string) => boolean;
+  size: number;
+}
+```
 
 # Method
 
-## Spider.prototype.plan(planName, callback)
-添加一个默认计划
-
-| name | type | description |
-| --- | --- | --- |
-| planName | string | 新计划的名称 |
-| callback | function | 成功爬取body后、或者报错时执行的callback函数 |
-
-执行 callback 时将传入三个参数：
-- `err` when there aren't error , it will be `null`
-- `current` current task's information
-- - `response`
-- - `body`  已经自动转码为**utf8格式**的返回正文
-- - `url`
-- - `planName`
-- - `hasRetried`
-- - `info`
-- - `$` the **jQ selector** that you can use it to operate the body
-- `spider`  this spider instance
-
-// TODO $的有趣方法
-
+## Spider.prototype.plan(name, newPlan)
+新建一个爬取计划
 ```javascript
-const s = new Spider();
-s.plan("myPlan", (err, current, s) => {
-    if (err) return s.retry(current);
-    const $ = current.$;
-    console.log($("title").text());
-});
-s.queue("myPlan", "http://www.google.com");
+s.plan("printBody", defaultPlan((err, current) => {
+    console.log(current.body);
+}))
+s.queue("printBody", "https://www.google.com");
 ```
 
-**提示** 如果你想亲自决定是否进行预处理（比如关闭jq加载、utf8格式转换），或者进行更加详细设置（比如修改请求 headers），建议你使用 `add` 方法来添加 default plan。
+**什么是计划？**  在 nodespider 中，当爬虫从待爬取队列中获取url后进行的所有操作，我们称之为计划。
 
-甚至，如果你想亲自决定任务如何执行，你可以使用 `add` 方法来添加你自己的计划。这些内容将在后文中提到。
+**什么是计划模板** 爬虫进行的操作往往大同小异，如果将计划中可以复用的部分（比如网络请求）整理起来，提供可以返回计划对象的函数，我们称之为计划模板
 
-## Spider.prototype.queue(planName, url, info)
+nodespider 自带了三个计划模板，可以帮助你快速新建一个爬取计划:
+- `defaultPlan` (默认的计划模板) 向站点发送网络请求，然后将接受到的 response 传递给 callbacks，以暴露返回正文给开发者处理
+- `streamPlan`  根据url发送网络请求，并将返回的流(stream)直接通过 callback 暴露给开发者
+- `downloadPlan`    下载url指向的文件到本地，开发者可以通过 callback 来处理下载成功与失败的情况
+
+使用方法: **[plan文档](./doc/plan.md)**
+
+## Spider.prototype.add(planName, url, info)
 添加链接到待爬取队列，并为该链接指定爬取计划。当队列轮到该链接时，将按照计划执行爬取任务。
 
 | name | type | description |
@@ -98,49 +136,21 @@ s.queue("myPlan", "http://www.google.com");
 | info | * | `(可选)`. 附带信息。当执行被添加url的任务时，`info`将以`current.info`形式传入 callback |
 
 ```javascript
-s.plan("myPlan", (err, current) => {
+s.plan("myPlan", defaultPlan((err, current) => {
     console.log(current.url);
     if (current.info) {
         console.log(current.info.from);
     }
-});
-s.queue("myPlan", "https://www.quora.com");
-s.queue("myPlan", [
+}));
+s.add("myPlan", "https://www.quora.com");
+s.add("myPlan", [
     "https://www.github.com",
     "https://www.baidu.com",
 ]);
-s.queue("myPlan", "https://www.npmjs.com", {
+s.add("myPlan", "https://www.npmjs.com", {
     from: "google"
 });
 ```
-
-## Spider.prototype.download(path, url, fileName)
-添加下载链接到待爬取队列，并指定保存路径。当队列轮到该链接时，将下载该链接指向的文件
-
-| name | type | description |
-| --- | --- | --- |
-| path | string | 下载文件的保存路径 |
-| url | string or string array | 需要添加的url(s) |
-| fileName | string | `(可选)` .文件的保存名称 |
-
-```javascript
-s.download("./save/to/path", "https://www.npmjs.com/static/images/mountain-dot.svg");
-s.download(
-    "./save/to/path",
-    "https://www.npmjs.com/static/images/mountain-dot.svg",
-    "download.svg"
-);
-```
-
-当`fileName === undefined`，下载文件将根据url以合法形式命名。所以不用担心命名问题
-```javascript
-s.download("./", "https://www.npmjs.com/static/images/rucksack-dot.svg");
-// 保存的文件名为： npmjs.com!static!images!rucksack-dot.svg
-```
-
-**注意** 当下载任务出现错误时，将自动重试3次，超过后将直接 `console.log` 错误。
-
-如果你想亲自决定如何处理错误，或者进行更多的下载设置，你可以使用 `add` 方法来添加 `download plan`。这些内容将在后文中提到。
 
 ## Spider.prototype.retry(currentTask, maxRetry, finalErrorCallback);
 
@@ -153,18 +163,14 @@ Retry the task. The task will be added to queue again.
 | finalErrorCallback | (Optional) the function will be called when reach maximum number of retries | function |
 
 ```javascript
-s.plan("myPlan", function (err, current) {
-    if (err) return s.retry(current);
-});
-s.plan("otherPlan", function (err, current) {
-    if (err) return s.retry(current, 10);
-});
-s.plan("anotherPlan", function (err, current) {
-    if (err) return s.retry(current, 5, () => console.log(err));
-});
+s.plan("planA", defaultPlan((err, current) => {
+    if (err) {
+        s.retry(current, 3);
+    }
+}))
 ```
 
-## Spider.prototype.isExist(url)
+## Spider.prototype.has(url)
 
 Check whether the url has been added. If the url is in the queue, is crawling or has been crawled, return `true`.
 
@@ -172,13 +178,9 @@ Check whether the url has been added. If the url is in the queue, is crawling or
 | --- | --- | --- |
 | url | the url you want to check | string |
 
-| return | description |
-| --- | --- |
-| boolean | if the url exists, return `true`
-
 ```javascript
-s.queue("myPlan", "http://www.example.com");
-console.log(s.isExist("http://www.example.com"));    // true
+s.add("printBody", "http://www.example.com");
+console.log(s.has("http://www.example.com"));    // true
 ```
 
 ## Spider.prototype.filter(urls)
@@ -194,7 +196,7 @@ Method `filter` return a new array of all unique url items which don't exist in 
 | array |
 
 ```javascript
-s.queue(planA, "a.com");
+s.add(planA, "a.com");
 
 var urls = n.filter(["a.com", "b.com", "c.com"]);
 console.log(urls); // ["http://b.com", "http://c.com"]
@@ -203,69 +205,93 @@ urls = n.filter(["a.com", "aa.com", "aa.com"]);
 console.log(urls); // ["http://aa.com"]
 ```
 
-## Spider.prototype.add(planObject)
-添加任意的一个计划
-```javascript
-s.add(defaultPlan({
-    name: "myPlan1",
-    callbacks: [
-        (err, current, s) => console.log(current.url)
-    ]
-}));
-s.queue("myPlan1", "https://www.google.com");
-```
 
-**什么是计划？**  在 nodespider 中，当爬虫从待爬取队列中获取url后进行的所有操作，我们称之为计划。
+## Spider.prototype.pipe(name, target, fields)
 
-**什么是计划模板** 爬虫进行的操作往往大同小异，如果将计划中可以复用的部分（比如网络请求）整理起来，提供可以返回计划对象的函数，我们称之为计划模板
-
-nodespider 自带了三个计划模板，可以帮助你快速新建一个爬取计划:
-- `defaultPlan` (默认的计划模板) 向站点发送网络请求，然后将接受到的 response 传递给 callbacks，以暴露返回正文给开发者处理
-- `streamPlan`  根据url发送网络请求，并将返回的流(stream)直接通过 callback 暴露给开发者
-- `downloadPlan`    下载url指向的文件到本地，开发者可以通过 callback 来处理下载成功与失败的情况
-
-使用方法: **[plan文档](./doc/plan.md)**
-
-*在未来的版本，你还可以自行创建更加灵活的爬取计划，甚至是你自己的计划模板。目前 nodespider 已经基本具备这些能力，但 api 和文档尚未完善，所以敬请期待*
-
-
-## Spider.prototype.connect(pipeObject)
 添加一个数据管道
+
 ```javascript
-s.connect(jsonPipe({
-    name: "myJson",
-    path: "./my.json",
-    items: [title, article, publish_date],
-}));
+const { jsonPipe } = require("nodespider");
+
+s.pipe("data", jsonPipe("./data.json"), [
+  "name",
+  "description",
+])
+
 ```
+
+### target
 
 nodespider 自带了三个管道发生器，可以帮助你快速建立一个数据管道：
-- `txt pipe`    数据以制表格式将保存到 txt 文档中
-- `json pipe`   数据将以json格式储存
-- `csv pipe`    数据将以 csv 格式储存
+
+- `txtPipe`    数据以制表格式将保存到 txt 文档中
+- `jsonPipe`   数据将以 json 格式储存
+- `csvPipe`    数据将以 csv 格式储存
 
 使用方法: **[pipe文档](./doc/pipe.md)**
 
-## Spider.prototype.save(pipeName, data)
-通过某个管道保存数据
-```javascript
-// connect a pipe
-s.connect(jsonPipe({
-    name: "myJson",
-    path: "./my.json",
-    items: [title, article, url],
-}))
-s.plan("saveDoc", (err, current, s) => {
-    const $ = current.$;
-    // save data through pipe
-    s.save("myJson", {
-        title: $("title").text(),
-        article: $("#readme").text(),
-        url: current.url,
-    });
+### fields
+
+
+
+```typescript
+s.pipe("trimedData", jsonPipe("./trimedData"), {
+  "name": (s) => s.trim()
+  "description": (s) => s.trim().slice(0, 100)
 })
-s.queue("saveDoc", "https://github.com/Bin-Huang/NodeSpider");
 ```
+
+## Spider.prototype.save(pipeName, data)
+
+通过指定的管道保存数据
+
+```typescript
+s.save("trimedData", {
+  title: "title",
+  description: "hello, world"
+})
+```
+
+常见的使用场景是爬取过程中保存抓取的数据：
+
+```javascript
+s.pipe("data", csvPipe("./data.json"), [
+  "name",
+  "document",
+  "url",
+])
+s.plan("getDocument", defaultPlan((err, current, s) => {
+  const $ = current.$;
+  // save data through pipe
+  s.save("myJson", {
+    name: $("title").text(),
+    document: $("#readme").text(),
+    url: current.url,
+  });
+}))
+s.add("getDocument", "https://github.com/Bin-Huang/NodeSpider");
+```
+
+### 快捷写法
+
+除了提前用 `pipe` 方法声明外，你还可以在不声明的情况下直接保存数据到 `jsonPipe`, `txtPipe`, `csvPipe`：
+
+```javascript
+s.save("./urls.csv", {
+  name: "NodeSpider",
+  url: "https://github.com/Bin-Huang/NodeSpider"
+})
+
+// 上面的写法等价于：
+
+// s.pipe("./urls.csv", csvPipe("./urls.csv"), ["name", "url"])
+// s.save("./urls.csv", {
+//   name: "NodeSpider",
+//   url: "https://github.com/Bin-Huang/NodeSpider",
+// })
+```
+
+NodeSpider 会根据 planName 的路径及后缀（仅限 `.txt`, `.csv`, `txt`）、并根据 data 属性为 fields 自动建立对应的 pipe，然后再保存数据。如果你不需要在保存时对数据项进行加工，可以使用这种方法
 
 ## Spider.prototype.end()
 close the spider instance.
