@@ -5,26 +5,32 @@ const { Spider, defaultPlan } = require("nodespider");
 
 const s = new Spider();
 
+// 声明一个名为“printTitle”的计划
 s.plan("printTitle", defaultPlan((err, current) => {
     if (err) {
         s.retry(current, 3);
     } else {
         const $ = current.$;
         console.log($("title").text());
+        // 将爬取到的所有链接添加到该计划
         s.add("printTitle", $("a").url());
     }
 }));
+// 添加初始链接到计划“printTitle”
 s.add("printTitle", "https://github.com/explore");
 
 
 const { csvPipe } = require("nodespider");
 
+// 声明一个名为“localCsv”的数据管道
 s.pipe("localCsv", csvPipe("./data.csv"));
+
 s.plan("extract", defaultPlan((err, current) => {
     if (err) {
         s.retry(current, 3);
     } else {
         const $ = current.$;
+        // 通过管道保存抓取的数据
         s.save("localCsv", {
             name: $(".package-name a").text(),
             readme: $("#readme").html().slice(0, 100),
