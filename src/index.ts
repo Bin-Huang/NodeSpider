@@ -7,15 +7,15 @@ import streamPlan from "./plan/streamPlan";
 import Queue from "./queue";
 import Spider from "./spider";
 export {
-    csvPipe,
-    jsonPipe,
-    txtPipe,
+  csvPipe,
+  jsonPipe,
+  txtPipe,
 
-    defaultPlan,
-    streamPlan,
-    downloadPlan,
+  defaultPlan,
+  streamPlan,
+  downloadPlan,
 
-    Queue,
+  Queue,
 
-    Spider,
+  Spider,
 };

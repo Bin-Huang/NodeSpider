@@ -6,7 +6,7 @@ export type IPlan = (task: ITask, spider: Spider) => Promise<any>;
 export interface IQueue {
   add: (task: ITask) => void;
   jump: (task: ITask) => void;
-  next: () => ITask|null;
+  next: () => ITask | null;
   getLength: () => number;
 }
 
