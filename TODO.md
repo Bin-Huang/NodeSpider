@@ -10,10 +10,57 @@ x 修改方法名称
 - 完成 $.url 方法
 - 修改error报错信息
 
-为什么采用 method(name, data) 的模式？
+# 为什么采用 method(name, data) 的模式？
 - 可以更加灵活实现分布式爬取（简单redis）
 - ……
 但 pipe 是否可以避免这种写法？
+
+# 去除 retry 方法。具体实现交给 plan 实现? 比如使用 p-retry
+
+# 是否考虑
+
+s.plan('', defaultPlan((res) => {
+
+}))
+
+s.plan('', {
+  reties: 23,
+  handle: asyncFn,
+  handleError: fn,
+  concurrency: 10,  // 同名任务的最大并发数
+})
+
+s.plan('', defaultPlan({
+  reties: 6,
+  handleError: (error) => {
+    console.log(error)
+  },
+  handleResult: (res) => {
+    console.log(res.url)
+  },
+  loadJq: true,
+  option: {
+  }
+}))
+
+s.plan('', streamPlan({
+  handleError: console.log,
+  reties: 4,
+}))
+
+
+s.plan('hello', (current) => {
+  const $ = current.$
+  console.log($('title').text())
+})
+
+
+
+
+
+
+
+
 
 -------------------------
 

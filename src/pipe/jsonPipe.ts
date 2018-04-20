@@ -1,6 +1,6 @@
 import * as Apjson from "apjson";
 import * as fs from "fs-extra";
-import { IPipe } from "../types";
+import { IPipe } from "../interfaces";
 
 // TODO C 加个header？
 export interface IJsonPipeOption {

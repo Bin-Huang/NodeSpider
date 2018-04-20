@@ -1,6 +1,6 @@
 import * as Apjson from "apjson";
 import * as fs from "fs-extra";
-import { IPipe } from "../types";
+import { IPipe } from "../interfaces";
 
 export interface ICsvPipeOption {
     name: string;

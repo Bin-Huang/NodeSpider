@@ -3,8 +3,8 @@ import * as fs from "fs-extra";
 import * as got from "got";
 import * as http from "http";
 import * as path from "path";
+import { IPlan, ITask } from "../interfaces";
 import Spider from "../spider";
-import { IPlan, ITask } from "../types";
 
 /**
  * s.queue(dlPlan, "http://img.com/my.jpg"); ==> img.com!my.jpg

@@ -2,9 +2,6 @@ import { EventEmitter } from "events";
 import * as isAbsoluteUrl from "is-absolute-url";
 import * as request from "request";
 import * as uuid from "uuid";
-import defaultPlan from "./plan/defaultPlan";
-import downloadPlan from "./plan/downloadPlan";
-import Queue from "./queue";
 import {
     IOptions,
     IOpts,
@@ -15,7 +12,10 @@ import {
     IState,
     IStatus,
     ITask,
-} from "./types";
+} from "./interfaces";
+import defaultPlan from "./plan/defaultPlan";
+import downloadPlan from "./plan/downloadPlan";
+import Queue from "./queue";
 
 const defaultOption: IOpts = {
     concurrency: 20,

@@ -1,8 +1,8 @@
 import * as got from "got";
 import * as http from "http";
 import * as stream from "stream";
+import { IPlan, ITask } from "../interfaces";
 import Spider from "../spider";
-import { IPlan, ITask } from "../types";
 
 export interface ICurrent extends ITask {
   done: () => any;

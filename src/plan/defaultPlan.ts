@@ -5,9 +5,9 @@ import * as http from "http";
 import * as iconv from "iconv-lite";
 import * as request from "request";
 import * as url from "url";
+import { IPlan, ITask } from "../interfaces";
 import Spider from "../spider";
 import NodeSpider from "../spider";
-import { IPlan, ITask } from "../types";
 
 export interface ICurrent extends ITask {
     response: got.Response<Buffer>;
