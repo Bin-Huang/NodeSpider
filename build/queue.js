@@ -81,3 +81,4 @@ class LinkedQueue {
     }
 }
 exports.default = LinkedQueue;
+//# sourceMappingURL=queue.js.map

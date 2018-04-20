@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import * as http from "http";
+import { ITask } from "../interfaces";
 import Spider from "../spider";
-import { ITask } from "../types";
 /**
  * s.queue(dlPlan, "http://img.com/my.jpg"); ==> img.com!my.jpg
  * s.queue(dlPlan, "http://img.com/my.jpg", "name.jpg"); ===> name.jpg

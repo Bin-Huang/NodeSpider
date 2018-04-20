@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { EventEmitter } from "events";
-import { IOptions, IPipe, IPipeItems, IPlan, IState, ITask } from "./types";
+import { IOptions, IPipe, IPipeItems, IPlan, IState, ITask } from "./interfaces";
 /**
  * class of NodeSpider
  * @class NodeSpider
@@ -36,10 +36,10 @@ export default class NodeSpider extends EventEmitter {
     plan(name: string, plan: IPlan): void;
     /**
      * connect new pipe
-     * @param  {IPipe}  newPipe pipe object
+     * @param  {IPipe}  target pipe object
      * @return {void}
      */
-    pipe(name: string, newPipe: IPipe, items?: IPipeItems): void;
+    pipe(name: string, target: IPipe, items?: IPipeItems): void;
     retry(current: ITask, maxRetry: number, finalErrorCallback?: () => any): void;
     add(planName: string, url: string | string[], info?: {
         [index: string]: any;

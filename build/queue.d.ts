@@ -1,4 +1,4 @@
-import { IQueue, ITask } from "./types";
+import { IQueue, ITask } from "./interfaces";
 export interface ILinkNode<T> {
     value: T;
     next: ILinkNode<T> | null;

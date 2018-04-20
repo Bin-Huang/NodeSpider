@@ -5,10 +5,13 @@ x 增加 nodespider 生命周期和状态
 x 完善事件体系
 x 修改和思考 pipe 接口
 x 修改方法名称
-- 修改内置pipe
+x 修改内置pipe
+x 内置 pipe 的基本测试
 - 修改文档
 - 完成 $.url 方法
 - 修改error报错信息
+- 单元测试
+- - pipe
 
 # 为什么采用 method(name, data) 的模式？
 - 可以更加灵活实现分布式爬取（简单redis）

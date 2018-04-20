@@ -13,6 +13,9 @@ class JsonPipe {
     this.stream = fs.createWriteStream(path);
     this.isFirst = true;
   }
+  public convert(data: object) {
+    return data;
+  }
   public write(data: object) {
     const str = JSON.stringify(data, null, this.space);
     if (this.isFirst) {

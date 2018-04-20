@@ -3,8 +3,8 @@
 /// <reference types="cheerio" />
 import * as got from "got";
 import * as http from "http";
+import { IPlan, ITask } from "../interfaces";
 import Spider from "../spider";
-import { IPlan, ITask } from "../types";
 export interface ICurrent extends ITask {
     response: got.Response<Buffer>;
     body: string;

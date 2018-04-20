@@ -1,7 +1,17 @@
-const { Spider, streamPlan, defaultPlan, downloadPlan } = require("../build/index");
-const fs = require("fs");
+const { Spider, csvPipe, txtPipe, jsonPipe } = require("../build/index");
 
-const s = new Spider();
+const pipe = jsonPipe('./data')
+
+pipe.write({
+  name: 'ben',
+  age: 21,
+});
+pipe.write({
+  name: 'liki',
+  age: 23,
+});
+
+pipe.end();
 
 // ok!
 // s.plan("trySpider", (err, current) => {

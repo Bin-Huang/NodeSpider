@@ -1,12 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
 const isAbsoluteUrl = require("is-absolute-url");
@@ -118,14 +110,14 @@ class NodeSpider extends events_1.EventEmitter {
     }
     /**
      * connect new pipe
-     * @param  {IPipe}  newPipe pipe object
+     * @param  {IPipe}  target pipe object
      * @return {void}
      */
-    pipe(name, newPipe, items = []) {
+    pipe(name, target, items = []) {
         if (this._STATE.pipeStore.has(name)) {
             throw new TypeError(`method connect: there already have a pipe named "${name}"`);
         }
-        this._STATE.pipeStore.set(name, { items, pipe: newPipe });
+        this._STATE.pipeStore.set(name, { items, pipe: target });
     }
     retry(current, maxRetry, finalErrorCallback) {
         // 过滤出current重要的task基本信息
@@ -257,32 +249,31 @@ function changeStatus(status, spider) {
     spider._STATE.status = status;
     spider.emit(e.statusChange, status, preStatus);
 }
-function startTask(spider) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (spider._STATE.status === "active") {
-            const maxConcurrency = spider._STATE.opts.concurrency;
-            const currentTasksNum = spider._STATE.currentTasks.length;
-            if (maxConcurrency - currentTasksNum > 0) {
-                const currentTask = spider._STATE.queue.next();
-                if (!currentTask) {
-                    spider.emit(e.queueEmpty);
+async function startTask(spider) {
+    if (spider._STATE.status === "active") {
+        const maxConcurrency = spider._STATE.opts.concurrency;
+        const currentTasksNum = spider._STATE.currentTasks.length;
+        if (maxConcurrency - currentTasksNum > 0) {
+            const currentTask = spider._STATE.queue.next();
+            if (!currentTask) {
+                spider.emit(e.queueEmpty);
+            }
+            else {
+                spider._STATE.currentTasks.push(currentTask);
+                startTask(spider); // 不断递归，使爬虫并发任务数量尽可能达到最大限制
+                const plan = spider._STATE.planStore.get(currentTask.planName);
+                try {
+                    await plan(currentTask, spider);
                 }
-                else {
-                    spider._STATE.currentTasks.push(currentTask);
-                    startTask(spider); // 不断递归，使爬虫并发任务数量尽可能达到最大限制
-                    const plan = spider._STATE.planStore.get(currentTask.planName);
-                    try {
-                        yield plan(currentTask, spider);
-                    }
-                    catch (e) {
-                        spider.end(); // 停止爬虫并退出，以提醒并便于开发者debug
-                        console.error(`An error is threw from plan execution.
+                catch (e) {
+                    spider.end(); // 停止爬虫并退出，以提醒并便于开发者debug
+                    console.error(`An error is threw from plan execution.
                         Check your callback function, or create an issue in the planGenerator's repository`);
-                        throw e;
-                    }
-                    spider._STATE.currentTasks = spider._STATE.currentTasks.filter(({ uid }) => uid !== currentTask.uid);
+                    throw e;
                 }
+                spider._STATE.currentTasks = spider._STATE.currentTasks.filter(({ uid }) => uid !== currentTask.uid);
             }
         }
-    });
+    }
 }
+//# sourceMappingURL=spider.js.map
