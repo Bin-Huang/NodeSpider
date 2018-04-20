@@ -3,7 +3,6 @@ import * as cheerio from "cheerio";
 import * as got from "got";
 import * as http from "http";
 import * as iconv from "iconv-lite";
-import * as request from "request";
 import * as url from "url";
 import { IPlan, ITask } from "../interfaces";
 import Spider from "../spider";

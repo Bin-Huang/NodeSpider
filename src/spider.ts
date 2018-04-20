@@ -1,6 +1,4 @@
 import { EventEmitter } from "events";
-import * as isAbsoluteUrl from "is-absolute-url";
-import * as request from "request";
 import * as uuid from "uuid";
 import {
     IOptions,
@@ -67,7 +65,6 @@ export default class NodeSpider extends EventEmitter {
             startTask(this);
         });
         this.on(e.heartbeat, () => startTask(this));
-
     }
 
     /**
@@ -233,36 +230,37 @@ export default class NodeSpider extends EventEmitter {
         const store = this._STATE.pipeStore.get(pipeName);
         if (! store) {
             throw new TypeError(`method save: no such pipe named ${pipeName}`);
+        }
+
+        // TODO:
+        let { pipe, items } = store;
+        const d: {[index: string]: any} = {};
+        if (Array.isArray(items)) {
+            if (items.length === 0) {
+                store.items = Object.keys(data);
+                items = store.items;
+            }
+            for (const key of items) {
+                if (typeof data[key] === "undefined") {
+                    d[key] = null;
+                } else {
+                    d[key] = data[key];
+                }
+            }
         } else {
-            let { pipe, items } = store;
-            const d: {[index: string]: any} = {};
-            if (Array.isArray(items)) {
-                if (items.length === 0) {
-                    store.items = Object.keys(data);
-                    items = store.items;
-                }
-                for (const key of items) {
-                    if (typeof data[key] === "undefined") {
-                        d[key] = null;
-                    } else {
-                        d[key] = data[key];
-                    }
-                }
-            } else {
-                for (const key of Object.keys(items)) {
-                    const fn = items[key];
-                    if (typeof data[key] === "undefined") {
-                        d[key] = null;
-                    } else {
-                        d[key] = fn(data[key]);
-                    }
+            for (const key of Object.keys(items)) {
+                const fn = items[key];
+                if (typeof data[key] === "undefined") {
+                    d[key] = null;
+                } else {
+                    d[key] = fn(data[key]);
                 }
             }
-            if (pipe.convert) {
-                pipe.write(pipe.convert(d));
-            } else {
-                pipe.write(JSON.stringify(d));
-            }
+        }
+        if (pipe.convert) {
+            pipe.write(pipe.convert(d));
+        } else {
+            pipe.write(JSON.stringify(d));
         }
     }
 }
@@ -289,9 +287,8 @@ async function startTask(spider: NodeSpider) {
                 try {
                     await plan(currentTask, spider);
                 } catch (e) {
+                  // TODO: 这里需要修改
                     spider.end(); // 停止爬虫并退出，以提醒并便于开发者debug
-                    console.error(`An error is threw from plan execution.
-                        Check your callback function, or create an issue in the planGenerator's repository`);
                     throw e;
                 }
                 spider._STATE.currentTasks = spider._STATE.currentTasks.filter(({uid}) => uid !== currentTask.uid);
