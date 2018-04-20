@@ -28,7 +28,6 @@ class CsvPipe {
    * @param {Object} data
    */
   public write(items: any[]) {
-    // TODO: 考证：这里的实现，将会导致输出结果中每行不以逗号结尾，这可能不符合 csv 格式
     const chunk = items.reduce((str, c) => `${str},${c}`) + "\n";
     this.stream.write(chunk);
   }

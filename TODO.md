@@ -11,7 +11,7 @@ x 内置 pipe 的基本测试
 - 完成 $.url 方法
 - 修改error报错信息
 - 单元测试
-- - pipe
+- - pipe 单元测试
 
 # 为什么采用 method(name, data) 的模式？
 - 可以更加灵活实现分布式爬取（简单redis）
