@@ -41,9 +41,15 @@ export default class NodeSpider extends EventEmitter {
      */
     pipe(name: string, target: IPipe, items?: IPipeItems): void;
     retry(current: ITask, maxRetry: number, finalErrorCallback?: () => any): void;
+    /**
+     * add new tasks, return tasks' uuids
+     * @param planName target plan name
+     * @param url url(s)
+     * @param info attached information
+     */
     add(planName: string, url: string | string[], info?: {
         [index: string]: any;
-    }): void;
+    }): string[];
     /**
      * Save data through a pipe
      * @param  {string} pipeName pipe name

@@ -171,27 +171,27 @@ export default class NodeSpider extends EventEmitter {
         this.emit(e.addTask, retryTask);    // TODO: 确定让重试任务也触发“addTask”事件？
     }
 
-    // TODO: 返回uid或者uid[]
-    public add(planName: string, url: string | string[], info?: {[index: string]: any}): void {
+    /**
+     * add new tasks, return tasks' uuids
+     * @param planName target plan name
+     * @param url url(s)
+     * @param info attached information
+     */
+    public add(planName: string, url: string | string[], info?: {[index: string]: any}): string[] {
         const plan = this._STATE.planStore.get(planName);
         if (! plan) {
             throw new TypeError(`method queue: no such plan named "${planName}"`);
         }
-        const noPassList: any[] = [];   // 因为格式不对、未能添加的成员队列
-        if (! Array.isArray(url)) {
-            url = [ url ];
+        const urls = Array.isArray(url) ? url : [ url ];
+
+        const tasks = urls.map((u) => ({ uid: uuid(), url: u, planName, info }));
+        for (const task of tasks) {
+          this._STATE.queue.add(task);
+          this._STATE.pool.add(task.url);
+          this.emit(e.addTask, task);
         }
 
-        url.map((u) => {
-            if (typeof u !== "string" || ! isAbsoluteUrl(u)) {
-                noPassList.push(u);
-            } else {
-                const newTask = { uid: uuid(), url: u, planName, info };
-                this._STATE.queue.add(newTask);
-                this._STATE.pool.add(newTask.url);
-                this.emit(e.addTask, newTask);
-            }
-        });
+        return tasks.map((t) => t.uid);
     }
 
     // public download(path: string, url: string, filename?: string) {
