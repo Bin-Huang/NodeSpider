@@ -17,7 +17,7 @@ export type IHandle =
 export interface IOption {
   name: string;
   handle: IHandle;
-  catch?: (error: Error) => any;
+  catch?: (error: Error, task: ITask, spider: Spider) => any;
   retries?: number;
   toUtf8?: boolean;
   requestOpts?: http.RequestOptions;  // encoding 必须为 null

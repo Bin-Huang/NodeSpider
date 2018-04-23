@@ -20,26 +20,26 @@ export interface ICurrent extends ITask {
 }
 
 export interface IOption {
+  name: string;
   path: string;
-  callback?: (err: Error | null, current: ICurrent, s: Spider) => Promise<any> | any; // 当下载完成或出错时调用
+  retries?: number;
+  callback?: (current: ICurrent, s: Spider) => Promise<any> | any; // 当下载完成或出错时调用
+  catch?: (error: Error, task: ITask, spider: Spider) => any;
   requestOpts?: http.RequestOptions;
 }
-
 const defaultOpts = {
-  callback: (err: Error | null, current: ICurrent, s: Spider): Promise<any> | any => {
-    // tslint:disable-next-line:no-console
-    if (err) { console.error(err); }
-    return;
-  },
+  retries: 3,
+  callback: (current: ICurrent, s: Spider) => null,
+  catch: (error: Error) => { throw error; },
 };
 
-export default function downloadPlan(option: IOption | string) {
-  if (typeof option === "string") {
-    option = { path: option };
-  }
+export default function downloadPlan(option: IOption): IPlan {
   const opts = { ...defaultOpts, ...option };
-  return (task: ITask, spider: Spider) => {
-    return new Promise((resolve, reject) => {
+  return {
+    name: opts.name,
+    retries: opts.retries,
+    catch: opts.catch,
+    process: async (task: ITask, spider: Spider) => {
       let filename: string; // 将url转化为合法的文件名
       if (task.info && typeof task.info.filename === "string") {
         filename = task.info.filename;
@@ -48,25 +48,19 @@ export default function downloadPlan(option: IOption | string) {
       }
       const filepath = path.resolve(opts.path, filename);    // 安全地拼接保存路径
 
-      const req = got.stream(task.url, opts.requestOpts);
-      const file = fs.createWriteStream(filepath);
-      req.pipe(file);
-
-      const current = { ...task, filepath };
-
-      // TODO: handle callback error
-      const handle = (e: Error | null, c: ICurrent, s: Spider) => {
-        const result = opts.callback(e, c, s);
-        if (result instanceof Promise) {
-          result.then((r) => resolve(r));
-        } else {
-          resolve(result);
-        }
-      };
-      req.on("error", (e) => handle(e, current, spider));
-      file.on("error", (e: Error) => handle(e, current, spider));
-      file.on("error", (e: Error) => handle(e, current, spider));
-      file.on("finish", () => handle(null, current, spider));
-    });
+      await downloadAsync(task.url, filepath, opts.requestOpts);
+      await opts.callback({...task, filepath}, spider);
+    },
   };
+}
+
+function downloadAsync(url: string, filepath: string, opts?: http.RequestOptions ) {
+  return new Promise((resolve, reject) => {
+    const req = got.stream(url, opts);
+    const file = fs.createWriteStream(filepath);
+    req.pipe(file);
+    req.on("error", reject);
+    file.on("error", reject);
+    file.on("finish", resolve);
+  });
 }
