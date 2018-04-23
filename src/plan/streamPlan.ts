@@ -17,7 +17,7 @@ export interface IOption {
 
 const defaultOption = {};
 
-export default function streamPlan(option: IOption | ICallback): IPlan {
+export default function streamPlan(option: IOption): IPlan {
   let opts: IOption;
   if (typeof option === "function") {
     opts = { ...defaultOption, callback: option };

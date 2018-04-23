@@ -21,27 +21,9 @@ s.plan(defaultPlan({
     console.log($("title").text()); // 每经过一个页面，打印它的标题
     console.log(i++);
     if (i < 200000) {
-        s.add("take a walk", $("a").url());
+      s.add("take a walk", s.filter($("a").urls()));
     }
   },
 }));
 
 s.add("take a walk", "http://www.baidu.com");
-
-
-setTimeout(() => {
-    i = 0;
-    console.log("============")
-    s.add("take a walk", "http://www.baidu.com");
-}, 6000);
-
-setTimeout(() => {
-    i = 0;
-    console.log("============")
-    s.end();
-    s.add("take a walk", "http://www.baidu.com");
-}, 12000);
-
-setTimeout(() => {
-    s.add("take a walk", "http://www.baidu.com");
-}, 15000);

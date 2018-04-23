@@ -10,14 +10,21 @@ export interface ICurrent extends ITask {
     body: string;
     $?: CheerioStatic;
 }
-export declare type ICallback = (err: Error | null, current: ICurrent, spider: Spider) => any | Promise<any>;
+export declare type IHandle = (current: ICurrent, spider: Spider) => any | Promise<any>;
 export interface IOption {
-    callback: ICallback;
+    name: string;
+    handle: IHandle;
+    catch?: (error: Error) => any;
+    retries?: number;
     toUtf8?: boolean;
     jQ?: boolean;
     requestOpts?: http.RequestOptions;
 }
-export default function defaultPlan(option: IOption | ICallback): IPlan;
+export interface IDefaultPlan {
+    (name: string, handle: IHandle): IPlan;
+    (option: IOption): IPlan;
+}
+export default function defaultPlan(option: IOption): IPlan;
 /**
  * 根据currentTask.body加载jQ对象，并扩展url、todo、download方法，以第三个参数$的形式传递
  */

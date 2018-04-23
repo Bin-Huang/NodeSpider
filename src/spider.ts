@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import * as pRetry from "p-retry";
 import * as uuid from "uuid";
 import {
   IOptions,
@@ -46,7 +47,7 @@ export default class NodeSpider extends EventEmitter {
       opts,
       currentTasks: [],
       pipeStore: new Map(),
-      planStore: new Map(),
+      planStore: [],
       queue: opts.queue,
       heartbeat: setInterval(() => this.emit(e.heartbeat), 4000),
       pool: opts.pool,
@@ -121,12 +122,11 @@ export default class NodeSpider extends EventEmitter {
    * @param  {IPlan}  plan plan object
    * @return {void}
    */
-  public plan(name: string, plan: IPlan): void {
-    if (this._STATE.planStore.has(name)) {
+  public plan(plan: IPlan): void {
+    if (this._STATE.planStore.find((p) => p.name === plan.name)) {
       throw new TypeError(`method add: there already have a plan named "${plan.name}"`);
     }
-    // 添加plan到planStore
-    this._STATE.planStore.set(name, plan);
+    this._STATE.planStore.push(plan);
   }
 
   /**
@@ -175,7 +175,7 @@ export default class NodeSpider extends EventEmitter {
    * @param info attached information
    */
   public add(planName: string, url: string | string[], info?: { [index: string]: any }): string[] {
-    const plan = this._STATE.planStore.get(planName);
+    const plan = this._STATE.planStore.find((p) => p.name === planName);
     if (!plan) {
       throw new TypeError(`method queue: no such plan named "${planName}"`);
     }
@@ -283,14 +283,9 @@ async function startTask(spider: NodeSpider) {
         spider._STATE.currentTasks.push(currentTask);
         startTask(spider);    // 不断递归，使爬虫并发任务数量尽可能达到最大限制
 
-        const plan = spider._STATE.planStore.get(currentTask.planName) as IPlan;
-        try {
-          await plan(currentTask, spider);
-        } catch (e) {
-          // TODO: 这里需要修改
-          spider.end(); // 停止爬虫并退出，以提醒并便于开发者debug
-          throw e;
-        }
+        const plan = spider._STATE.planStore.find((p) => p.name === currentTask.planName) as IPlan;
+        await pRetry(() => plan.process(currentTask, spider), { retries: plan.retries }).catch(plan.catch);
+
         spider._STATE.currentTasks = spider._STATE.currentTasks.filter(({ uid }) => uid !== currentTask.uid);
       }
     }

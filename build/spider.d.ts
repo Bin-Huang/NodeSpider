@@ -33,7 +33,7 @@ export default class NodeSpider extends EventEmitter {
      * @param  {IPlan}  plan plan object
      * @return {void}
      */
-    plan(name: string, plan: IPlan): void;
+    plan(plan: IPlan): void;
     /**
      * connect new pipe
      * @param  {IPipe}  target pipe object

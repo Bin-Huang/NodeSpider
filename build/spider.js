@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
+const pRetry = require("p-retry");
 const uuid = require("uuid");
 const queue_1 = require("./queue");
 const defaultOption = {
@@ -31,7 +32,7 @@ class NodeSpider extends events_1.EventEmitter {
             opts,
             currentTasks: [],
             pipeStore: new Map(),
-            planStore: new Map(),
+            planStore: [],
             queue: opts.queue,
             heartbeat: setInterval(() => this.emit(e.heartbeat), 4000),
             pool: opts.pool,
@@ -100,12 +101,11 @@ class NodeSpider extends events_1.EventEmitter {
      * @param  {IPlan}  plan plan object
      * @return {void}
      */
-    plan(name, plan) {
-        if (this._STATE.planStore.has(name)) {
+    plan(plan) {
+        if (this._STATE.planStore.find((p) => p.name === plan.name)) {
             throw new TypeError(`method add: there already have a plan named "${plan.name}"`);
         }
-        // 添加plan到planStore
-        this._STATE.planStore.set(name, plan);
+        this._STATE.planStore.push(plan);
     }
     /**
      * connect new pipe
@@ -151,7 +151,7 @@ class NodeSpider extends events_1.EventEmitter {
      * @param info attached information
      */
     add(planName, url, info) {
-        const plan = this._STATE.planStore.get(planName);
+        const plan = this._STATE.planStore.find((p) => p.name === planName);
         if (!plan) {
             throw new TypeError(`method queue: no such plan named "${planName}"`);
         }
@@ -203,8 +203,8 @@ class NodeSpider extends events_1.EventEmitter {
         if (!store) {
             throw new TypeError(`method save: no such pipe named ${pipeName}`);
         }
-        // TODO:
-        let { pipe, items } = store;
+        const { pipe } = store;
+        let { items } = store;
         const d = {};
         if (Array.isArray(items)) {
             if (items.length === 0) {
@@ -257,15 +257,8 @@ async function startTask(spider) {
             else {
                 spider._STATE.currentTasks.push(currentTask);
                 startTask(spider); // 不断递归，使爬虫并发任务数量尽可能达到最大限制
-                const plan = spider._STATE.planStore.get(currentTask.planName);
-                try {
-                    await plan(currentTask, spider);
-                }
-                catch (e) {
-                    // TODO: 这里需要修改
-                    spider.end(); // 停止爬虫并退出，以提醒并便于开发者debug
-                    throw e;
-                }
+                const plan = spider._STATE.planStore.find((p) => p.name === currentTask.planName);
+                await pRetry(() => plan.process(currentTask, spider), { retries: plan.retries }).catch(plan.catch);
                 spider._STATE.currentTasks = spider._STATE.currentTasks.filter(({ uid }) => uid !== currentTask.uid);
             }
         }

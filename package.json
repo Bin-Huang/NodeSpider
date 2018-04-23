@@ -12,6 +12,7 @@
     "got": "^8.2.0",
     "iconv-lite": "^0.4.13",
     "is-absolute-url": "^2.1.0",
+    "p-retry": "^1.0.0",
     "request": "^2.78.0"
   },
   "devDependencies": {
@@ -22,6 +23,7 @@
     "@types/iconv-lite": "0.0.1",
     "@types/is-absolute-url": "^2.1.0",
     "@types/node": "^7.0.8",
+    "@types/p-retry": "^1.0.1",
     "@types/request": "^2.47.0",
     "jest": "^19.0.2"
   },

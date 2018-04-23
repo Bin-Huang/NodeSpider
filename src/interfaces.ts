@@ -1,7 +1,12 @@
 import * as fs from "fs";
 import Spider from "./spider";
 
-export type IPlan = (task: ITask, spider: Spider) => Promise<any>;
+export interface IPlan {
+  name: string;
+  retries: number;
+  process: (task: ITask, spider: Spider) => Promise<any>;
+  catch: (error: Error) => any;
+}
 
 export interface IQueue {
   add: (task: ITask) => void;
@@ -31,7 +36,7 @@ export type IPipeItems = string[] | { [index: string]: (data: any) => any };
 export interface IState {
   queue: IQueue;
   pool: IPool;
-  planStore: Map<string, IPlan>;
+  planStore: IPlan[];
   pipeStore: Map<string, {
     items: IPipeItems;
     pipe: IPipe;

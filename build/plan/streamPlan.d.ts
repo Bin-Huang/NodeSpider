@@ -13,4 +13,4 @@ export interface IOption {
     callback: ICallback;
     requestOpts?: http.RequestOptions;
 }
-export default function streamPlan(option: IOption | ICallback): IPlan;
+export default function streamPlan(option: IOption): IPlan;

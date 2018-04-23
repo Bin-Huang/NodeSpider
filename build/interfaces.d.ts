@@ -1,6 +1,11 @@
 /// <reference types="node" />
 import Spider from "./spider";
-export declare type IPlan = (task: ITask, spider: Spider) => Promise<any>;
+export interface IPlan {
+    name: string;
+    retries: number;
+    process: (task: ITask, spider: Spider) => Promise<any>;
+    catch: (error: Error) => any;
+}
 export interface IQueue {
     add: (task: ITask) => void;
     jump: (task: ITask) => void;
@@ -26,7 +31,7 @@ export declare type IPipeItems = string[] | {
 export interface IState {
     queue: IQueue;
     pool: IPool;
-    planStore: Map<string, IPlan>;
+    planStore: IPlan[];
     pipeStore: Map<string, {
         items: IPipeItems;
         pipe: IPipe;

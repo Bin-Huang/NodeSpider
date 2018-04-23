@@ -5,43 +5,30 @@ const cheerio = require("cheerio");
 const got = require("got");
 const iconv = require("iconv-lite");
 const url = require("url");
-const defaultOpts = {
+const defaultOption = {
     toUtf8: true,
     jQ: true,
     requestOpts: { encoding: null },
+    catch: (error) => { throw error; },
+    retries: 3,
 };
 function defaultPlan(option) {
-    if (typeof option === "function") {
-        option = { callback: option };
-    }
-    const opts = Object.assign({}, defaultOpts, option);
-    return async (task, spider) => {
-        let res;
-        let err = null;
-        let current;
-        try {
-            res = await got(task.url, opts.requestOpts);
-            current = Object.assign({}, task, { response: res, body: res.body.toString() });
-        }
-        catch (e) {
-            err = e;
-            current = Object.assign({}, task, { response: {}, body: "" });
-        }
-        if (!err) {
+    const opts = Object.assign({}, defaultOption, option);
+    return {
+        name: opts.name,
+        retries: opts.retries,
+        catch: opts.catch,
+        process: async (task, spider) => {
+            const res = await got(task.url, opts.requestOpts);
+            const current = Object.assign({}, task, { response: res, body: res.body.toString() });
             if (opts.toUtf8) {
                 current.body = preToUtf8(current.response);
             }
             if (opts.jQ) {
                 preLoadJq(current);
             }
-        }
-        try {
-            return await opts.callback(err, current, spider);
-        }
-        catch (e) {
-            // tslint:disable-next-line:no-console
-            console.log(`callback failed: ${e}`);
-        }
+            return await opts.handle(current, spider);
+        },
     };
 }
 exports.default = defaultPlan;
@@ -54,10 +41,10 @@ function preLoadJq(currentTask) {
     // 返回当前节点（们）链接的的绝对路径(array)
     // 自动处理了锚和 javascript: void(0)
     // TODO B 存在不合法链接的返回
-    $.prototype.url = function () {
+    $.prototype.urls = function () {
         const result = [];
-        $(this).each(function () {
-            let newUrl = $(this).attr("href");
+        $(this).map((ix, ele) => {
+            let newUrl = $(ele).attr("href");
             // 如果为空，或是类似 'javascirpt: void(0)' 的 js 代码，直接跳过
             if (!newUrl || /^javascript:/.test(newUrl)) {
                 return false;

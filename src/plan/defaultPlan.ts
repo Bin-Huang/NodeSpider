@@ -14,51 +14,48 @@ export interface ICurrent extends ITask {
   $?: CheerioStatic;
 }
 
-export type ICallback =
-  (err: Error | null, current: ICurrent, spider: Spider)
+export type IHandle =
+  (current: ICurrent, spider: Spider)
     => any | Promise<any>;
 
 export interface IOption {
-  callback: ICallback;
+  name: string;
+  handle: IHandle;
+  catch?: (error: Error) => any;
+  retries?: number;
   toUtf8?: boolean;
   jQ?: boolean;
-  requestOpts?: http.RequestOptions;
+  requestOpts?: http.RequestOptions;  // encoding 必须为 null
 }
 
-const defaultOpts = {
+const defaultOption = {
   toUtf8: true,
   jQ: true,
-  requestOpts: { encoding: null },
+  requestOpts: { encoding: null },  // 当输入 option 有requestOpts 设置，将可能导致encoding 不为 null
+  catch: (error) => { throw error; },
+  retries: 3,
 };
 
-export default function defaultPlan(option: IOption | ICallback): IPlan {
-  if (typeof option === "function") {
-    option = { callback: option };
-  }
-  const opts = { ...defaultOpts, ...option };
-  return async (task, spider) => {
-    let res: got.Response<Buffer>;
-    let err: Error | null = null;
-    let current: ICurrent;
-    try {
-      res = await got(task.url, opts.requestOpts);
-      current = { ...task, response: res, body: res.body.toString() };
-    } catch (e) {
-      err = e;
-      current = { ...task, response: {}, body: "" } as any;
-    }
+export interface IDefaultPlan {
+  (name: string, handle: IHandle): IPlan;
+  (option: IOption): IPlan;
+}
 
-    if (!err) {
+export default function defaultPlan(option: IOption): IPlan {
+  const opts = { ...defaultOption, ...option };
+  return {
+    name: opts.name,
+    retries: opts.retries,
+    catch: opts.catch,
+    process: async (task, spider) => {
+      const res: got.Response<Buffer> = await got(task.url, opts.requestOpts);
+      const current = { ...task, response: res, body: res.body.toString() };
+
       if (opts.toUtf8) { current.body = preToUtf8(current.response as got.Response<Buffer>); }
       if (opts.jQ) { preLoadJq(current); }
-    }
 
-    try {
-      return await opts.callback(err, current, spider);
-    } catch (e) {
-      // tslint:disable-next-line:no-console
-      console.log(`callback failed: ${e}`);
-    }
+      return await opts.handle(current, spider);
+    },
   };
 }
 
@@ -72,10 +69,10 @@ export function preLoadJq(currentTask: ICurrent): void {
   // 返回当前节点（们）链接的的绝对路径(array)
   // 自动处理了锚和 javascript: void(0)
   // TODO B 存在不合法链接的返回
-  $.prototype.url = function() {
+  $.prototype.urls = function(): string[] {
     const result: string[] = [];
-    $(this).each(function() {
-      let newUrl = $(this).attr("href");
+    $(this).map((ix, ele) => {
+      let newUrl = $(ele).attr("href");
       // 如果为空，或是类似 'javascirpt: void(0)' 的 js 代码，直接跳过
       if (!newUrl || /^javascript:/.test(newUrl)) {
         return false;
