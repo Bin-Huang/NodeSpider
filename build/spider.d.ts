@@ -51,6 +51,15 @@ export default class NodeSpider extends EventEmitter {
         [index: string]: any;
     }): string[];
     /**
+     * filter new tasks and add, return tasks' uuids
+     * @param planName target plan name
+     * @param url url(s)
+     * @param info attached information
+     */
+    addU(planName: string, url: string | string[], info?: {
+        [index: string]: any;
+    }): string[];
+    /**
      * Save data through a pipe
      * @param  {string} pipeName pipe name
      * @param  {any}    data     data you need to save

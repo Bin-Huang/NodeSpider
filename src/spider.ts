@@ -191,6 +191,17 @@ export default class NodeSpider extends EventEmitter {
     return tasks.map((t) => t.uid);
   }
 
+  /**
+   * filter new tasks and add, return tasks' uuids
+   * @param planName target plan name
+   * @param url url(s)
+   * @param info attached information
+   */
+  public addU(planName: string, url: string | string[], info?: { [index: string]: any }): string[] {
+    const urls = Array.isArray(url) ? url : [url];
+    return this.add(planName, this.filter(urls), info);
+  }
+
   // public download(path: string, url: string, filename?: string) {
   //     if (typeof path !== "string") {
   //         throw new TypeError(`method download: the parameter 'path' should be a string`);
