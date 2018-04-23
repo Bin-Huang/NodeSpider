@@ -72,9 +72,9 @@ export function preLoadJq(currentTask: ICurrent): void {
   // 返回当前节点（们）链接的的绝对路径(array)
   // 自动处理了锚和 javascript: void(0)
   // TODO B 存在不合法链接的返回
-  $.prototype.url = function () {
+  $.prototype.url = function() {
     const result: string[] = [];
-    $(this).each(function () {
+    $(this).each(function() {
       let newUrl = $(this).attr("href");
       // 如果为空，或是类似 'javascirpt: void(0)' 的 js 代码，直接跳过
       if (!newUrl || /^javascript:/.test(newUrl)) {
@@ -98,9 +98,9 @@ export function preLoadJq(currentTask: ICurrent): void {
    * 获得选中节点（们）的 src 路径（自动补全）
    * @returns {array}
    */
-  $.prototype.src = function () {
+  $.prototype.src = function() {
     const result: string[] = [];
-    $(this).each(function () {
+    $(this).each(function() {
       let newUrl = $(this).attr("src");
       // 如果是相对路径，补全路径为绝对路径
       if (newUrl && !/^https?:\/\//.test(newUrl)) {
