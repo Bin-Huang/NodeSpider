@@ -141,33 +141,6 @@ export default class NodeSpider extends EventEmitter {
     this._STATE.pipeStore.set(name, { items, pipe: target });
   }
 
-  public retry(current: ITask, maxRetry: number, finalErrorCallback?: () => any): void {
-    // 过滤出current重要的task基本信息
-    const retryTask = {
-      uid: current.uid,
-      hasRetried: current.hasRetried,
-      info: current.info,
-      planName: current.planName,
-      url: current.url,
-    };
-    if (!retryTask.hasRetried) {
-      retryTask.hasRetried = 0;
-    }
-    if (!finalErrorCallback) {
-      finalErrorCallback = () => {
-        throw new Error(`
-                    ${current.url}达到最大重试次数，但依然出错
-                `);
-      };
-    }
-    if (retryTask.hasRetried >= maxRetry) {
-      return finalErrorCallback();
-    }
-    retryTask.hasRetried++;
-    this._STATE.queue.jump(retryTask);    // 插队到队列，重新等待执行
-    this.emit(e.addTask, retryTask);    // TODO: 确定让重试任务也触发“addTask”事件？
-  }
-
   /**
    * add new tasks, return tasks' uuids
    * @param planName target plan name
@@ -295,7 +268,8 @@ async function startTask(spider: NodeSpider) {
         startTask(spider);    // 不断递归，使爬虫并发任务数量尽可能达到最大限制
 
         const plan = spider._STATE.planStore.find((p) => p.name === currentTask.planName) as IPlan;
-        await pRetry(() => plan.process(currentTask, spider), { retries: plan.retries }).catch(plan.catch);
+        await pRetry(() => plan.process(currentTask, spider), { retries: plan.retries })
+          .catch((err) => plan.catch(err, currentTask, spider));
 
         spider._STATE.currentTasks = spider._STATE.currentTasks.filter(({ uid }) => uid !== currentTask.uid);
       }

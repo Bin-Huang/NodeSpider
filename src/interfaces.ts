@@ -15,7 +15,6 @@ export interface IQueue {
   getLength: () => number;
 }
 
-// TODO: 除了url，还可以是其他的嘛: new Pool("info.id")
 export interface IPool {
   add: (url: string) => void;
   has: (url: string) => boolean;
