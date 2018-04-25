@@ -20,11 +20,13 @@ const defaultOption: IOpts = {
   concurrency: 20,
   queue: new Queue(),
   pool: new Set<string>(),
+  heartbeat: 4000,
 };
 
 const e = {
   statusChange: "statusChange",
   addTask: "addTask",
+  taskDone: "taskDone",
   queueEmpty: "queueEmpty",
   heartbeat: "heartbeat",
   goodbye: "goodbye",
@@ -49,7 +51,7 @@ export default class NodeSpider extends EventEmitter {
       pipeStore: new Map(),
       planStore: [],
       queue: opts.queue,
-      heartbeat: setInterval(() => this.emit(e.heartbeat), 4000),
+      heartbeat: setInterval(() => this.emit(e.heartbeat), opts.heartbeat),
       pool: opts.pool,
       status: "vacant",   // 初始化后，在获得新任务前，将保持“空闲”状态
     };
@@ -66,6 +68,18 @@ export default class NodeSpider extends EventEmitter {
       startTask(this);
     });
     this.on(e.heartbeat, () => startTask(this));
+    this.on(e.taskDone, () => {
+      if (this._STATE.status === "active") {
+        startTask(this);
+      } else if (this._STATE.status === "end" && this._STATE.currentTasks.length === 0) {
+        for (const { pipe } of this._STATE.pipeStore.values()) {
+          pipe.end();
+        }
+        clearInterval(this._STATE.heartbeat);
+        // TODO: end
+        this.emit(e.goodbye);
+      }
+    });
   }
 
   /**
@@ -73,11 +87,6 @@ export default class NodeSpider extends EventEmitter {
    */
   public end() {
     changeStatus("end", this);
-    for (const { pipe } of this._STATE.pipeStore.values()) {
-      pipe.end();
-    }
-    clearInterval(this._STATE.heartbeat);
-    this.emit(e.goodbye);
   }
 
   /**
@@ -272,6 +281,7 @@ async function startTask(spider: NodeSpider) {
           .catch((err) => plan.catch(err, currentTask, spider));
 
         spider._STATE.currentTasks = spider._STATE.currentTasks.filter(({ uid }) => uid !== currentTask.uid);
+        spider.emit(e.taskDone, currentTask);
       }
     }
   }

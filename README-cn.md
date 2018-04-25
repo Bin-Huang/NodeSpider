@@ -1,63 +1,57 @@
 [beta]  现仅处于开发状态
 
+**easy to use**
 ```javascript
-const { Spider, defaultPlan } = require("nodespider");
-
+const { Spider, jqPlan } = require("nodespider");
 const s = new Spider();
 
-// 声明一个名为“printTitle”的计划
-s.plan("printTitle", defaultPlan((err, current) => {
-    if (err) {
-        s.retry(current, 3);
-    } else {
-        const $ = current.$;
-        console.log($("title").text());
-        // 将爬取到的所有链接添加到该计划
-        s.add("printTitle", $("a").url());
-    }
-}));
-// 添加初始链接到计划“printTitle”
+s.plan(jqPlan({
+  name: "printTitle",
+  handle: ($) => console.log($("title").text()),
+}))
+
 s.add("printTitle", "https://github.com/explore");
-
-
-const { csvPipe } = require("nodespider");
-
-// 声明一个名为“localCsv”的数据管道
-s.pipe("localCsv", csvPipe("./data.csv"));
-
-s.plan("extract", defaultPlan((err, current) => {
-    if (err) {
-        s.retry(current, 3);
-    } else {
-        const $ = current.$;
-        // 通过管道保存抓取的数据
-        s.save("localCsv", {
-            name: $(".package-name a").text(),
-            readme: $("#readme").html().slice(0, 100),
-        });
-    }
-}));
-s.add("extract", [
-    "https://www.npmjs.com/package/nodespider",
-    "https://www.npmjs.com/package/got",
-    "https://www.npmjs.com/package/tyty",
-]);
-
-
-const { downloadPlan } = require("nodespider");
-
-s.plan("saveImg", downloadPlan("./download/myImg"));
-s.add("saveImg", "https://www.npmjs.com/static/images/mountain-dot.svg");
-
-
-s.end();
 ```
 
-# Installation & initialization
+**save extracted data**
+```javascript
+const { Spider, jqPlan, csvPipe } = require("nodespider");
+const s = new Spider();
+
+s.pipe("localCsv", csvPipe("./data.csv"));
+
+s.plan(jqPlan({
+  name: "extract",
+  handle: ($) => {
+    s.save("localCsv", {
+        name: $(".package-name a").text(),
+        readme: $("#readme").html().slice(0, 100),
+    });
+  },
+}))
+
+s.add("extract", "https://www.npmjs.com/package/nodespider")
+```
+
+**download**
+```javascript
+const { Spider, downloadPlan } = require("nodespider");
+const s = new Spider();
+
+s.plan(downloadPlan({
+  name: "saveImg",
+  path: "./download",
+}))
+s.add("saveImg", "https://www.npmjs.com/static/images/mountain-dot.svg");
+```
+
+# Installation
 
 ```bash
 npm install nodespider --save
 ```
+
+# new Spider(options)
 
 ```javascript
 const { Spider } = require("nodespider");

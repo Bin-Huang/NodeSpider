@@ -52,12 +52,14 @@ export interface IOptions {
   concurrency?: number;
   queue?: IQueue;
   pool?: IPool;
+  heartbeat?: number;
 }
 // 记录在state中的设置
 export interface IOpts {
   concurrency: number;
   queue: IQueue;
   pool: IPool;
+  heartbeat: number;
 }
 
 // for task object in the queue;在queue保存的task
