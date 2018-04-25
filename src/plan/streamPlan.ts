@@ -8,7 +8,7 @@ export interface IOption {
   name: string;
   handle: (stream: got.GotEmitter & stream.Duplex, done: (e?: Error) => any, current: ITask, s: Spider) => any;
   retries?: number;
-  catch?: (err: Error) => any;
+  catch?: (error: Error, task: ITask, spider: Spider) => any;
   requestOpts?: http.RequestOptions;
 }
 
