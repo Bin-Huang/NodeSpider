@@ -11,7 +11,7 @@ import defaultPlan from "./defaultPlan";
 import { ICurrent } from "./defaultPlan";
 
 export type IHandle =
-  ($: Jq, current: ICurrent, spider: Spider)
+  ($: IJq, current: ICurrent, spider: Spider)
     => any | Promise<any>;
 
 export interface IOption {
@@ -65,15 +65,15 @@ export default function jqPlan(option: IOption): IPlan {
   // };
 }
 
-export interface Jq extends CheerioStatic {
-  (selector: string): Jq;
+export interface IJq extends CheerioStatic {
+  (selector: string): IJq;
   urls: () => string[];
 }
 
 /**
  * 根据currentTask.body加载jQ对象，并扩展url、todo、download方法，以第三个参数$的形式传递
  */
-export function loadJq(currentTask: ICurrent): Jq {
+export function loadJq(currentTask: ICurrent): IJq {
   const $ = cheerio.load(currentTask.body);
 
   // 扩展：添加 url 方法
@@ -102,22 +102,22 @@ export function loadJq(currentTask: ICurrent): Jq {
     return result;
   };
 
-  /**
-   * 获得选中节点（们）的 src 路径（自动补全）
-   * @returns {array}
-   */
-  $.prototype.src = function() {
-    const result: string[] = [];
-    $(this).each(function() {
-      let newUrl = $(this).attr("src");
-      // 如果是相对路径，补全路径为绝对路径
-      if (newUrl && !/^https?:\/\//.test(newUrl)) {
-        newUrl = url.resolve(currentTask.url, newUrl);
-      }
-      result.push(newUrl);
-    });
-    return result;
-  };
+  // /**
+  //  * 获得选中节点（们）的 src 路径（自动补全）
+  //  * @returns {array}
+  //  */
+  // $.prototype.src = function() {
+  //   const result: string[] = [];
+  //   $(this).each(function() {
+  //     let newUrl = $(this).attr("src");
+  //     // 如果是相对路径，补全路径为绝对路径
+  //     if (newUrl && !/^https?:\/\//.test(newUrl)) {
+  //       newUrl = url.resolve(currentTask.url, newUrl);
+  //     }
+  //     result.push(newUrl);
+  //   });
+  //   return result;
+  // };
 
-  return $ as Jq;
+  return $ as IJq;
 }

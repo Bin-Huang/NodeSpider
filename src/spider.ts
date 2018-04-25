@@ -76,7 +76,6 @@ export default class NodeSpider extends EventEmitter {
           pipe.end();
         }
         clearInterval(this._STATE.heartbeat);
-        // TODO: end
         this.emit(e.goodbye);
       }
     });

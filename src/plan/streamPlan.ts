@@ -4,37 +4,38 @@ import * as stream from "stream";
 import { IPlan, ITask } from "../interfaces";
 import Spider from "../spider";
 
-export interface ICurrent extends ITask {
-  done: () => any;
-}
-
-export type ICallback = (stream: got.GotEmitter & stream.Duplex, current: ICurrent, s: Spider) => any;
-
 export interface IOption {
-  callback: ICallback;
+  name: string;
+  handle: (stream: got.GotEmitter & stream.Duplex, done: (e?: Error) => any, current: ITask, s: Spider) => any;
+  retries?: number;
+  catch?: (err: Error) => any;
   requestOpts?: http.RequestOptions;
 }
 
-const defaultOption = {};
+const defaultOption = {
+  retries: 3,
+  catch: (err: Error) => { throw err; },
+};
 
 export default function streamPlan(option: IOption): IPlan {
-  let opts: IOption;
-  if (typeof option === "function") {
-    opts = { ...defaultOption, callback: option };
-  } else {
-    opts = { ...defaultOption, ...option };
-  }
-  return async (task: ITask, spider: Spider) => {
-    return new Promise((resolve, reject) => {
-      const flow = got.stream(task.url, opts.requestOpts);
-      const current: ICurrent = { done: resolve, ...task };
-      // TODO: handle error from callback
-      opts.callback(flow, current, spider);
-
-      // TODO: 考慮自動resolve的安全模式
-      // flow.on("error", resolve);
-      // flow.on("end", resolve);
-    });
+  const opts = { ...defaultOption, ...option };
+  return {
+    name: opts.name,
+    retries: opts.retries,
+    catch: opts.catch,
+    process: async (task, spider) => {
+      return new Promise((resolve, reject) => {
+        const flow = got.stream(task.url, opts.requestOpts);
+        const done = (err?: Error) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        };
+        opts.handle(flow, done, task, spider);
+      });
+    },
   };
 }
 
