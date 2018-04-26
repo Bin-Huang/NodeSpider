@@ -48,7 +48,7 @@ export default class NodeSpider extends EventEmitter {
     this._STATE = {
       opts,
       currentTasks: [],
-      pipeStore: new Map(),
+      pipeStore: [],
       planStore: [],
       queue: opts.queue,
       heartbeat: setInterval(() => this.emit(e.heartbeat), opts.heartbeat),
@@ -72,7 +72,7 @@ export default class NodeSpider extends EventEmitter {
       if (this._STATE.status === "active") {
         startTask(this);
       } else if (this._STATE.status === "end" && this._STATE.currentTasks.length === 0) {
-        for (const { pipe } of this._STATE.pipeStore.values()) {
+        for (const pipe of this._STATE.pipeStore) {
           pipe.end();
         }
         clearInterval(this._STATE.heartbeat);
@@ -142,11 +142,11 @@ export default class NodeSpider extends EventEmitter {
    * @param  {IPipe}  target pipe object
    * @return {void}
    */
-  public pipe(name: string, target: IPipe, items: IPipeItems = []): void {
-    if (this._STATE.pipeStore.has(name)) {
+  public pipe(newPipe: IPipe): void {
+    if (this._STATE.pipeStore.find((p) => p.name === newPipe.name)) {
       throw new TypeError(`method connect: there already have a pipe named "${name}"`);
     }
-    this._STATE.pipeStore.set(name, { items, pipe: target });
+    this._STATE.pipeStore.push(newPipe);
   }
 
   /**
@@ -219,41 +219,26 @@ export default class NodeSpider extends EventEmitter {
     if (typeof data !== "object") {
       throw new TypeError(`method save: the parameter "data" should be an object`);
     }
-    const store = this._STATE.pipeStore.get(pipeName);
-    if (!store) {
+    const pipe = this._STATE.pipeStore.find((p) => p.name === pipeName);
+    if (!pipe) {
       throw new TypeError(`method save: no such pipe named ${pipeName}`);
     }
 
-    const { pipe } = store;
-    let { items } = store;
-    const d: { [index: string]: any } = {};
-    if (Array.isArray(items)) {
-      if (items.length === 0) {
-        store.items = Object.keys(data);
-        items = store.items;
-      }
-      for (const key of items) {
-        if (typeof data[key] === "undefined") {
-          d[key] = null;
-        } else {
-          d[key] = data[key];
-        }
+    if (! pipe.items) {
+      pipe.items = Object.keys(data);
+    }
+
+    if (Array.isArray(pipe.items)) {
+      for (const item of pipe.items) {
+        data[item] = (typeof data[item] !== "undefined") ? data[item] : null;
       }
     } else {
-      for (const key of Object.keys(items)) {
-        const fn = items[key];
-        if (typeof data[key] === "undefined") {
-          d[key] = null;
-        } else {
-          d[key] = fn(data[key]);
-        }
+      for (const [ item, fn ] of Object.entries(pipe.items)) {
+        data[item] = (typeof data[item] !== "undefined") ? fn(data[item]) : null;
       }
     }
-    if (pipe.convert) {
-      pipe.write(pipe.convert(d));
-    } else {
-      pipe.write(JSON.stringify(d));
-    }
+
+    pipe.write(data);
   }
 }
 

@@ -22,24 +22,22 @@ export interface IPool {
 }
 
 export interface IPipe {
+  name: string;
+  items?: IPipeItems;
   write: (data: any) => any;
   end: (data?: any) => any;
-  convert?: (data: { [index: string]: any }) => any;
 }
 
-export type IStatus = "active" | "end" | "pause" | "vacant";
-
 export type IPipeItems = string[] | { [index: string]: (data: any) => any };
+
+export type IStatus = "active" | "end" | "pause" | "vacant";
 
 // NodeSpider' state
 export interface IState {
   queue: IQueue;
   pool: IPool;
   planStore: IPlan[];
-  pipeStore: Map<string, {
-    items: IPipeItems;
-    pipe: IPipe;
-  }>;
+  pipeStore: IPipe[];
   opts: IOpts;
   currentTasks: ITask[];
 
