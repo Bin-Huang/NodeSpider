@@ -1,20 +1,25 @@
 import * as fs from "fs-extra";
-import { IPipe } from "../interfaces";
+import { IPipe, IPipeItems } from "../interfaces";
+
+export interface IJsonPipeOpts {
+  name: string;
+  path: string;
+  space?: number;
+  items?: IPipeItems;
+}
 
 class JsonPipe {
+  public name: string;
+  public items?: IPipeItems;
   private stream: fs.WriteStream;
   private isFirst: boolean;
   private space: number;
-  constructor(path: string, space = 4) {
-    if (typeof path !== "string") {
-      throw new TypeError('the string-typed parameter "path" is required');
-    }
-    this.space = space;
-    this.stream = fs.createWriteStream(path);
+  constructor(opts: IJsonPipeOpts) {
+    this.name = opts.name;
+    this.items = opts.items;
+    this.space = (typeof opts.space !== "undefined") ? opts.space : 4;
+    this.stream = fs.createWriteStream(opts.path);
     this.isFirst = true;
-  }
-  public convert(data: object) {
-    return data;
   }
   public write(data: object) {
     const str = JSON.stringify(data, null, this.space);
@@ -30,6 +35,6 @@ class JsonPipe {
   }
 }
 
-export default function jsonPipe(path: string, space?: number): IPipe {
-  return new JsonPipe(path, space);
+export default function jsonPipe(opts: IJsonPipeOpts): IPipe {
+  return new JsonPipe(opts);
 }

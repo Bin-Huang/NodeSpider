@@ -2,16 +2,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs-extra");
 class JsonPipe {
-    constructor(path, space = 4) {
-        if (typeof path !== "string") {
-            throw new TypeError('the string-typed parameter "path" is required');
-        }
-        this.space = space;
-        this.stream = fs.createWriteStream(path);
+    constructor(opts) {
+        this.name = opts.name;
+        this.items = opts.items;
+        this.space = (typeof opts.space !== "undefined") ? opts.space : 4;
+        this.stream = fs.createWriteStream(opts.path);
         this.isFirst = true;
-    }
-    convert(data) {
-        return data;
     }
     write(data) {
         const str = JSON.stringify(data, null, this.space);
@@ -27,8 +23,8 @@ class JsonPipe {
         this.stream.end("\n]");
     }
 }
-function jsonPipe(path, space) {
-    return new JsonPipe(path, space);
+function jsonPipe(opts) {
+    return new JsonPipe(opts);
 }
 exports.default = jsonPipe;
 //# sourceMappingURL=jsonPipe.js.map

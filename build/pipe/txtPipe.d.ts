@@ -1,2 +1,7 @@
-import { IPipe } from "../interfaces";
-export default function txtPipe(path: string): IPipe;
+import { IPipe, IPipeItems } from "../interfaces";
+export interface ITxtPipeOpts {
+    name: string;
+    path: string;
+    items?: IPipeItems;
+}
+export default function txtPipe(opts: ITxtPipeOpts): IPipe;

@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import * as http from "http";
-import { ITask } from "../interfaces";
+import { IPlan, ITask } from "../interfaces";
 import Spider from "../spider";
 /**
  * s.queue(dlPlan, "http://img.com/my.jpg"); ==> img.com!my.jpg
@@ -14,8 +14,11 @@ export interface ICurrent extends ITask {
     filepath: string;
 }
 export interface IOption {
+    name: string;
     path: string;
-    callback?: (err: Error | null, current: ICurrent, s: Spider) => Promise<any> | any;
+    retries?: number;
+    callback?: (current: ICurrent, s: Spider) => Promise<any> | any;
+    catch?: (error: Error, task: ITask, spider: Spider) => any;
     requestOpts?: http.RequestOptions;
 }
-export default function downloadPlan(option: IOption | string): (task: ITask, spider: Spider) => Promise<{}>;
+export default function downloadPlan(option: IOption): IPlan;

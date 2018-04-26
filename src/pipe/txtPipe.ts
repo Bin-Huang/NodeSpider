@@ -1,28 +1,33 @@
 import * as fs from "fs-extra";
-import { IPipe } from "../interfaces";
+import { IPipe, IPipeItems } from "../interfaces";
+
+export interface ITxtPipeOpts {
+  name: string;
+  path: string;
+  items?: IPipeItems;
+}
 
 class TxtPipe {
+  public name: string;
+  public items?: IPipeItems;
   private stream: fs.WriteStream;
   private header: string[];
-  constructor(path: string) {
-    if (typeof path !== "string") {
-      throw new TypeError('the string-typed parameter "path" is required');
-    }
-    this.stream = fs.createWriteStream(path);
+  constructor(opts: ITxtPipeOpts) {
+    this.name = opts.name;
+    this.items = opts.items;
+    this.stream = fs.createWriteStream(opts.path);
     this.header = [];
-  }
-  public convert(data: object): any[] {
-    if (this.header.length === 0) {
-      this.header = Object.keys(data);
-      this.write(this.header);
-    }
-    return this.header.map((key) => data[key]);
   }
   /**
    * 根据表头写入新数据
    * @param {Object} data
    */
-  public write(items: any[]) {
+  public write(data: any) {
+    if (this.header.length === 0) {
+      this.header = Object.keys(data);
+      this.write(this.header);
+    }
+    const items = this.header.map((key) => data[key]);
     const chunk = items.reduce((str, c) => `${str}\t${c}`) + "\n";
     this.stream.write(chunk);
   }
@@ -31,6 +36,6 @@ class TxtPipe {
   }
 }
 
-export default function txtPipe(path: string): IPipe {
-  return new TxtPipe(path);
+export default function txtPipe(opts: ITxtPipeOpts): IPipe {
+  return new TxtPipe(opts);
 }

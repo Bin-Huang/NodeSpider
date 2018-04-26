@@ -8,10 +8,12 @@ const defaultOption = {
     concurrency: 20,
     queue: new queue_1.default(),
     pool: new Set(),
+    heartbeat: 4000,
 };
 const e = {
     statusChange: "statusChange",
     addTask: "addTask",
+    taskDone: "taskDone",
     queueEmpty: "queueEmpty",
     heartbeat: "heartbeat",
     goodbye: "goodbye",
@@ -31,10 +33,10 @@ class NodeSpider extends events_1.EventEmitter {
         this._STATE = {
             opts,
             currentTasks: [],
-            pipeStore: new Map(),
+            pipeStore: [],
             planStore: [],
             queue: opts.queue,
-            heartbeat: setInterval(() => this.emit(e.heartbeat), 4000),
+            heartbeat: setInterval(() => this.emit(e.heartbeat), opts.heartbeat),
             pool: opts.pool,
             status: "vacant",
         };
@@ -50,17 +52,24 @@ class NodeSpider extends events_1.EventEmitter {
             startTask(this);
         });
         this.on(e.heartbeat, () => startTask(this));
+        this.on(e.taskDone, () => {
+            if (this._STATE.status === "active") {
+                startTask(this);
+            }
+            else if (this._STATE.status === "end" && this._STATE.currentTasks.length === 0) {
+                for (const pipe of this._STATE.pipeStore) {
+                    pipe.end();
+                }
+                clearInterval(this._STATE.heartbeat);
+                this.emit(e.goodbye);
+            }
+        });
     }
     /**
      * 终止爬虫
      */
     end() {
         changeStatus("end", this);
-        for (const { pipe } of this._STATE.pipeStore.values()) {
-            pipe.end();
-        }
-        clearInterval(this._STATE.heartbeat);
-        this.emit(e.goodbye);
     }
     /**
      * Check whether the url has been added
@@ -112,37 +121,11 @@ class NodeSpider extends events_1.EventEmitter {
      * @param  {IPipe}  target pipe object
      * @return {void}
      */
-    pipe(name, target, items = []) {
-        if (this._STATE.pipeStore.has(name)) {
+    pipe(newPipe) {
+        if (this._STATE.pipeStore.find((p) => p.name === newPipe.name)) {
             throw new TypeError(`method connect: there already have a pipe named "${name}"`);
         }
-        this._STATE.pipeStore.set(name, { items, pipe: target });
-    }
-    retry(current, maxRetry, finalErrorCallback) {
-        // 过滤出current重要的task基本信息
-        const retryTask = {
-            uid: current.uid,
-            hasRetried: current.hasRetried,
-            info: current.info,
-            planName: current.planName,
-            url: current.url,
-        };
-        if (!retryTask.hasRetried) {
-            retryTask.hasRetried = 0;
-        }
-        if (!finalErrorCallback) {
-            finalErrorCallback = () => {
-                throw new Error(`
-                    ${current.url}达到最大重试次数，但依然出错
-                `);
-            };
-        }
-        if (retryTask.hasRetried >= maxRetry) {
-            return finalErrorCallback();
-        }
-        retryTask.hasRetried++;
-        this._STATE.queue.jump(retryTask); // 插队到队列，重新等待执行
-        this.emit(e.addTask, retryTask); // TODO: 确定让重试任务也触发“addTask”事件？
+        this._STATE.pipeStore.push(newPipe);
     }
     /**
      * add new tasks, return tasks' uuids
@@ -209,44 +192,24 @@ class NodeSpider extends events_1.EventEmitter {
         if (typeof data !== "object") {
             throw new TypeError(`method save: the parameter "data" should be an object`);
         }
-        const store = this._STATE.pipeStore.get(pipeName);
-        if (!store) {
+        const pipe = this._STATE.pipeStore.find((p) => p.name === pipeName);
+        if (!pipe) {
             throw new TypeError(`method save: no such pipe named ${pipeName}`);
         }
-        const { pipe } = store;
-        let { items } = store;
-        const d = {};
-        if (Array.isArray(items)) {
-            if (items.length === 0) {
-                store.items = Object.keys(data);
-                items = store.items;
-            }
-            for (const key of items) {
-                if (typeof data[key] === "undefined") {
-                    d[key] = null;
-                }
-                else {
-                    d[key] = data[key];
-                }
+        if (!pipe.items) {
+            pipe.items = Object.keys(data);
+        }
+        if (Array.isArray(pipe.items)) {
+            for (const item of pipe.items) {
+                data[item] = (typeof data[item] !== "undefined") ? data[item] : null;
             }
         }
         else {
-            for (const key of Object.keys(items)) {
-                const fn = items[key];
-                if (typeof data[key] === "undefined") {
-                    d[key] = null;
-                }
-                else {
-                    d[key] = fn(data[key]);
-                }
+            for (const [item, fn] of Object.entries(pipe.items)) {
+                data[item] = (typeof data[item] !== "undefined") ? fn(data[item]) : null;
             }
         }
-        if (pipe.convert) {
-            pipe.write(pipe.convert(d));
-        }
-        else {
-            pipe.write(JSON.stringify(d));
-        }
+        pipe.write(data);
     }
 }
 exports.default = NodeSpider;
@@ -268,8 +231,10 @@ async function startTask(spider) {
                 spider._STATE.currentTasks.push(currentTask);
                 startTask(spider); // 不断递归，使爬虫并发任务数量尽可能达到最大限制
                 const plan = spider._STATE.planStore.find((p) => p.name === currentTask.planName);
-                await pRetry(() => plan.process(currentTask, spider), { retries: plan.retries }).catch(plan.catch);
+                await pRetry(() => plan.process(currentTask, spider), { retries: plan.retries })
+                    .catch((err) => plan.catch(err, currentTask, spider));
                 spider._STATE.currentTasks = spider._STATE.currentTasks.filter(({ uid }) => uid !== currentTask.uid);
+                spider.emit(e.taskDone, currentTask);
             }
         }
     }

@@ -1,25 +1,30 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const got = require("got");
-const defaultOption = {};
+const defaultOption = {
+    retries: 3,
+    catch: (err) => { throw err; },
+};
 function streamPlan(option) {
-    let opts;
-    if (typeof option === "function") {
-        opts = Object.assign({}, defaultOption, { callback: option });
-    }
-    else {
-        opts = Object.assign({}, defaultOption, option);
-    }
-    return async (task, spider) => {
-        return new Promise((resolve, reject) => {
-            const flow = got.stream(task.url, opts.requestOpts);
-            const current = Object.assign({ done: resolve }, task);
-            // TODO: handle error from callback
-            opts.callback(flow, current, spider);
-            // TODO: 考慮自動resolve的安全模式
-            // flow.on("error", resolve);
-            // flow.on("end", resolve);
-        });
+    const opts = Object.assign({}, defaultOption, option);
+    return {
+        name: opts.name,
+        retries: opts.retries,
+        catch: opts.catch,
+        process: async (task, spider) => {
+            return new Promise((resolve, reject) => {
+                const flow = got.stream(task.url, opts.requestOpts);
+                const done = (err) => {
+                    if (err) {
+                        reject(err);
+                    }
+                    else {
+                        resolve();
+                    }
+                };
+                opts.handle(flow, done, task, spider);
+            });
+        },
     };
 }
 exports.default = streamPlan;

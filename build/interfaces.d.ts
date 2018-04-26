@@ -4,7 +4,7 @@ export interface IPlan {
     name: string;
     retries: number;
     process: (task: ITask, spider: Spider) => Promise<any>;
-    catch: (error: Error) => any;
+    catch: (error: Error, task: ITask, spider: Spider) => any;
 }
 export interface IQueue {
     add: (task: ITask) => void;
@@ -18,24 +18,20 @@ export interface IPool {
     size: number;
 }
 export interface IPipe {
+    name: string;
+    items?: IPipeItems;
     write: (data: any) => any;
     end: (data?: any) => any;
-    convert?: (data: {
-        [index: string]: any;
-    }) => any;
 }
-export declare type IStatus = "active" | "end" | "pause" | "vacant";
 export declare type IPipeItems = string[] | {
     [index: string]: (data: any) => any;
 };
+export declare type IStatus = "active" | "end" | "pause" | "vacant";
 export interface IState {
     queue: IQueue;
     pool: IPool;
     planStore: IPlan[];
-    pipeStore: Map<string, {
-        items: IPipeItems;
-        pipe: IPipe;
-    }>;
+    pipeStore: IPipe[];
     opts: IOpts;
     currentTasks: ITask[];
     status: IStatus;
@@ -45,11 +41,13 @@ export interface IOptions {
     concurrency?: number;
     queue?: IQueue;
     pool?: IPool;
+    heartbeat?: number;
 }
 export interface IOpts {
     concurrency: number;
     queue: IQueue;
     pool: IPool;
+    heartbeat: number;
 }
 export interface ITask {
     uid: string;

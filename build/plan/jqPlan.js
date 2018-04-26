@@ -67,22 +67,22 @@ function loadJq(currentTask) {
         });
         return result;
     };
-    /**
-     * 获得选中节点（们）的 src 路径（自动补全）
-     * @returns {array}
-     */
-    $.prototype.src = function () {
-        const result = [];
-        $(this).each(function () {
-            let newUrl = $(this).attr("src");
-            // 如果是相对路径，补全路径为绝对路径
-            if (newUrl && !/^https?:\/\//.test(newUrl)) {
-                newUrl = url.resolve(currentTask.url, newUrl);
-            }
-            result.push(newUrl);
-        });
-        return result;
-    };
+    // /**
+    //  * 获得选中节点（们）的 src 路径（自动补全）
+    //  * @returns {array}
+    //  */
+    // $.prototype.src = function() {
+    //   const result: string[] = [];
+    //   $(this).each(function() {
+    //     let newUrl = $(this).attr("src");
+    //     // 如果是相对路径，补全路径为绝对路径
+    //     if (newUrl && !/^https?:\/\//.test(newUrl)) {
+    //       newUrl = url.resolve(currentTask.url, newUrl);
+    //     }
+    //     result.push(newUrl);
+    //   });
+    //   return result;
+    // };
     return $;
 }
 exports.loadJq = loadJq;

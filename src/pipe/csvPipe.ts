@@ -1,33 +1,33 @@
 import * as fs from "fs-extra";
-import { IPipe } from "../interfaces";
+import { IPipe, IPipeItems } from "../interfaces";
+
+export interface ICsvPipeOpts {
+  name: string;
+  path: string;
+  items?: IPipeItems;
+}
 
 class CsvPipe {
-  /**
-   * Creates an instance of csv pipe.
-   * @param {string} path 写入文件路径
-   * @memberOf TxtTable
-   */
+  public name: string;
+  public items?: IPipeItems;
   private stream: fs.WriteStream;
   private header: string[];
-  constructor(path: string) {
-    if (typeof path !== "string") {
-      throw new Error('the string-typed parameter "path" is required');
-    }
-    this.stream = fs.createWriteStream(path);
+  constructor(opts: ICsvPipeOpts) {
+    this.name = opts.name;
+    this.items = opts.items;
+    this.stream = fs.createWriteStream(opts.path);
     this.header = [];
-  }
-  public convert(data: object): any[] {
-    if (this.header.length === 0) {
-      this.header = Object.keys(data);
-      this.write(this.header);
-    }
-    return this.header.map((key) => data[key]);
   }
   /**
    * 根据表头写入新数据
    * @param {Object} data
    */
-  public write(items: any[]) {
+  public write(data: object) {
+    if (this.header.length === 0) {
+      this.header = Object.keys(data);
+      this.write(this.header);
+    }
+    const items = this.header.map((key) => data[key]);
     const chunk = items.reduce((str, c) => `${str},${c}`) + "\n";
     this.stream.write(chunk);
   }
@@ -36,6 +36,6 @@ class CsvPipe {
   }
 }
 
-export default function csvPipe(path: string): IPipe {
-  return new CsvPipe(path);
+export default function csvPipe(opts: ICsvPipeOpts): IPipe {
+  return new CsvPipe(opts);
 }
