@@ -2,8 +2,8 @@
   "name": "nodespider",
   "version": "0.9.3",
   "description": "Simple, flexible, delightful web crawler/spider package",
-  "main": "./build/index.js",
-  "typings": "./build/index.d.ts",
+  "main": "./dist/src/index.js",
+  "typings": "./dist/src/index.d.ts",
   "dependencies": {
     "charset": "^1.0.1",
     "cheerio": "^0.22.0",
