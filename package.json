@@ -29,7 +29,8 @@
     "@types/request": "^2.47.0"
   },
   "scripts": {
-    "test": "ava dist/test"
+    "test": "ava dist/test",
+    "clean": "rm -rf dist && mkdir dist"
   },
   "repository": {
     "type": "git",
