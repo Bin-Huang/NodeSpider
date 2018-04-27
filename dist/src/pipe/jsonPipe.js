@@ -10,7 +10,12 @@ class JsonPipe {
         this.isFirst = true;
     }
     write(data) {
-        const str = JSON.stringify(data, null, this.space);
+        const obj = {};
+        const items = (Array.isArray(this.items)) ? this.items : Object.keys(this.items);
+        for (const [ix, item] of items.entries()) {
+            obj[item] = data[ix];
+        }
+        const str = JSON.stringify(obj, null, this.space);
         if (this.isFirst) {
             this.stream.write(`[\n${str}`);
             this.isFirst = false;

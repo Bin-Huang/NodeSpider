@@ -5,12 +5,12 @@ export interface IJsonPipeOpts {
   name: string;
   path: string;
   space?: number;
-  items?: IPipeItems;
+  items: IPipeItems;
 }
 
 class JsonPipe {
   public name: string;
-  public items?: IPipeItems;
+  public items: IPipeItems;
   private stream: fs.WriteStream;
   private isFirst: boolean;
   private space: number;
@@ -21,8 +21,13 @@ class JsonPipe {
     this.stream = fs.createWriteStream(opts.path);
     this.isFirst = true;
   }
-  public write(data: object) {
-    const str = JSON.stringify(data, null, this.space);
+  public write(data: any[]) {
+    const obj: {[x: string]: any} = {};
+    const items = (Array.isArray(this.items)) ? this.items : Object.keys(this.items);
+    for (const [ix, item] of items.entries()) {
+      obj[item] = data[ix];
+    }
+    const str = JSON.stringify(obj, null, this.space);
     if (this.isFirst) {
       this.stream.write(`[\n${str}`);
       this.isFirst = false;
