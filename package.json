@@ -1,1 +1,49 @@
-{"name":"nodespider","version":"0.9.3","description":"Simple, flexible, delightful web crawler/spider package","main":"./dist/src/index.js","typings":"./dist/src/index.d.ts","dependencies":{"charset":"^1.0.1","cheerio":"^0.22.0","filenamify-url":"^1.0.0","fs-extra":"^2.0.0","got":"^8.2.0","iconv-lite":"^0.4.13","is-absolute-url":"^2.1.0","p-retry":"^1.0.0","request":"^2.78.0"},"devDependencies":{"@types/charset":"^1.0.0","@types/cheerio":"^0.22.7","@types/fs-extra":"^4.0.8","@types/got":"^7.1.8","@types/iconv-lite":"0.0.1","@types/is-absolute-url":"^2.1.0","@types/node":"^7.0.8","@types/p-retry":"^1.0.1","@types/request":"^2.47.0","jest":"^19.0.2"},"scripts":{"test":"jest"},"repository":{"type":"git","url":"git+ssh://git@github.com/Bin-Huang/NodeSpider.git"},"author":"Ben Huang","license":"Apache License 2.0","bugs":{"url":"https://github.com/Bin-Huang/NodeSpider/issues"},"keywords":["crawler","spider","nodespider"],"homepage":"https://github.com/Bin-Huang/NodeSpider#readme"}
+{
+  "name": "nodespider",
+  "version": "0.9.3",
+  "description": "Simple, flexible, delightful web crawler/spider package",
+  "main": "./dist/src/index.js",
+  "typings": "./dist/src/index.d.ts",
+  "dependencies": {
+    "ava": "^0.25.0",
+    "charset": "^1.0.1",
+    "cheerio": "^0.22.0",
+    "delay": "^2.0.0",
+    "filenamify-url": "^1.0.0",
+    "fs-extra": "^5.0.0",
+    "got": "^8.2.0",
+    "iconv-lite": "^0.4.13",
+    "is-absolute-url": "^2.1.0",
+    "p-retry": "^1.0.0",
+    "request": "^2.78.0"
+  },
+  "devDependencies": {
+    "@types/charset": "^1.0.0",
+    "@types/cheerio": "^0.22.7",
+    "@types/fs-extra": "^4.0.8",
+    "@types/got": "^7.1.8",
+    "@types/iconv-lite": "0.0.1",
+    "@types/is-absolute-url": "^2.1.0",
+    "@types/node": "^7.0.8",
+    "@types/p-retry": "^1.0.1",
+    "@types/request": "^2.47.0"
+  },
+  "scripts": {
+    "test": "ava dist/test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Bin-Huang/NodeSpider.git"
+  },
+  "author": "Ben Huang",
+  "license": "Apache License 2.0",
+  "bugs": {
+    "url": "https://github.com/Bin-Huang/NodeSpider/issues"
+  },
+  "keywords": [
+    "crawler",
+    "spider",
+    "nodespider"
+  ],
+  "homepage": "https://github.com/Bin-Huang/NodeSpider#readme"
+}

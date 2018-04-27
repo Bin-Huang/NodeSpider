@@ -4,31 +4,32 @@ import { IPipe, IPipeItems } from "../interfaces";
 export interface ICsvPipeOpts {
   name: string;
   path: string;
-  items?: IPipeItems;
+  items: IPipeItems;
 }
 
 class CsvPipe {
   public name: string;
-  public items?: IPipeItems;
+  public items: IPipeItems;
   private stream: fs.WriteStream;
-  private header: string[];
+  private isFirst: boolean;
   constructor(opts: ICsvPipeOpts) {
     this.name = opts.name;
     this.items = opts.items;
     this.stream = fs.createWriteStream(opts.path);
-    this.header = [];
+    this.isFirst = true;
   }
   /**
    * 根据表头写入新数据
    * @param {Object} data
    */
-  public write(data: object) {
-    if (this.header.length === 0) {
-      this.header = Object.keys(data);
-      this.write(this.header);
+  public write(data: any[]) {
+    let chunk = "";
+    if (this.isFirst) {
+      this.isFirst = false;
+      const headers = (Array.isArray(this.items)) ? this.items : Object.keys(this.items);
+      chunk += headers.reduce((str, c) => `${str},${c}`) + "\n";
     }
-    const items = this.header.map((key) => data[key]);
-    const chunk = items.reduce((str, c) => `${str},${c}`) + "\n";
+    chunk += data.reduce((str, c) => `${str},${c}`) + "\n";
     this.stream.write(chunk);
   }
   public end() {

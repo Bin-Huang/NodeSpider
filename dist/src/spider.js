@@ -199,17 +199,10 @@ class NodeSpider extends events_1.EventEmitter {
         if (!pipe.items) {
             pipe.items = Object.keys(data);
         }
-        if (Array.isArray(pipe.items)) {
-            for (const item of pipe.items) {
-                data[item] = (typeof data[item] !== "undefined") ? data[item] : null;
-            }
-        }
-        else {
-            for (const [item, fn] of Object.entries(pipe.items)) {
-                data[item] = (typeof data[item] !== "undefined") ? fn(data[item]) : null;
-            }
-        }
-        pipe.write(data);
+        const d = (Array.isArray(pipe.items)) ?
+            pipe.items.map((item) => (typeof data[item] !== "undefined") ? data[item] : null)
+            : Object.entries(pipe.items).map(([item, fn]) => (typeof data[item] !== "undefined") ? fn(data[item]) : null);
+        pipe.write(d);
     }
 }
 exports.default = NodeSpider;
