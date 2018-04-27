@@ -6,19 +6,20 @@ class TxtPipe {
         this.name = opts.name;
         this.items = opts.items;
         this.stream = fs.createWriteStream(opts.path);
-        this.header = [];
+        this.isFirst = true;
     }
     /**
      * 根据表头写入新数据
      * @param {Object} data
      */
     write(data) {
-        if (this.header.length === 0) {
-            this.header = Object.keys(data);
-            this.write(this.header);
+        let chunk = "";
+        if (this.isFirst) {
+            this.isFirst = false;
+            const headers = (Array.isArray(this.items)) ? this.items : Object.keys(this.items);
+            chunk += headers.reduce((str, c) => `${str}\t${c}`) + "\n";
         }
-        const items = this.header.map((key) => data[key]);
-        const chunk = items.reduce((str, c) => `${str}\t${c}`) + "\n";
+        chunk += data.reduce((str, c) => `${str}\t${c}`) + "\n";
         this.stream.write(chunk);
     }
     end() {

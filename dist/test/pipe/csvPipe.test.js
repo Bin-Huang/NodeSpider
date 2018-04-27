@@ -42,4 +42,4 @@ ava_1.default("test 2 for csvPipe", async (t) => {
     t.is(str, "item1,item2\nnull,null\ndata3,null\ndata4,data5\n");
     await fs.remove(filepath);
 });
-//# sourceMappingURL=pipe.test.js.map
+//# sourceMappingURL=csvPipe.test.js.map
