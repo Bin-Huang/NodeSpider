@@ -23,9 +23,9 @@ export interface IPool {
 
 export interface IPipe {
   name: string;
-  items?: IPipeItems;
-  write: (data: any) => any;
-  end: (data?: any) => any;
+  items: IPipeItems;
+  write: (data: any[]) => any;
+  end: () => any;
 }
 
 export type IPipeItems = string[] | { [index: string]: (data: any) => any };
