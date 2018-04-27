@@ -14,18 +14,19 @@ class JsonPipe {
   private stream: fs.WriteStream;
   private isFirst: boolean;
   private space: number;
+  private keys: string[];
   constructor(opts: IJsonPipeOpts) {
     this.name = opts.name;
     this.items = opts.items;
     this.space = (typeof opts.space !== "undefined") ? opts.space : 4;
     this.stream = fs.createWriteStream(opts.path);
     this.isFirst = true;
+    this.keys = (Array.isArray(this.items)) ? this.items : Object.keys(this.items);
   }
   public write(data: any[]) {
     const obj: {[x: string]: any} = {};
-    const items = (Array.isArray(this.items)) ? this.items : Object.keys(this.items);
-    for (const [ix, item] of items.entries()) {
-      obj[item] = data[ix];
+    for (const [ix, key] of this.keys.entries()) {
+      obj[key] = data[ix];
     }
     const str = JSON.stringify(obj, null, this.space);
     if (this.isFirst) {
