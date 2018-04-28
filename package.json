@@ -15,7 +15,8 @@
     "iconv-lite": "^0.4.13",
     "is-absolute-url": "^2.1.0",
     "p-retry": "^1.0.0",
-    "request": "^2.78.0"
+    "request": "^2.78.0",
+    "sinon": "^4.5.0"
   },
   "devDependencies": {
     "@types/charset": "^1.0.0",
@@ -26,7 +27,9 @@
     "@types/is-absolute-url": "^2.1.0",
     "@types/node": "^7.0.8",
     "@types/p-retry": "^1.0.1",
-    "@types/request": "^2.47.0"
+    "@types/request": "^2.47.0",
+    "@types/delay": "2.0.1",
+    "@types/sinon": "4.3.1"
   },
   "scripts": {
     "test": "ava dist/test",
