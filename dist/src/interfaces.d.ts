@@ -42,12 +42,14 @@ export interface IOptions {
     queue?: IQueue;
     pool?: IPool;
     heartbeat?: number;
+    genUUID?: () => string;
 }
 export interface IOpts {
     concurrency: number;
     queue: IQueue;
     pool: IPool;
     heartbeat: number;
+    genUUID: () => string;
 }
 export interface ITask {
     uid: string;

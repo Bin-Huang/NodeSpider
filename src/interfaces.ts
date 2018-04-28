@@ -51,6 +51,7 @@ export interface IOptions {
   queue?: IQueue;
   pool?: IPool;
   heartbeat?: number;
+  genUUID?: () => string;
 }
 // 记录在state中的设置
 export interface IOpts {
@@ -58,6 +59,7 @@ export interface IOpts {
   queue: IQueue;
   pool: IPool;
   heartbeat: number;
+  genUUID: () => string;
 }
 
 // for task object in the queue;在queue保存的task
