@@ -19,8 +19,8 @@
     "sinon": "^4.5.0"
   },
   "devDependencies": {
-    "@types/charset": "^1.0.0",
     "@types/cheerio": "^0.22.7",
+    "@types/delay": "2.0.1",
     "@types/fs-extra": "^4.0.8",
     "@types/got": "^7.1.8",
     "@types/iconv-lite": "0.0.1",
@@ -28,7 +28,6 @@
     "@types/node": "^7.0.8",
     "@types/p-retry": "^1.0.1",
     "@types/request": "^2.47.0",
-    "@types/delay": "2.0.1",
     "@types/sinon": "4.3.1"
   },
   "scripts": {
