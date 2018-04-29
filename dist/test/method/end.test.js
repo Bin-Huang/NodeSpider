@@ -12,4 +12,4 @@ ava_1.default("test for method 'end'", async (t) => {
     t.is(1, handleStatusChange.callCount);
     t.is("end", handleStatusChange.getCall(0).args[0]);
 });
-//# sourceMappingURL=end.js.map
+//# sourceMappingURL=end.test.js.map
