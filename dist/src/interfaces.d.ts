@@ -55,7 +55,6 @@ export interface ITask {
     uid: string;
     url: string;
     planName: string;
-    hasRetried?: number;
     info?: {
         [index: string]: any;
     };
