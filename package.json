@@ -33,7 +33,8 @@
   },
   "scripts": {
     "test": "ava dist/test",
-    "clean": "rm -rf dist && mkdir dist"
+    "clean": "rm -rf dist && mkdir dist",
+    "refresh": "rm -rf dist && mkdir dist && tsc"
   },
   "repository": {
     "type": "git",
