@@ -24,7 +24,7 @@ const defaultOption: IOpts = {
   genUUID: uuid,
 };
 
-const e = {
+const event = {
   statusChange: "statusChange",
   addTask: "addTask",
   taskDone: "taskDone",
@@ -52,24 +52,24 @@ export default class NodeSpider extends EventEmitter {
       pipeStore: [],
       planStore: [],
       queue: opts.queue,
-      heartbeat: setInterval(() => this.emit(e.heartbeat), opts.heartbeat),
+      heartbeat: setInterval(() => this.emit(event.heartbeat), opts.heartbeat),
       pool: opts.pool,
       status: "vacant",   // 初始化后，在获得新任务前，将保持“空闲”状态
     };
 
-    this.on(e.queueEmpty, () => {
+    this.on(event.queueEmpty, () => {
       if (this._STATE.currentTasks.length === 0) {
         changeStatus("vacant", this);
       }
     });
-    this.on(e.addTask, () => {
+    this.on(event.addTask, () => {
       if (this._STATE.status === "vacant") {
         changeStatus("active", this);
       }
       startTask(this);
     });
-    this.on(e.heartbeat, () => startTask(this));
-    this.on(e.taskDone, () => {
+    this.on(event.heartbeat, () => startTask(this));
+    this.on(event.taskDone, () => {
       if (this._STATE.status === "active") {
         startTask(this);
       } else if (this._STATE.status === "end" && this._STATE.currentTasks.length === 0) {
@@ -77,7 +77,7 @@ export default class NodeSpider extends EventEmitter {
           pipe.end();
         }
         clearInterval(this._STATE.heartbeat);
-        this.emit(e.goodbye);
+        this.emit(event.goodbye);
       }
     });
   }
@@ -167,7 +167,7 @@ export default class NodeSpider extends EventEmitter {
     for (const task of tasks) {
       this._STATE.queue.add(task);
       this._STATE.pool.add(task.url);
-      this.emit(e.addTask, task);
+      this.emit(event.addTask, task);
     }
 
     return tasks.map((t) => t.uid);
@@ -240,7 +240,7 @@ export default class NodeSpider extends EventEmitter {
 function changeStatus(status: IStatus, spider: NodeSpider) {
   const preStatus = spider._STATE.status;
   spider._STATE.status = status;
-  spider.emit(e.statusChange, status, preStatus);
+  spider.emit(event.statusChange, status, preStatus);
 }
 
 async function startTask(spider: NodeSpider) {
@@ -250,7 +250,7 @@ async function startTask(spider: NodeSpider) {
     if (maxConcurrency - currentTasksNum > 0) {
       const currentTask = spider._STATE.queue.next();
       if (!currentTask) {
-        spider.emit(e.queueEmpty);
+        spider.emit(event.queueEmpty);
       } else {
         spider._STATE.currentTasks.push(currentTask);
         startTask(spider);    // 不断递归，使爬虫并发任务数量尽可能达到最大限制
@@ -260,7 +260,7 @@ async function startTask(spider: NodeSpider) {
           .catch((err) => plan.catch(err, currentTask, spider));
 
         spider._STATE.currentTasks = spider._STATE.currentTasks.filter(({ uid }) => uid !== currentTask.uid);
-        spider.emit(e.taskDone, currentTask);
+        spider.emit(event.taskDone, currentTask);
       }
     }
   }

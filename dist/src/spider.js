@@ -11,7 +11,7 @@ const defaultOption = {
     heartbeat: 4000,
     genUUID: uuid,
 };
-const e = {
+const event = {
     statusChange: "statusChange",
     addTask: "addTask",
     taskDone: "taskDone",
@@ -37,23 +37,23 @@ class NodeSpider extends events_1.EventEmitter {
             pipeStore: [],
             planStore: [],
             queue: opts.queue,
-            heartbeat: setInterval(() => this.emit(e.heartbeat), opts.heartbeat),
+            heartbeat: setInterval(() => this.emit(event.heartbeat), opts.heartbeat),
             pool: opts.pool,
             status: "vacant",
         };
-        this.on(e.queueEmpty, () => {
+        this.on(event.queueEmpty, () => {
             if (this._STATE.currentTasks.length === 0) {
                 changeStatus("vacant", this);
             }
         });
-        this.on(e.addTask, () => {
+        this.on(event.addTask, () => {
             if (this._STATE.status === "vacant") {
                 changeStatus("active", this);
             }
             startTask(this);
         });
-        this.on(e.heartbeat, () => startTask(this));
-        this.on(e.taskDone, () => {
+        this.on(event.heartbeat, () => startTask(this));
+        this.on(event.taskDone, () => {
             if (this._STATE.status === "active") {
                 startTask(this);
             }
@@ -62,7 +62,7 @@ class NodeSpider extends events_1.EventEmitter {
                     pipe.end();
                 }
                 clearInterval(this._STATE.heartbeat);
-                this.emit(e.goodbye);
+                this.emit(event.goodbye);
             }
         });
     }
@@ -144,7 +144,7 @@ class NodeSpider extends events_1.EventEmitter {
         for (const task of tasks) {
             this._STATE.queue.add(task);
             this._STATE.pool.add(task.url);
-            this.emit(e.addTask, task);
+            this.emit(event.addTask, task);
         }
         return tasks.map((t) => t.uid);
     }
@@ -210,7 +210,7 @@ exports.default = NodeSpider;
 function changeStatus(status, spider) {
     const preStatus = spider._STATE.status;
     spider._STATE.status = status;
-    spider.emit(e.statusChange, status, preStatus);
+    spider.emit(event.statusChange, status, preStatus);
 }
 async function startTask(spider) {
     if (spider._STATE.status === "active") {
@@ -219,7 +219,7 @@ async function startTask(spider) {
         if (maxConcurrency - currentTasksNum > 0) {
             const currentTask = spider._STATE.queue.next();
             if (!currentTask) {
-                spider.emit(e.queueEmpty);
+                spider.emit(event.queueEmpty);
             }
             else {
                 spider._STATE.currentTasks.push(currentTask);
@@ -228,7 +228,7 @@ async function startTask(spider) {
                 await pRetry(() => plan.process(currentTask, spider), { retries: plan.retries })
                     .catch((err) => plan.catch(err, currentTask, spider));
                 spider._STATE.currentTasks = spider._STATE.currentTasks.filter(({ uid }) => uid !== currentTask.uid);
-                spider.emit(e.taskDone, currentTask);
+                spider.emit(event.taskDone, currentTask);
             }
         }
     }
