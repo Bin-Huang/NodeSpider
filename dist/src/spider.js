@@ -67,12 +67,6 @@ class NodeSpider extends events_1.EventEmitter {
         });
     }
     /**
-     * 终止爬虫
-     */
-    end() {
-        changeStatus("end", this);
-    }
-    /**
      * Check whether the url has been added
      * @param {string} url
      * @returns {boolean}
@@ -204,6 +198,15 @@ class NodeSpider extends events_1.EventEmitter {
             pipe.items.map((item) => (typeof data[item] !== "undefined") ? data[item] : null)
             : Object.entries(pipe.items).map(([item, fn]) => (typeof data[item] !== "undefined") ? fn(data[item]) : null);
         pipe.write(d);
+    }
+    pause() {
+        changeStatus("pause", this);
+    }
+    active() {
+        changeStatus("active", this);
+    }
+    end() {
+        changeStatus("end", this);
     }
 }
 exports.default = NodeSpider;

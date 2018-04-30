@@ -13,10 +13,6 @@ export default class NodeSpider extends EventEmitter {
      */
     constructor(option?: IOptions);
     /**
-     * 终止爬虫
-     */
-    end(): void;
-    /**
      * Check whether the url has been added
      * @param {string} url
      * @returns {boolean}
@@ -67,4 +63,7 @@ export default class NodeSpider extends EventEmitter {
     save(pipeName: string, data: {
         [index: string]: any;
     }): void;
+    pause(): void;
+    active(): void;
+    end(): void;
 }

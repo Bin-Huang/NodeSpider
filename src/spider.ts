@@ -83,13 +83,6 @@ export default class NodeSpider extends EventEmitter {
   }
 
   /**
-   * 终止爬虫
-   */
-  public end() {
-    changeStatus("end", this);
-  }
-
-  /**
    * Check whether the url has been added
    * @param {string} url
    * @returns {boolean}
@@ -235,6 +228,19 @@ export default class NodeSpider extends EventEmitter {
 
     pipe.write(d);
   }
+
+  public pause() {
+    changeStatus("pause", this);
+  }
+
+  public active() {
+    changeStatus("active", this);
+  }
+
+  public end() {
+    changeStatus("end", this);
+  }
+
 }
 
 function changeStatus(status: IStatus, spider: NodeSpider) {
