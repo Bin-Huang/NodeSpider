@@ -22,6 +22,7 @@ const defaultOption: IOpts = {
   pool: new Set<string>(),
   heartbeat: 4000,
   genUUID: uuid,
+  stillAlive: false,
 };
 
 const event = {
@@ -62,24 +63,10 @@ export default class NodeSpider extends EventEmitter {
         changeStatus("vacant", this);
       }
     });
-    this.on(event.addTask, () => {
-      if (this._STATE.status === "vacant") {
-        changeStatus("active", this);
-      }
-      startTask(this);
-    });
-    this.on(event.heartbeat, () => startTask(this));
-    this.on(event.taskDone, () => {
-      if (this._STATE.status === "active") {
-        startTask(this);
-      } else if (this._STATE.status === "end" && this._STATE.currentTasks.length === 0) {
-        for (const pipe of this._STATE.pipeStore) {
-          pipe.end();
-        }
-        clearInterval(this._STATE.heartbeat);
-        this.emit(event.goodbye);
-      }
-    });
+    this.on(event.addTask, () => work(this));
+    this.on(event.taskDone, () => work(this));
+    this.on(event.heartbeat, () => work(this));
+
   }
 
   /**
@@ -249,25 +236,49 @@ function changeStatus(status: IStatus, spider: NodeSpider) {
   spider.emit(event.statusChange, status, preStatus);
 }
 
-async function startTask(spider: NodeSpider) {
-  if (spider._STATE.status === "active") {
-    const maxConcurrency = spider._STATE.opts.concurrency;
-    const currentTasksNum = spider._STATE.currentTasks.length;
-    if (maxConcurrency - currentTasksNum > 0) {
-      const currentTask = spider._STATE.queue.next();
-      if (!currentTask) {
-        spider.emit(event.queueEmpty);
-      } else {
-        spider._STATE.currentTasks.push(currentTask);
-        startTask(spider);    // 不断递归，使爬虫并发任务数量尽可能达到最大限制
+async function startTask(task: ITask, spider: NodeSpider) {
+  spider._STATE.currentTasks.push(task);
 
-        const plan = spider._STATE.planStore.find((p) => p.name === currentTask.planName) as IPlan;
-        await pRetry(() => plan.process(currentTask, spider), { retries: plan.retries })
-          .catch((err) => plan.catch(err, currentTask, spider));
+  const plan = spider._STATE.planStore.find((p) => p.name === task.planName) as IPlan;
+  await pRetry(() => plan.process(task, spider), { retries: plan.retries })
+    .catch((err) => plan.catch(err, task, spider));
 
-        spider._STATE.currentTasks = spider._STATE.currentTasks.filter(({ uid }) => uid !== currentTask.uid);
-        spider.emit(event.taskDone, currentTask);
+  spider._STATE.currentTasks = spider._STATE.currentTasks.filter(({ uid }) => uid !== task.uid);
+  spider.emit(event.taskDone, task);
+}
+
+function isFullyLoaded(spider: NodeSpider): boolean {
+  const maxConcurrency = spider._STATE.opts.concurrency;
+  const currentTasksNum = spider._STATE.currentTasks.length;
+  return currentTasksNum >= maxConcurrency;
+}
+
+async function work(spider: NodeSpider) {
+  if (spider._STATE.status === "active" && !isFullyLoaded(spider)) {
+    const task = spider._STATE.queue.next();
+    if (task) {
+      startTask(task, spider);
+      work(spider);
+    } else {
+      spider.emit(event.queueEmpty);
+    }
+  } else if (spider._STATE.status === "vacant" && !isFullyLoaded(spider)) {
+    const task = spider._STATE.queue.next();
+    if (task) {
+      startTask(task, spider);
+      work(spider);
+      changeStatus("active", spider);
+    } else {
+      spider.emit(event.queueEmpty);
+      if (!spider._STATE.opts.stillAlive) {
+        spider.end();
       }
     }
+  } else if (spider._STATE.status === "end" && spider._STATE.currentTasks.length === 0) {
+    for (const pipe of spider._STATE.pipeStore) {
+      pipe.end();
+    }
+    clearInterval(spider._STATE.heartbeat);
+    spider.emit(event.goodbye);
   }
 }

@@ -43,6 +43,7 @@ export interface IOptions {
     pool?: IPool;
     heartbeat?: number;
     genUUID?: () => string;
+    stillAlive?: boolean;
 }
 export interface IOpts {
     concurrency: number;
@@ -50,6 +51,7 @@ export interface IOpts {
     pool: IPool;
     heartbeat: number;
     genUUID: () => string;
+    stillAlive: boolean;
 }
 export interface ITask {
     uid: string;
