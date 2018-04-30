@@ -20,7 +20,7 @@ const defaultOption: IOpts = {
   concurrency: 20,
   queue: new Queue(),
   pool: new Set<string>(),
-  heartbeat: 4000,
+  heartbeat: 2000,
   genUUID: uuid,
   stillAlive: false,
 };

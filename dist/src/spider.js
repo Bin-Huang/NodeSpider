@@ -8,7 +8,7 @@ const defaultOption = {
     concurrency: 20,
     queue: new queue_1.default(),
     pool: new Set(),
-    heartbeat: 4000,
+    heartbeat: 2000,
     genUUID: uuid,
     stillAlive: false,
 };
