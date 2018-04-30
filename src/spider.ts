@@ -28,6 +28,7 @@ const defaultOption: IOpts = {
 const event = {
   statusChange: "statusChange",
   addTask: "addTask",
+  taskStart: "taskStart",
   taskDone: "taskDone",
   queueEmpty: "queueEmpty",
   heartbeat: "heartbeat",
@@ -238,6 +239,7 @@ function changeStatus(status: IStatus, spider: NodeSpider) {
 
 async function startTask(task: ITask, spider: NodeSpider) {
   spider._STATE.currentTasks.push(task);
+  spider.emit(event.taskStart, task);
 
   const plan = spider._STATE.planStore.find((p) => p.name === task.planName) as IPlan;
   await pRetry(() => plan.process(task, spider), { retries: plan.retries })

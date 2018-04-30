@@ -15,6 +15,7 @@ const defaultOption = {
 const event = {
     statusChange: "statusChange",
     addTask: "addTask",
+    taskStart: "taskStart",
     taskDone: "taskDone",
     queueEmpty: "queueEmpty",
     heartbeat: "heartbeat",
@@ -202,6 +203,7 @@ function changeStatus(status, spider) {
 }
 async function startTask(task, spider) {
     spider._STATE.currentTasks.push(task);
+    spider.emit(event.taskStart, task);
     const plan = spider._STATE.planStore.find((p) => p.name === task.planName);
     await pRetry(() => plan.process(task, spider), { retries: plan.retries })
         .catch((err) => plan.catch(err, task, spider));
