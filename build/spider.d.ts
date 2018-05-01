@@ -1,24 +1,17 @@
 /// <reference types="node" />
 import { EventEmitter } from "events";
-import { IDefaultPlanOptionCallback, preLoadJq, preToUtf8 } from "./plan/defaultPlan";
-import { IDefaultOptionInput, IPipe, IPlan, IState, ITask } from "./types";
+import { IOptionInput, IPipe, IPlan, IState, ITask } from "./types";
 /**
  * class of NodeSpider
  * @class NodeSpider
  */
 export default class NodeSpider extends EventEmitter {
-    static preToUtf8: typeof preToUtf8;
-    static preLoadJq: typeof preLoadJq;
     _STATE: IState;
     /**
      * create an instance of NodeSpider
      * @param opts
      */
-    constructor(opts?: IDefaultOptionInput);
-    /**
-     * 终止爬虫
-     */
-    end(): void;
+    constructor(opts?: IOptionInput);
     /**
      * Check whether the url has been added
      * @param {string} url
@@ -36,19 +29,19 @@ export default class NodeSpider extends EventEmitter {
      * @param  {IPlan}  newPlan plan object
      * @return {void}
      */
-    add(newPlan: IPlan): void;
+    plan(name: string, newPlan: IPlan): NodeSpider;
     /**
      * connect new pipe
      * @param  {IPipe}  newPipe pipe object
-     * @return {void}
+     * @return {this}
      */
-    connect(newPipe: IPipe): void;
+    pipe(name: string, newPipe: {
+        store: IPipe;
+        items: string[] | {
+            [index: string]: (v: any) => any;
+        };
+    }): NodeSpider;
     retry(current: ITask, maxRetry: number, finalErrorCallback?: () => any): any;
-    /**
-     * add new default plan
-     * @param option default plan's option
-     */
-    plan(name: string, callback: IDefaultPlanOptionCallback): void;
     /**
      * Add url(s) to the queue and specify a plan. These task will be performed as planned when it's turn. Eventually only absolute url(s) can be added to the queue, the other will be returned in an array.
      * @param planName the name of specified plan
@@ -56,7 +49,7 @@ export default class NodeSpider extends EventEmitter {
      * @param info (Optional). Attached information for this url
      * @returns {array}
      */
-    queue(planName: string, url: string | string[], info?: any): any[];
+    add(planName: string, url: string | string[], info?: any): any[];
     download(path: string, url: string, filename?: string): void;
     /**
      * Save data through a pipe
@@ -64,6 +57,14 @@ export default class NodeSpider extends EventEmitter {
      * @param  {any}    data     data you need to save
      * @return {void}
      */
-    save(pipeName: string, data: any): void;
+    save(pipeName: string, data: {
+        [index: string]: any;
+    }): void;
+    active(): void;
+    pause(): void;
+    /**
+     * 终止爬虫
+     */
+    end(): void;
     private work();
 }

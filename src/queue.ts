@@ -118,11 +118,11 @@ export default class Queue implements IQueue {
         this.urlPool = new Set();
         this.queue = new LinkedQueue();
     }
-    public addTask(newTask: ITask) {
+    public add(newTask: ITask) {
         this.urlPool.add(newTask.url);
         this.queue.add(newTask);
     }
-    public jumpTask(newTask: ITask) {
+    public jump(newTask: ITask) {
         this.urlPool.add(newTask.url);
         this.queue.jump(newTask);
     }
@@ -149,7 +149,7 @@ export default class Queue implements IQueue {
     /**
      * 返回下一个任务。该排队没有新任务，都会返回 null
      */
-    public nextTask() {
+    public next() {
         return this.queue.next() || null;
     }
 }

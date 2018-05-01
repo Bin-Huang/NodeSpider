@@ -16,13 +16,12 @@ function downloadPlan(option) {
     // TODO C 参数检验
     option.method = option.method || "GET";
     option.headers = option.headers || {};
-    return new DownloadPlan(option.name, option);
+    return new DownloadPlan(option);
 }
 exports.default = downloadPlan;
 class DownloadPlan {
-    constructor(name, option) {
+    constructor(option) {
         this.option = option;
-        this.name = name;
     }
     process(task, spider) {
         return __awaiter(this, void 0, void 0, function* () {

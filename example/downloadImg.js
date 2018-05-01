@@ -6,22 +6,21 @@ const { Spider, downloadPlan } = require("../build/index");
 
 const s = new Spider();
 
-s.add(downloadPlan({
+s.plan("downloadImg", downloadPlan({
     callback: (err, current) => {
         if (err) return console.log(err);
         console.log(current.url + " done!");
     },
-    path: "./img",
-    name: "downloadImg",
+    path: "./example/img",
 }));
 
 s.plan("getSrc", (err, current) => {
     if (err) return console.log(err);
     const $ = current.$;
-    s.queue("downloadImg", $("img").src());
-    $("img").src().map((src) => {
-        s.download("./img", src);
-    });
+    s.add("downloadImg", $("img").src());
+    // $("img").src().map((src) => {
+    //     s.download("./img", src);
+    // });
 });
 
-s.queue("getSrc", "https://pixabay.com/");
+s.add("getSrc", "https://pixabay.com/");

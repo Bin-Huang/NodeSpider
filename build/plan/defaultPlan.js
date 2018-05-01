@@ -13,31 +13,22 @@ const cheerio = require("cheerio");
 const iconv = require("iconv-lite");
 const request = require("request");
 const url = require("url");
-/**
- * 默认值 type: "default", info: {}, option: {request: {encoding: null}, pre: [preToUtf8(), preLoadJq()], callback }
- * @param planOptionInput
- */
 function defaultPlan(option) {
-    if (typeof option.name !== "string") {
-        throw new TypeError(`the option's member "name" should be a string`);
-    }
-    if (!Array.isArray(option.callbacks)) {
-        throw new TypeError(`the option's member "callbacks" should be an array of function`);
-    }
-    for (const cb of option.callbacks) {
-        if (typeof cb !== "function") {
-            throw new TypeError(`the option's member "callbacks" should be an array of function`);
-        }
-    }
-    option.method = option.method || "GET";
-    option.headers = option.headers || {};
-    return new DefaultPlan(option.name, option);
+    return new DefaultPlan(option);
 }
 exports.defaultPlan = defaultPlan;
 class DefaultPlan {
-    constructor(name, option) {
-        this.option = option;
-        this.name = name;
+    constructor(opts) {
+        if (typeof opts.callback !== "function") {
+            throw new TypeError("defaultplna设置必须包含callback");
+        }
+        this.option = {
+            method: (typeof opts.method !== "string") ? "GET" : opts.method,
+            headers: (typeof opts.headers !== "object") ? {} : opts.headers,
+            toUtf8: (typeof opts.toUtf8 !== "boolean") ? true : opts.toUtf8,
+            jQ: (typeof opts.jQ !== "boolean") ? true : opts.jQ,
+            callback: opts.callback,
+        };
     }
     process(task, spider) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -49,18 +40,17 @@ class DefaultPlan {
             });
             const current = Object.assign({}, task, { body,
                 response });
-            // 按顺序执行callback
-            try {
-                for (const cb of this.option.callbacks) {
-                    const result = cb(error, current, spider);
-                    if (result instanceof Promise) {
-                        yield result;
-                    }
-                }
+            // 预处理
+            if (this.option.toUtf8) {
+                toUtf8(error, current);
             }
-            catch (e) {
-                console.error("defaultPlan: there are an error from callback function");
-                throw e;
+            if (this.option.jQ) {
+                loadJq(error, current);
+            }
+            // 为什么不捕捉用户callback中的错误？这个交给用户
+            const result = this.option.callback(error, current, spider);
+            if (result instanceof Promise) {
+                yield result;
             }
         });
     }
@@ -76,7 +66,7 @@ function requestAsync(opts) {
 /**
  * 根据currentTask.body加载jQ对象，并扩展url、todo、download方法，以第三个参数$的形式传递
  */
-function preLoadJq(error, currentTask) {
+function loadJq(error, currentTask) {
     if (error) {
         return;
     }
@@ -87,8 +77,8 @@ function preLoadJq(error, currentTask) {
     // TODO B 存在不合法链接的返回
     $.prototype.url = function () {
         const result = [];
-        $(this).each(function () {
-            let newUrl = $(this).attr("href");
+        $(this).each((ix, ele) => {
+            let newUrl = $(ele).attr("href");
             // 如果为空，或是类似 'javascirpt: void(0)' 的 js 代码，直接跳过
             if (!newUrl || /^javascript/.test(newUrl)) {
                 return false;
@@ -124,11 +114,11 @@ function preLoadJq(error, currentTask) {
     };
     currentTask.$ = $;
 }
-exports.preLoadJq = preLoadJq;
+exports.loadJq = loadJq;
 /**
  * 根据当前任务的response.header和response.body中的编码格式，将currentTask.body转码为utf8格式
  */
-function preToUtf8(error, currentTask) {
+function toUtf8(error, currentTask) {
     if (error) {
         return;
     }
@@ -139,4 +129,4 @@ function preToUtf8(error, currentTask) {
         currentTask.body = iconv.decode(currentTask.response.body, encoding);
     }
 }
-exports.preToUtf8 = preToUtf8;
+exports.toUtf8 = toUtf8;

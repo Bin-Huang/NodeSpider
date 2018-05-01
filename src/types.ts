@@ -3,27 +3,13 @@ import Spider from "./spider";
 
 export interface IPlan {
     // process 不能抛出错误，否则将导致爬虫终止。所有错误应该以参数传递到callback，由开发者自行处理
-    name: string;
     process: (task: ITask, spider: Spider) => Promise<{}|null|void>;
-    option?: any;
-}
-
-// nodespider's queue;
-export interface IQueue {
-    addTask: (newTask: ITask) => void;
-    jumpTask: (newTask: ITask) => void;
-
-    check: (url: string) => boolean;
-
-    getWaitingTaskNum: () => number;
-    getTotalUrlsNum: () => number;
-
-    nextTask: () => ITask|null;
+    option: any;
 }
 
 export interface IPipe {
-    name: string;
-    add: (data: any) => void;
+    format?: (data: any) => any;
+    write: (data: any) => void;
     close: () => void;
 }
 
@@ -31,22 +17,30 @@ export interface IPipe {
 export interface IState {
     queue: IQueue;
     planStore: Map<string, IPlan>;
-    pipeStore: Map<string, IPipe>;
-    option: IDefaultOption;
-    working: boolean;
-    currentTotalConnections: number;
+    pipeStore: Map<string, {
+        items: string[]|{[index: string]: (v: any) => any},
+        store: IPipe,
+    }>;
+    option: IOption;
+    currentTotalConnections: ITask[];
+    status: "active"|"pause"|"end";
+    startAt: Date;
+    endIn: Date|null;
+    heartbeat: NodeJS.Timer|null;
 }
 
 export type queueClass = new () => IQueue;
 
 // for parameter option, when initialize an instance  of NodeSpider.
-export interface IDefaultOptionInput {
+export interface IOptionInput {
     concurrency?: number;
     queue?: queueClass;
+    alive?: boolean;
 }
-export interface IDefaultOption extends IDefaultOptionInput {
+export interface IOption {
     concurrency: number;
     queue: queueClass;
+    alive: boolean;
 }
 
 // for task object in the queue;在queue保存的task
@@ -57,12 +51,15 @@ export interface ITask {
     info?: any;
 }
 
-export interface ICurrent extends ITask {
-    info: any;
-}
+// nodespider's queue;
+export interface IQueue {
+    add: (newTask: ITask) => void;
+    jump: (newTask: ITask) => void;
 
-// ====== request options ======
-export interface IRequestOptionInput {
-    method?: string;
-    headers?: any;
+    check: (url: string) => boolean;
+
+    getWaitingTaskNum: () => number;
+    getTotalUrlsNum: () => number;
+
+    next: () => ITask|null;
 }

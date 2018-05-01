@@ -1,46 +1,46 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const fs = require("fs-extra");
-const tools_1 = require("./tools");
-function csvPipe(path) {
+import * as fs from "fs-extra";
+import { entries } from "./tools";
+import { IPipe } from "./types";
+
+export function csvPipe(path: string): IPipe {
     const pipe = fs.createWriteStream(path);
-    pipe.format = csvFormat;
+    (pipe as IPipe).format = csvFormat;
     return pipe;
 }
-exports.csvPipe = csvPipe;
 const csvFormat = (() => {
     let isFirst = true;
-    return (items) => {
+    return (items: object): string => {
         let chunk = "";
         if (isFirst) {
             isFirst = false;
-            chunk += tools_1.entries(items)[0].join(",") + ",\n";
+            chunk += entries(items)[0].join(",") + ",\n";
         }
-        chunk += tools_1.entries(items)[1].join(",") + ",\n";
+        chunk += entries(items)[1].join(",") + ",\n";
         return chunk;
     };
 })();
-function txtPipe(path) {
+
+export function txtPipe(path: string): IPipe {
     const pipe = fs.createWriteStream(path);
-    pipe.format = txtFormat;
+    (pipe as IPipe).format = txtFormat;
     return pipe;
 }
-exports.txtPipe = txtPipe;
 const txtFormat = (() => {
     let isFirst = true;
-    return (items) => {
+    return (items: object): string => {
         let chunk = "";
         if (isFirst) {
             isFirst = false;
-            chunk += tools_1.entries(items)[0].join("\t") + "\n";
+            chunk += entries(items)[0].join("\t") + "\n";
         }
-        chunk += tools_1.entries(items)[1].join("\t") + "\n";
+        chunk += entries(items)[1].join("\t") + "\n";
         return chunk;
     };
 })();
-function jsonPipe(path) {
+
+export function jsonPipe(path: string): IPipe {
     const pipe = fs.createWriteStream(path);
-    pipe.format = jsonFormat;
+    (pipe as IPipe).format = jsonFormat;
     const streamClose = pipe.close;
     pipe.close = () => {
         pipe.write("\n]");
@@ -48,16 +48,14 @@ function jsonPipe(path) {
     };
     return pipe;
 }
-exports.jsonPipe = jsonPipe;
 const jsonFormat = (() => {
     let first = true;
-    return (items) => {
+    return (items: object): string => {
         let chunk = "";
         if (first) {
             first = false;
             chunk += "[\n";
-        }
-        else {
+        } else {
             chunk = ",\n";
         }
         chunk += JSON.stringify(items);

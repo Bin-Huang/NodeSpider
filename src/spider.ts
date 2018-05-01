@@ -1,13 +1,14 @@
 import { EventEmitter } from "events";
 import * as isAbsoluteUrl from "is-absolute-url";
 import * as request from "request";
-import { defaultPlan, IDefaultPlanOptionCallback, preLoadJq, preToUtf8 } from "./plan/defaultPlan";
+import { clearInterval } from "timers";
+import { defaultPlan, IDefaultPlanOptionCallback } from "./plan/defaultPlan";
 import downloadPlan from "./plan/downloadPlan";
 import Queue from "./queue";
+import { entries } from "./tools";
 import {
-    ICurrent,
-    IDefaultOption,
-    IDefaultOptionInput,
+    IOption,
+    IOptionInput,
     IPipe,
     IPlan,
     IQueue,
@@ -15,9 +16,10 @@ import {
     ITask,
 } from "./types";
 
-const defaultOption: IDefaultOption = {
+const defaultOption: IOption = {
     concurrency: 20,
     queue: Queue,
+    alive: false,
 };
 
 /**
@@ -25,28 +27,29 @@ const defaultOption: IDefaultOption = {
  * @class NodeSpider
  */
 export default class NodeSpider extends EventEmitter {
-    public static preToUtf8 = preToUtf8;
-    public static preLoadJq = preLoadJq;
     public _STATE: IState;
     /**
      * create an instance of NodeSpider
      * @param opts
      */
-    constructor(opts: IDefaultOptionInput = {}) {
+    constructor(opts: IOptionInput = {}) {
         super();
         ParameterOptsCheck(opts);
         const finalOption = Object.assign({}, defaultOption, opts);
         this._STATE = {
-            currentTotalConnections: 0,
+            currentTotalConnections: [],
             option: finalOption,
             pipeStore: new Map(),
             planStore: new Map(),
             queue: new finalOption.queue(),
-            working: true,
+            status: "active",
+            startAt: new Date(),
+            endIn: null,
+            heartbeat: (finalOption.alive) ? setInterval(() => this.emit("heartbeat"), 5000) : null,
         };
 
         this.on("empty", () => {
-            if (this._STATE.currentTotalConnections === 0) {
+            if (this._STATE.currentTotalConnections.length === 0) {
                 this.emit("vacant");   // queue为空，当前异步连接为0，说明爬虫已经空闲，触发事件
             }
         });
@@ -55,17 +58,6 @@ export default class NodeSpider extends EventEmitter {
             // this.work();
         });
 
-    }
-
-    /**
-     * 终止爬虫
-     */
-    public end() {
-        // 关闭注册的pipe
-        for (const pipe of this._STATE.pipeStore.values()) {
-            pipe.close();
-        }
-        // TODO C 更多，比如修改所有method来提醒开发者已经end
     }
 
     /**
@@ -110,85 +102,84 @@ export default class NodeSpider extends EventEmitter {
      * @param  {IPlan}  newPlan plan object
      * @return {void}
      */
-    public add(newPlan: IPlan) {
-        if (! newPlan.name || ! newPlan.process) {
+    public plan(name: string, newPlan: IPlan): NodeSpider {
+        if (! name || ! newPlan) {
+            // TODO: 修改参数检验
             throw new TypeError("method add: the parameter isn't a plan object");
         }
-        if (this._STATE.planStore.has(newPlan.name)) {
-            throw new TypeError(`method add: there already have a plan named "${newPlan.name}"`);
+        if (this._STATE.planStore.has(name)) {
+            throw new TypeError(`method add: there already have a plan named "${name}"`);
         }
-        // 添加plan到planStore
-        this._STATE.planStore.set(newPlan.name, newPlan);
-        return ;
+
+        if (typeof newPlan === "object") {
+            if (typeof newPlan.process === "function") {
+                // 添加plan到planStore
+                this._STATE.planStore.set(name, newPlan);
+            } else {
+                throw new TypeError("不是一个plan对象");
+            }
+        } else if (typeof newPlan === "function") {
+            return this.plan(name, defaultPlan({ callback: newPlan }));
+        } else {
+            throw new TypeError("newplan 必须是一个plan对象，或者函数");
+        }
+
+        return this;
     }
 
     /**
      * connect new pipe
      * @param  {IPipe}  newPipe pipe object
-     * @return {void}
+     * @return {this}
      */
-    public connect(newPipe: IPipe) {
-        if (! newPipe.name) {
+    public pipe(name: string, newPipe: {store: IPipe, items: string[]|{[index: string]: (v: any) => any}}): NodeSpider {
+        if (typeof name !== "string") {
             throw new TypeError("method connect: the parameter isn't a pipe object");
         }
-        if (this._STATE.pipeStore.has(newPipe.name)) {
-            throw new TypeError(`method connect: there already have a pipe named "${newPipe.name}"`);
+        if (this._STATE.pipeStore.has(name)) {
+            throw new TypeError(`method connect: there already have a pipe named "${name}"`);
         }
+
+        if (typeof newPipe !== "object") {
+            throw new TypeError("// TODO:");
+        }
+        if (Array.isArray(newPipe.items)) {
+            for (const item of newPipe.items) {
+                if (typeof item !== "string") { throw new Error("// TODO:"); }
+            }
+            this._STATE.pipeStore.set(name, newPipe);
+        } else if (typeof newPipe.items === "object") {
+            for (const f of entries(newPipe.items)[1]) {
+                if (typeof f !== "function") { throw new Error("// TODO:"); }
+            }
+            this._STATE.pipeStore.set(name, newPipe);
+        } else {
+            throw new Error("// TODO:");
+        }
+
         // 如果参数iten是一个pipe
-        this._STATE.pipeStore.set(newPipe.name, newPipe);
-        return ;
+        return this;
     }
 
     public retry(current: ITask, maxRetry: number, finalErrorCallback?: () => any) {
         // 过滤出current重要的task基本信息
-        const retryTask = {
+        const retryTask: ITask = {
             hasRetried: current.hasRetried,
             info: current.info,
             planName: current.planName,
             url: current.url,
         };
-        if (! retryTask.hasRetried) {
+        if (typeof retryTask.hasRetried !== "number") {
             retryTask.hasRetried = 0;
         }
         if (! finalErrorCallback) {
-            finalErrorCallback = () => {
-                throw new Error(`
-                    ${current.url}达到最大重试次数，但依然出错
-                `);
-            };
+            finalErrorCallback = () =>  { throw new Error(` ${current.url}达到最大重试次数，但依然出错`); };
         }
         if (retryTask.hasRetried >= maxRetry) {
             return finalErrorCallback();
         }
         retryTask.hasRetried ++;
-        this._STATE.queue.jumpTask(retryTask);    // 插队到队列，重新等待执行
-    }
-
-    /**
-     * add new default plan
-     * @param option default plan's option
-     */
-    public plan(name: string, callback: IDefaultPlanOptionCallback) {
-        if (typeof name !== "string") {
-            throw new TypeError(`method plan: failed to add new plan.
-            then parameter "name" should be a string`);
-        }
-        if (typeof callback !== "function") {
-            throw new TypeError(`method plan: failed to add new plan.
-            then parameter "callback" should be a function`);
-        }
-        if (this._STATE.planStore.has(name)) {
-            throw new TypeError(`method plan: Can not add new plan named "${name}".
-            There are already a plan called "${name}".`);
-        }
-        return this.add(defaultPlan({
-            callbacks: [
-                NodeSpider.preToUtf8,
-                NodeSpider.preLoadJq,
-                callback,
-            ],
-            name,
-        }));
+        this._STATE.queue.jump(retryTask);    // 插队到队列，重新等待执行
     }
 
     // tslint:disable-next-line:max-line-length
@@ -199,7 +190,7 @@ export default class NodeSpider extends EventEmitter {
      * @param info (Optional). Attached information for this url
      * @returns {array}
      */
-    public queue(planName: string, url: string | string[], info?: any): any[] {
+    public add(planName: string, url: string | string[], info?: any): any[] {
         const plan = this._STATE.planStore.get(planName);
         if (! plan) {
             throw new TypeError(`method queue: no such plan named "${planName}"`);
@@ -213,13 +204,12 @@ export default class NodeSpider extends EventEmitter {
                 noPassList.push(u);
             } else {
                 const newTask = { url: u, planName, info };
-                this._STATE.queue.addTask(newTask);
+                this._STATE.queue.add(newTask);
                 this.emit("queueTask", newTask);
                 this.work();
             }
         });
 
-        this._STATE.working = true;
         return noPassList;
     }
 
@@ -238,13 +228,12 @@ export default class NodeSpider extends EventEmitter {
                         return s.retry(current, 3, () => console.log(err));
                     }
                 },
-                name: path,
                 path,
             });
-            this.add(newPlan);
+            this.plan(path, newPlan);
         }
         // 添加下载链接 url 到队列
-        this.queue(path, url, filename);
+        this.add(path, url, filename);
     }
 
     /**
@@ -253,7 +242,7 @@ export default class NodeSpider extends EventEmitter {
      * @param  {any}    data     data you need to save
      * @return {void}
      */
-    public save(pipeName: string, data: any) {
+    public save(pipeName: string, data: {[index: string]: any}) {
         if (typeof pipeName !== "string") {
             throw new TypeError(`methdo save: the parameter "pipeName" should be a string`);
         }
@@ -261,32 +250,92 @@ export default class NodeSpider extends EventEmitter {
             throw new TypeError(`method save: the parameter "data" should be an object`);
         }
         const pipe = this._STATE.pipeStore.get(pipeName);
-        if (! pipe) {
-            throw new TypeError(`method save: no such pipe named ${pipeName}`);
+        if (!pipe) {
+            throw new TypeError("//TODO:");
+        }
+
+        const { items, store } = pipe;
+        const processedData: {[index: string]: any} = {};
+        if (Array.isArray(items)) {
+             items.map((item) => {
+                processedData[item] = data[item];
+            });
         } else {
-            pipe.add(data);
+            const keys = entries(items)[0];
+            keys.map((key) => {
+                processedData[key] = items[key](data[key]);
+            });
+        }
+
+        if (store.format) {
+            store.write(store.format(processedData));
+        } else {
+            store.write(processedData.toString());
         }
     }
+
+    public active() {
+        if (this._STATE.status === "pause") {
+            this._STATE.status = "active";
+            this.work();
+        }
+    }
+
+    public pause() {
+        if (this._STATE.status === "active") {
+            this._STATE.status = "pause";
+        }
+    }
+
+    /**
+     * 终止爬虫
+     */
+    public end() {
+        this._STATE.status = "end";
+        // 关闭注册的pipe
+        for (const pipe of this._STATE.pipeStore.values()) {
+            pipe.store.close();
+        }
+        // TODO C 更多，比如修改所有method来提醒开发者已经end
+    }
+
     private work() {
-        const count = this._STATE.option.concurrency - this._STATE.currentTotalConnections;
+        if (this._STATE.status !== "active") {
+            if (this._STATE.currentTotalConnections.length === 0) {
+                if (this._STATE.status === "pause") {
+                    console.log("\nnodespider is pausing\n");
+                    // TODO
+                } else if (this._STATE.status === "end") {
+                    if (this._STATE.heartbeat) {
+                        clearInterval(this._STATE.heartbeat);
+                        this._STATE.heartbeat = null;
+                    }
+                    this._STATE.endIn = new Date();
+                    console.log("\nnodespider has ended\n");
+                }
+            }
+            return ;
+        }
+
+        const count = this._STATE.option.concurrency - this._STATE.currentTotalConnections.length;
         if (count <= 0) {
             return ;
         }
-        const task = this._STATE.queue.nextTask();
+        const task = this._STATE.queue.next();
         if (! task) { return this.emit("empty"); }
 
-        this._STATE.currentTotalConnections ++;
+        this._STATE.currentTotalConnections.push(task);
         const plan = this._STATE.planStore.get(task.planName) as IPlan;
-        const current: ICurrent = {
-            ... task,
-            info: (typeof task.info === "undefined") ? {} : task.info,
-        };
         plan.process(task, this).then(() => {
-            this._STATE.currentTotalConnections --;
+            const ix = this._STATE.currentTotalConnections.findIndex((t) => t.url === task.url);
+            this._STATE.currentTotalConnections.splice(ix, 1);
+
             this.work();
         }).catch((e: Error) => {
             // 如果计划执行失败，这是非常严重的，因为直接会导致爬虫不能完成开发者制定的任务
-            this._STATE.currentTotalConnections --;
+            const ix = this._STATE.currentTotalConnections.findIndex((t) => t.url === task.url);
+            this._STATE.currentTotalConnections.splice(ix, 1);
+
             this.end(); // 停止爬虫并退出，以提醒并便于开发者debug
             console.error(`An error is threw from plan execution.
                 Check your callback function, or create an issue in the planGenerator's repository`);
@@ -299,7 +348,7 @@ export default class NodeSpider extends EventEmitter {
  * to check whether the parameter option is legal to initialize a spider, if not return the error
  * @param opts the option object
  */
-function ParameterOptsCheck(opts: IDefaultOptionInput): null {
+function ParameterOptsCheck(opts: IOptionInput): null {
     // check type of parameter opts
     if (typeof opts !== "object") {
         throw new TypeError(`Paramter option is no required, and it should be a object.
