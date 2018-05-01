@@ -144,7 +144,7 @@ export default class NodeSpider extends EventEmitter {
     }
     const urls = Array.isArray(url) ? url : [url];
 
-    const tasks = urls.map((u) => ({ uid: this._STATE.opts.genUUID(), url: u, planName, info }));
+    const tasks: ITask[] = urls.map((u) => ({ uid: this._STATE.opts.genUUID(), url: u, planName, info }));
     for (const task of tasks) {
       this._STATE.queue.add(task);
       this._STATE.pool.add(task.url);
