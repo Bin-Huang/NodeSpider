@@ -137,14 +137,19 @@ export default class NodeSpider extends EventEmitter {
    * @param url url(s)
    * @param info attached information
    */
-  public add(planName: string, url: string | string[], info?: { [index: string]: any }): string[] {
+  public add(planName: string, url: string | string[], info: { [index: string]: any } = {}): string[] {
     const plan = this._STATE.planStore.find((p) => p.name === planName);
     if (!plan) {
       throw new TypeError(`method queue: no such plan named "${planName}"`);
     }
     const urls = Array.isArray(url) ? url : [url];
 
-    const tasks: ITask[] = urls.map((u) => ({ uid: this._STATE.opts.genUUID(), url: u, planName, info }));
+    const tasks: ITask[] = urls.map((u) => ({
+      uid: this._STATE.opts.genUUID(),
+      url: u,
+      planName,
+      info: JSON.parse(JSON.stringify(info)),
+    }));
     for (const task of tasks) {
       this._STATE.queue.add(task);
       this._STATE.pool.add(task.url);
