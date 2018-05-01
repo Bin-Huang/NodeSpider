@@ -1,4 +1,3 @@
-
 # Method
 
 ## plan(newPlan)
