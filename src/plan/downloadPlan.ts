@@ -23,13 +23,13 @@ export interface IOption {
   name: string;
   path: string;
   retries?: number;
-  callback?: (current: ICurrent, s: Spider) => Promise<any> | any; // 当下载完成或出错时调用
+  handle?: (current: ICurrent, s: Spider) => Promise<any> | any;
   catch?: (error: Error, task: ITask, spider: Spider) => any;
   requestOpts?: http.RequestOptions;
 }
 const defaultOpts = {
   retries: 3,
-  callback: (current: ICurrent, s: Spider) => null,
+  handle: (current: ICurrent, s: Spider) => null,
   catch: (error: Error) => { throw error; },
 };
 
@@ -49,7 +49,7 @@ export default function downloadPlan(option: IOption): IPlan {
       const filepath = path.resolve(opts.path, filename);    // 安全地拼接保存路径
 
       await downloadAsync(task.url, filepath, opts.requestOpts);
-      await opts.callback({...task, filepath}, spider);
+      await opts.handle({...task, filepath}, spider);
     },
   };
 }

@@ -6,7 +6,7 @@ const got = require("got");
 const path = require("path");
 const defaultOpts = {
     retries: 3,
-    callback: (current, s) => null,
+    handle: (current, s) => null,
     catch: (error) => { throw error; },
 };
 function downloadPlan(option) {
@@ -25,7 +25,7 @@ function downloadPlan(option) {
             }
             const filepath = path.resolve(opts.path, filename); // 安全地拼接保存路径
             await downloadAsync(task.url, filepath, opts.requestOpts);
-            await opts.callback(Object.assign({}, task, { filepath }), spider);
+            await opts.handle(Object.assign({}, task, { filepath }), spider);
         },
     };
 }

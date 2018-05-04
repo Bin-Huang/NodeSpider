@@ -17,7 +17,7 @@ export interface IOption {
     name: string;
     path: string;
     retries?: number;
-    callback?: (current: ICurrent, s: Spider) => Promise<any> | any;
+    handle?: (current: ICurrent, s: Spider) => Promise<any> | any;
     catch?: (error: Error, task: ITask, spider: Spider) => any;
     requestOpts?: http.RequestOptions;
 }
