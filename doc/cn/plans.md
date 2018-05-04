@@ -1,14 +1,48 @@
 # Plan
 
+在开始爬取一个页面前，首先要新建一个爬取计划。爬取计划是对任务操作细节、任务失败时错误处理的封装。
+
+这是一个简单的 plan 及使用例子：
+
+```javascript
+const { Spider } = require("nodespider")
+const got = require("got")
+const s = new Spider()
+s.plan({
+  name: "showBody",
+  process: async (task) => {
+    const res = await got(task.url)
+    console.log(res.body)
+  },
+  retries: 3,
+  catch: (e) => console.log(e),
+})
+s.add("showBody", "https://github.com/Bin-Huang/NodeSpider")
+```
+
+这里使用 nodespider 内置的计划模板 jqPlan，可以更简单地新建计划：
+
+```javascript
+const { Spider, jqPlan } = require("nodespider")
+const s = new Spider()
+
+s.plan(jqPlan({
+  name: "showTitle",
+  handle: ($) => console.log($("title").text()),
+}))
+
+s.add("showTitle", "https://github.com/Bin-Huang/NodeSpider")
+```
+
 ## Plan Object
 
 *建议：使用 nodespider 并不一定需要理解 plan object，你完全可以直接借助内置的三个计划模板函数，完成绝大部分的爬虫需求。三个计划模板的文档在本页下方*
 
-plan object 封装了任务名称、对任务进行的操作、任务操作失败后的重试次数、达到最大重试次数后的错误处理。
+plan object 封装了计划名称、对任务进行的操作、任务操作失败后的重试次数、达到最大重试次数后的错误处理。
 
 ```javascript
 {
-  name, // 任务名称
+  name, // 计划名称
   process,  // 对任务进行的操作
   retries,  // 任务操作失败后的重试次数
   catch,  // 达到最大重试次数后的错误处理
@@ -17,7 +51,7 @@ plan object 封装了任务名称、对任务进行的操作、任务操作失�
 
 **name**
 
-对象名称（唯一标识符）。`string`
+计划名称（唯一标识符）。`string`
 
 **retries**
 
@@ -51,7 +85,6 @@ Spider 会调用 `process` 以执行任务。当调用时，将传入两个参�
 - `spider` 当前爬虫实例对象
 
 catch 可以是普通函数、async function 或返回 promise 的函数，当 catch 执行结束，或者返回的 promise 进入 fulfilled 阶段，则认为当前任务已经结束。
-
 
 ## 内置 Plan 模板
 
