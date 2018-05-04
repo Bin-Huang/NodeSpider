@@ -1,6 +1,6 @@
 {
   "name": "nodespider",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Simple, flexible, delightful web crawler/spider package",
   "main": "./dist/src/index.js",
   "typings": "./dist/src/index.d.ts",
