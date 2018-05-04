@@ -2,13 +2,64 @@
 
 ## Plan Object
 
+*建议：使用 nodespider 并不一定需要理解 plan object，你完全可以直接借助内置的三个计划模板函数，完成绝大部分的爬虫需求。三个计划模板的文档在本页下方*
+
+plan object 封装了任务名称、对任务进行的操作、任务操作失败后的重试次数、达到最大重试次数后的错误处理。
+
+```javascript
+{
+  name, // 任务名称
+  process,  // 对任务进行的操作
+  retries,  // 任务操作失败后的重试次数
+  catch,  // 达到最大重试次数后的错误处理
+}
+```
+
+**name**
+
+对象名称（唯一标识符）。`string`
+
+**retries**
+
+失败时最大重试次数。当任务执行失败时，Spider 将自动重试，但不会超过最大重试次数。`number`
+
+**process**
+
+`process` 函数包括了对当前任务的所有操作。`process` 应该是一个 async function 或者返回 promise 的函数。
+
+Spider 会调用 `process` 以执行任务。当调用时，将传入两个参数 `task` 和 `spider`：
+
+- `task` 当前任务
+  - `url` 当前任务链接。*string*
+  - `uid` 任务 uid。*string*
+  - `planName`  当前任务指定的 plan 名称。*string*
+  - `info`  当前任务附带的 info 对象。*object*
+- `spider` 当前爬虫实例对象
+
+当执行 `process` 返回的 promise 进入 fulfilled 状态则代表任务成功完成，而当进入 rejected 状态则代表任务失败。任务失败时，Spider 会自动重试，直到达到最大重试次数，这时将调用 `catch` 函数。
+
+**catch**
+
+当任务失败，并且重试次数达到最大次数时，将调用 catch 函数，这时将传入三个参数 `error`, `task` 与 `spider`：
+
+- `error` 任务失败时捕获的错误
+- `task` 当前任务
+  - `url` 当前任务链接。*string*
+  - `uid` 任务 uid。*string*
+  - `planName`  当前任务指定的 plan 名称。*string*
+  - `info`  当前任务附带的 info 对象。*object*
+- `spider` 当前爬虫实例对象
+
+catch 可以是普通函数、async function 或返回 promise 的函数，当 catch 执行结束，或者返回的 promise 进入 fulfilled 阶段，则认为当前任务已经结束。
+
+
 ## 内置 Plan 模板
 
-NodeSpider 内置了三个 Plan 模板函数，可以让开发者快速新建一个 Plan 对象：
+NodeSpider 内置了三个 Plan 模板函数，可以让开发者快速新建一个爬取计划：
 
-- **requestPlan** 模板封装了 request 操作，让开发者可以直接操作 response 和 body，并且默认自动将 body 转码成 `utf8` 格式（可设置）
+- **requestPlan** 模板封装了 request 操作，让开发者远离 request 部分、直接操作 response 和 body，并且默认自动将 body 转码成 `utf8` 格式（可设置）
 - **jqPlan** 是 `requestPlan` 的衍生，继承了其所有的特性，并提供了服务器端 jq 选择器，可以更加轻松的从 body 中提取信息
-- **downloadPlan**  模板封装了下载操作
+- **downloadPlan**  模板封装了下载操作，让开发者无需关注下载流和请求。
 
 ### requestPlan
 
