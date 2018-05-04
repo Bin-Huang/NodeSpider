@@ -15,6 +15,7 @@ s.add("printBody", "http://www.github.com");
 ```
 
 ## options
+
 ```javascript
 // 1)
 defaultPlan(callback)

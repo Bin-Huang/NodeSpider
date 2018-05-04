@@ -6,7 +6,7 @@
 const { Spider, csvPipe, jqPlan } = require("nodespider")
 const s = new Spider()
 
-// 声明一个名为 person 的数据管道
+// 声明一个名为 person 的数据管
 s.pipe(csvPipe({
   name: "person",
   path: "data/person.csv",
@@ -19,7 +19,7 @@ s.save("person", {
   age: 21,
 })
 
-// 使用这个管道，从网页中保存数据
+// 在爬取计划中使用，从网页中保存数据
 s.plan(jqPlan({
   name: "extract",
   hander: ($) => {
