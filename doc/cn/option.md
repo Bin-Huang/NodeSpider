@@ -5,6 +5,7 @@
 所有设置项均有默认值，所以你可以直接使用默认配置：
 
 ```javascript
+const { Spider } = require("nodespider")
 const s = new Spider()
 ```
 
