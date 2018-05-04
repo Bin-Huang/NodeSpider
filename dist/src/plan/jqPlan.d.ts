@@ -3,7 +3,7 @@
 import * as http from "http";
 import { IPlan, ITask } from "../interfaces";
 import Spider from "../spider";
-import { ICurrent } from "./defaultPlan";
+import { ICurrent } from "./requestPlan";
 export declare type IHandle = ($: IJq, current: ICurrent, spider: Spider) => any | Promise<any>;
 export interface IOption {
     name: string;
@@ -12,10 +12,6 @@ export interface IOption {
     retries?: number;
     toUtf8?: boolean;
     requestOpts?: http.RequestOptions;
-}
-export interface IDefaultPlan {
-    (name: string, handle: IHandle): IPlan;
-    (option: IOption): IPlan;
 }
 export default function jqPlan(option: IOption): IPlan;
 export interface IJq extends CheerioStatic {

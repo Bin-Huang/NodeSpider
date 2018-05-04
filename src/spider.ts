@@ -12,8 +12,8 @@ import {
   IStatus,
   ITask,
 } from "./interfaces";
-import defaultPlan from "./plan/defaultPlan";
 import downloadPlan from "./plan/downloadPlan";
+import requestPlan from "./plan/requestPlan";
 import Queue from "./queue";
 
 const defaultOption: IOpts = {

@@ -4,7 +4,7 @@
 
 ## 内置 Plan 模板
 
-### defaultPlan
+### requestPlan
 
 ### jqPlan
 

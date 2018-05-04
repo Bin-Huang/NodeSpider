@@ -3,13 +3,13 @@
 ---------------------------------------------------
 
 There are three built-in plan generators that can help you quickly create a plan:
-- `defaultPlan` requests and passes response body to callbacks(expose to developer)
+- `requestPlan` requests and passes response body to callbacks(expose to developer)
 - `streamPlan`  requests and passes response stream to callback(expose to developer)
 - `downloadPlan`    downloads file and saves it in specified path.
 
 # default plan
 ```javascript
-defaultPlan({
+requestPlan({
     name,
     callbacks,
     headers,    // Optional, default: `{}`
@@ -34,7 +34,7 @@ The three parameters will be passed in turn between each function. All changes t
 - `spider`  this spider instance
 
 ```javascript
-let plan = defaultPlan({
+let plan = requestPlan({
     name: "myPlan",
     callbacks: [
         Spider.preToUtf8,

@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const cheerio = require("cheerio");
 const url = require("url");
-const defaultPlan_1 = require("./defaultPlan");
+const requestPlan_1 = require("./requestPlan");
 const defaultOption = {
     toUtf8: true,
     requestOpts: { encoding: null },
@@ -10,7 +10,7 @@ const defaultOption = {
     retries: 3,
 };
 function jqPlan(option) {
-    return defaultPlan_1.default({
+    return requestPlan_1.default({
         name: option.name,
         catch: option.catch,
         retries: option.retries,

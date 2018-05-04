@@ -212,7 +212,7 @@ console.log(urls); // ["http://aa.com"]
 add a new plan
 
 ```javascript
-s.add(defaultPlan({
+s.add(requestPlan({
     name: "myPlan1",
     callbacks: [
         (err, current, s) => console.log(current.url)
@@ -227,7 +227,7 @@ s.queue("myPlan1", "https://www.google.com");
 
 There are three built-in plan generators that can help you quickly create a plan:
 
-- `defaultPlan` requests and passes response body to callbacks(expose to developer)
+- `requestPlan` requests and passes response body to callbacks(expose to developer)
 - `streamPlan`  requests and passes response stream to callback(expose to developer)
 - `downloadPlan`    downloads file and saves it in specified path.
 

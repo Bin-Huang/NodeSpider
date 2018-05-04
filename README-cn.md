@@ -109,7 +109,7 @@ interface IPool {
 ## Spider.prototype.plan(name, newPlan)
 新建一个爬取计划
 ```javascript
-s.plan("printBody", defaultPlan((err, current) => {
+s.plan("printBody", requestPlan((err, current) => {
     console.log(current.body);
 }))
 s.queue("printBody", "https://www.google.com");
@@ -120,7 +120,7 @@ s.queue("printBody", "https://www.google.com");
 **什么是计划模板** 爬虫进行的操作往往大同小异，如果将计划中可以复用的部分（比如网络请求）整理起来，提供可以返回计划对象的函数，我们称之为计划模板
 
 nodespider 自带了三个计划模板，可以帮助你快速新建一个爬取计划:
-- `defaultPlan` (默认的计划模板) 向站点发送网络请求，然后将接受到的 response 传递给 callbacks，以暴露返回正文给开发者处理
+- `requestPlan` (默认的计划模板) 向站点发送网络请求，然后将接受到的 response 传递给 callbacks，以暴露返回正文给开发者处理
 - `streamPlan`  根据url发送网络请求，并将返回的流(stream)直接通过 callback 暴露给开发者
 - `downloadPlan`    下载url指向的文件到本地，开发者可以通过 callback 来处理下载成功与失败的情况
 
@@ -136,7 +136,7 @@ nodespider 自带了三个计划模板，可以帮助你快速新建一个爬取
 | info | * | `(可选)`. 附带信息。当执行被添加url的任务时，`info`将以`current.info`形式传入 callback |
 
 ```javascript
-s.plan("myPlan", defaultPlan((err, current) => {
+s.plan("myPlan", requestPlan((err, current) => {
     console.log(current.url);
     if (current.info) {
         console.log(current.info.from);
@@ -163,7 +163,7 @@ Retry the task. The task will be added to queue again.
 | finalErrorCallback | (Optional) the function will be called when reach maximum number of retries | function |
 
 ```javascript
-s.plan("planA", defaultPlan((err, current) => {
+s.plan("planA", requestPlan((err, current) => {
     if (err) {
         s.retry(current, 3);
     }
@@ -260,7 +260,7 @@ s.pipe("data", csvPipe("./data.json"), [
   "document",
   "url",
 ])
-s.plan("getDocument", defaultPlan((err, current, s) => {
+s.plan("getDocument", requestPlan((err, current, s) => {
   const $ = current.$;
   // save data through pipe
   s.save("myJson", {

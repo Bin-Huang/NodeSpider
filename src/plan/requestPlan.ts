@@ -32,12 +32,12 @@ const defaultOption = {
   retries: 3,
 };
 
-export interface IDefaultPlan {
+export interface IRequestPlan {
   (name: string, handle: IHandle): IPlan;
   (option: IOption): IPlan;
 }
 
-export default function defaultPlan(option: IOption): IPlan {
+export default function requestPlan(option: IOption): IPlan {
   const requestOpts = (option.requestOpts) ?
     { ...defaultOption.requestOpts, ...option.requestOpts } : defaultOption.requestOpts;
   const opts = { ...defaultOption, ...option, requestOpts };

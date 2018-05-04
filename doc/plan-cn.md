@@ -1,10 +1,10 @@
-# defaultPlan
+# requestPlan
 
 ```javascript
-const { Spider, defaultPlan } = require("nodespider");
+const { Spider, requestPlan } = require("nodespider");
 const s = new Spider();
 
-s.plan("printBody", defaultPlan((err, current) => {
+s.plan("printBody", requestPlan((err, current) => {
     if (err) {
         s.retry(current, 3);
     } else {
@@ -18,9 +18,9 @@ s.add("printBody", "http://www.github.com");
 
 ```javascript
 // 1)
-defaultPlan(callback)
+requestPlan(callback)
 // 2)
-defaultPlan({ callback, toUtf8, jQ, requestOpts })
+requestPlan({ callback, toUtf8, jQ, requestOpts })
 ```
 
 ### callback
@@ -53,7 +53,7 @@ function showTitle (err, current) {
     const $ = current.$;
     console.log($("title").text());
 })
-s.plan("showTitle", defaultPlan(showTitle));
+s.plan("showTitle", requestPlan(showTitle));
 ```
 
 为了更方便的提取数据，nodespider 扩充了jQ，提供了下面一些有用的工具函数：

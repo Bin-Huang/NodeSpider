@@ -7,8 +7,8 @@ import * as url from "url";
 import { IPlan, ITask } from "../interfaces";
 import Spider from "../spider";
 import NodeSpider from "../spider";
-import defaultPlan from "./defaultPlan";
-import { ICurrent } from "./defaultPlan";
+import requestPlan from "./requestPlan";
+import { ICurrent } from "./requestPlan";
 
 export type IHandle =
   ($: IJq, current: ICurrent, spider: Spider)
@@ -30,13 +30,8 @@ const defaultOption = {
   retries: 3,
 };
 
-export interface IDefaultPlan {
-  (name: string, handle: IHandle): IPlan;
-  (option: IOption): IPlan;
-}
-
 export default function jqPlan(option: IOption): IPlan {
-  return defaultPlan({
+  return requestPlan({
     name: option.name,
     catch: option.catch,
     retries: option.retries,
