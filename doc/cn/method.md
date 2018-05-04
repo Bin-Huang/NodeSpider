@@ -15,6 +15,34 @@
 - **info**  【可选】新添加任务的附带信息。`object`
 - *return*  返回新添加任务的 uid 数组。`string[]`
 
+### info
+
+有些情况，你可能想要为某个任务附带一些独有数据。`info` 可以帮你做到这一点。
+
+```javascript
+const s = new Spider();
+s.plan({
+  name: "testPlan",
+  process: async (task) => {
+    console.log("from", task.info.from);  // 将打印 "from google"
+  },
+  catch: console.log,
+  retries: 3,
+});
+
+s.add("testPlan", "https://www.npmjs.com/package/nodespider", { from: "google" })
+```
+
+当批量添加一个 url 列表，这时传入的 `info` 将以深复制的形式，附带到本次添加的每一个新任务中。
+
+```javascript
+const urls = ["https://www.npmjs.com/package/nodespider", "https://github.com/Bin-Huang/NodeSpider"]
+
+s.add("testPlan", urls, { from: "google" }) // 新增的两个任务都附带了 info 的深度拷贝
+```
+
+需要注意的是，`info` 必须是一个可以被 `(info) => JSON.parse(JSON.stringify(info))` 还原的对象，即不能有函数、正则以及其他特殊类型的成员。 
+
 ## addU(planName, url, info)
 
 添加新任务，但事先会自动过滤掉重复 url 以及链接池已经存在的 url
