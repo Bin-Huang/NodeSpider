@@ -11,7 +11,7 @@
     "delay": "^2.0.0",
     "filenamify-url": "^1.0.0",
     "fs-extra": "^5.0.0",
-    "got": "^8.2.0",
+    "got": "^8.3.1",
     "iconv-lite": "^0.4.13",
     "is-absolute-url": "^2.1.0",
     "p-retry": "^1.0.0",
@@ -25,7 +25,7 @@
     "@types/got": "^7.1.8",
     "@types/iconv-lite": "0.0.1",
     "@types/is-absolute-url": "^2.1.0",
-    "@types/node": "^7.0.8",
+    "@types/node": "^7.0.63",
     "@types/p-retry": "^1.0.1",
     "@types/request": "^2.47.0",
     "@types/sinon": "4.3.1"
