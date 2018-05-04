@@ -4,18 +4,31 @@
 
 ## 内置 Plan 模板
 
+NodeSpider 内置了三个 Plan 模板函数，可以让开发者快速新建一个 Plan 对象：
+
+- **requestPlan** 模板封装了 request 操作，让开发者可以直接操作 response 和 body，并且默认自动将 body 转码成 `utf8` 格式（可设置）
+- **jqPlan** 是 `requestPlan` 的衍生，继承了其所有的特性，并提供了服务器端 jq 选择器，可以更加轻松的从 body 中提取信息
+- **downloadPlan**  模板封装了下载操作
+
 ### requestPlan
 
 ```javascript
-requestPlan({
-  name,
-  handle,
-  catch,
-  retries,
-  toUtf8r,
-  requestOpts,
-})
+const { Spider, requestPlan } = require("nodespider")
+const s = new Spider()
+
+s.plan(requestPlan({
+  name: "showBody",
+  handle: (current) => {
+    console.log(current.body)
+  },
+  retries: 3,
+  toUtf8: true,
+}))
+
+s.add("showBody", "https://github.com/Bin-Huang/NodeSpider")
 ```
+
+以下是 `requestPlan` 的所有选项：
 
 **name**
 
@@ -75,15 +88,20 @@ request 设置。具体设置项请看： [nodejs http.request options](https://
 
 
 ```javascript
-jqPlan({
-  name,
-  handle,
-  catch,
-  retries,
-  toUtf8r,
-  requestOpts,
-})
+const { Spider, jqPlan } = require("nodespider")
+const s = new Spider()
+
+s.plan(jqPlan({
+  name: "showTitle",
+  handle: ($) => {
+    console.log($("title").text())
+  },
+}))
+
+s.add("showTitle", "https://github.com/Bin-Huang/NodeSpider")
 ```
+
+以下是 `jqPlan` 的所有选项：
 
 **name**
 
@@ -144,15 +162,18 @@ request 设置。具体设置项请看： [nodejs http.request options](https://
 ### downloadPlan
 
 ```javascript
-downloadPlan({
-  name,
-  path,
-  retries,
-  handle,
-  catch,
-  requestOpts,
-})
+const { Spider, downloadPlan } = require("nodespider")
+const s = new Spider()
+
+s.plan(downloadPlan({
+  name: "downloadImg",
+  path: "./save/img/",
+}))
+
+s.add("downloadImg", "https://raw.githubusercontent.com/Bin-Huang/tyty/master/image/example.PNG")
 ```
+
+以下是 `downloadPlan` 的所有选项：
 
 **name**
 
