@@ -17,7 +17,7 @@ test.serial("test for method 'addU': basic", async (t) => {
   const url1 = "http://test1.com";
   const [ uid1 ] = s.addU("test", url1);
   const task1 = {
-    info: undefined,
+    info: {},
     uid: uid1,
     url: url1,
     planName: "test",
@@ -52,13 +52,13 @@ test.serial("test for method 'addU' with urls", async (t) => {
   const [ url1, url2 ] = [ "http://test3.com", "http://test4.com", "http://test3.com", "http://test2.com" ];
   const [ uid1, uid2 ] = s.addU("test", [ url1, url2 ]);
   const task1 = {
-    info: undefined,
+    info: {},
     uid: uid1,
     url: url1,
     planName: "test",
   };
   const task2 = {
-    info: undefined,
+    info: {},
     uid: uid2,
     url: url2,
     planName: "test",

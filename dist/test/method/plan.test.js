@@ -20,7 +20,7 @@ ava_1.default.serial("test for method 'plan'", async (t) => {
         uid,
         url: "http://test1.com",
         planName: "test",
-        info: undefined,
+        info: {},
     });
     t.is(s, plan.process.getCall(0).args[1]);
 });
