@@ -5,17 +5,15 @@
 const { Spider, streamPlan } = require("../build/index");
 const fs = require("fs");
 
-const s = new Spider();
+const s = new Spider({
+  concurrency: 1,
+});
 
 let i = 1;
-s.add(streamPlan({
-    name: "trySpider",
-    callback: (err, current, s) => {
-        if (err) return console.log(err);
-        const res = current.res;
-        const writeStream = fs.createWriteStream(`./${i++}.html`);
-        res.pipe(writeStream);  // 直接将返回的数据流传到写入流
-    }
-}))
+s.add("trySpider", streamPlan((s, c) => {
+  s.pipe(fs.createWriteStream(`${i++}.html`));
+  s.on("end", c.done);
+}));
+
 s.queue("trySpider", "http://www.baidu.com");
 s.queue("trySpider", "http://www.iqiyi.com");
