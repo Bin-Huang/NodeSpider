@@ -26,19 +26,40 @@ s
 
 当有新的任务添加到队列时，将触发 `addTask` 事件。该事件触发时，将传入参数 `task` 到监听器。
 
-// TODO: **ITask**
+```
+{
+  uid,  // string。任务的id
+  url,  // string。本次任务的请求链接
+  planName, // string。本次任务指定计划的名称
+  info, // object。任务附带的信息对象
+}
+```
 
 ## taskStart
 
 当爬虫开始一个新任务时，将触发 `taskStart` 事件。该事件触发时，将有参数 `task` 传入到监听器： 
 
-// TODO: **ITask**
+```
+{
+  uid,  // string。任务的id
+  url,  // string。本次任务的请求链接
+  planName, // string。本次任务指定计划的名称
+  info, // object。任务附带的信息对象
+}
+```
 
 ## taskDone
 
 当爬虫完成一个任务时，将触发 `taskDone` 事件。该事件触发时，将有参数 `task` 传入到监听器： 
 
-// TODO: **ITask**
+```
+{
+  uid,  // string。任务的id
+  url,  // string。本次任务的请求链接
+  planName, // string。本次任务指定计划的名称
+  info, // object。任务附带的信息对象
+}
+```
 
 ## queueEmpty
 
