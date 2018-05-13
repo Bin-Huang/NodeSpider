@@ -36,23 +36,23 @@ const s = new Spider()
 // 声明一个名为 data 的数据管道
 s.pipe(csvPipe({
   name: "data",
-  path: "./data.csv", // 数据将被写入到本地的 data.csv 文件
+  path: "./data.csv",
   items: ["title", "url"],
 }))
 
 // 声明一个名为 extract 的爬取计划
 s.plan(jqPlan({
   name: "extract",
-  toUtf8: true, // 自动转码返回正文为 utf8，再也不用担心编码问题
-  retries: 3, // 若失败则自动重试，但最多 3 次
+  toUtf8: true, // 自动转码为 utf8
+  retries: 3, // 失败自动重试
   handle: ($, current) => {
-    const title = $("title").text()  // 没错，jqPlan 让你可以使用 jQ
-    s.save("data", { title, url: current.url })  // 使用管道保存抓取的数据
-    s.addU("extract", $("a").urls())  // 将该页面的所有的新链接都作为新任务添加
+    const title = $("title").text() // 你想要的 jq 选择器
+    s.save("data", { title, url: current.url })
+    s.addU("extract", $("a").urls())
   },
 }))
 
-s.add("extract", "https://github.com/Bin-Huang/NodeSpider") // 添加第一个任务
+s.add("extract", "https://github.com/Bin-Huang/NodeSpider") // 添加任务
 ```
 
 # Document
