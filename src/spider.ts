@@ -47,6 +47,9 @@ export default class NodeSpider extends EventEmitter {
    */
   constructor(option: IOptions = {}) {
     super();
+    if (option && typeof option !== "object") {
+      throw new TypeError("option is NOT required, but it should be a object if passed");
+    }
     const opts = { ...defaultOption, ...option };
     this._STATE = {
       opts,
@@ -90,19 +93,15 @@ export default class NodeSpider extends EventEmitter {
   public filter(urls: string[]): string[] {
     if (!Array.isArray(urls)) {
       throw new TypeError(`urls is required and must be an array of strings`);
-    } else {
-      const s = new Set(urls);
-      const result: string[] = [];
-      for (const url of s) {
-        if (typeof url !== "string") {
-          throw new TypeError(`urls is required and must be an array of strings`);
-        }
-        if (!this.has(url)) {
-          result.push(url);
-        }
-      }
-      return result;
     }
+    for (const url of urls) {
+      if (typeof url !== "string") {
+        throw new TypeError(`urls is required and must be an array of strings`);
+      }
+    }
+
+    const set = new Set(urls);
+    return Array.from(set.values()).filter((u) => !this.has(u));
   }
 
   /**
@@ -136,11 +135,20 @@ export default class NodeSpider extends EventEmitter {
    * @param info attached information
    */
   public add(planName: string, url: string | string[], info: { [index: string]: any } = {}): string[] {
+    const urls = Array.isArray(url) ? url : [url];
+    for (const u of urls) {
+      if (typeof u !== "string") {
+        throw new TypeError("url is required and must be a string or an array of strings");
+      }
+    }
+    if (typeof planName !== "string") {
+      throw new TypeError("planName is required and must be a string");
+    }
+
     const plan = this._STATE.planStore.find((p) => p.name === planName);
     if (!plan) {
       throw new TypeError(`No such plan named "${planName}"`);
     }
-    const urls = Array.isArray(url) ? url : [url];
 
     const tasks: ITask[] = urls.map((u) => ({
       uid: this._STATE.opts.genUUID(),
@@ -191,8 +199,8 @@ export default class NodeSpider extends EventEmitter {
     }
 
     const d = (Array.isArray(pipe.items)) ?
-      pipe.items.map((item) => (typeof data[item] !== "undefined") ? data[item] : null)
-      : Object.entries(pipe.items).map(([ item, fn ]) => (typeof data[item] !== "undefined") ? fn(data[item]) : null);
+      pipe.items.map((item) => (typeof data[item] !== "undefined") ? data[item] : null) :
+        Object.entries(pipe.items).map(([ item, fn ]) => (typeof data[item] !== "undefined") ? fn(data[item]) : null);
 
     pipe.write(d);
   }
