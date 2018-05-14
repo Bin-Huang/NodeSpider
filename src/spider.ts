@@ -168,29 +168,6 @@ export default class NodeSpider extends EventEmitter {
     return this.add(planName, this.filter(urls), info);
   }
 
-  // public download(path: string, url: string, filename?: string) {
-  //     if (typeof path !== "string") {
-  //         throw new TypeError(`method download: the parameter 'path' should be a string`);
-  //     }
-  //     if (typeof url !== "string") {
-  //         throw new TypeError(`method download: the parameter 'url' should be a string`);
-  //     }
-  //     // 如果不存在与该path相对应的 download plan，则新建一个
-  //     if (! this._STATE.planStore.has(path)) {
-  //         const newPlan = downloadPlan({
-  //             callback: (err, current, s) => {
-  //                 if (err) {
-  //                     return s.retry(current, 3, () => console.log(err));
-  //                 }
-  //             },
-  //             path,
-  //         });
-  //         this.plan(name, newPlan);
-  //     }
-  //     // 添加下载链接 url 到队列
-  //     this.add(path, url, { filename });
-  // }
-
   /**
    * Save data through a pipe
    * @param  {string} pipeName pipe name
