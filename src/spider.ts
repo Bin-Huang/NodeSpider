@@ -77,27 +77,25 @@ export default class NodeSpider extends EventEmitter {
    */
   public has(url: string): boolean {
     if (typeof url !== "string") {
-      throw new TypeError(`the parameter of method isExist should be a string`);
+      throw new TypeError(`url is required and must be a string`);
     }
     return this._STATE.pool.has(url);
   }
 
   /**
    * 过滤掉一个数组中的重复链接，以及所有已被添加的链接，返回一个新数组
-   * @param urlArray {array}
+   * @param urls {array}
    * @returns {array}
    */
-  public filter(urlArray: string[]): string[] {
-    if (!Array.isArray(urlArray)) {
-      throw new TypeError("the parameter of the method filter is required, and can only be an array of strings");
+  public filter(urls: string[]): string[] {
+    if (!Array.isArray(urls)) {
+      throw new TypeError(`urls is required and must be an array of strings`);
     } else {
-      const s = new Set(urlArray);
+      const s = new Set(urls);
       const result: string[] = [];
       for (const url of s) {
         if (typeof url !== "string") {
-          throw new TypeError(
-            "the parameter of the method filter is required, and can only be an array of strings",
-          );
+          throw new TypeError(`urls is required and must be an array of strings`);
         }
         if (!this.has(url)) {
           result.push(url);
@@ -114,7 +112,7 @@ export default class NodeSpider extends EventEmitter {
    */
   public plan(plan: IPlan): void {
     if (this._STATE.planStore.find((p) => p.name === plan.name)) {
-      throw new TypeError(`method add: there already have a plan named "${plan.name}"`);
+      throw new TypeError(`The plan named "${plan.name}" already exists`);
     }
     this._STATE.planStore.push(plan);
   }
@@ -126,7 +124,7 @@ export default class NodeSpider extends EventEmitter {
    */
   public pipe(newPipe: IPipe): void {
     if (this._STATE.pipeStore.find((p) => p.name === newPipe.name)) {
-      throw new TypeError(`method connect: there already have a pipe named "${name}"`);
+      throw new TypeError(`The pipe named "${name}" already exists`);
     }
     this._STATE.pipeStore.push(newPipe);
   }
@@ -140,7 +138,7 @@ export default class NodeSpider extends EventEmitter {
   public add(planName: string, url: string | string[], info: { [index: string]: any } = {}): string[] {
     const plan = this._STATE.planStore.find((p) => p.name === planName);
     if (!plan) {
-      throw new TypeError(`method queue: no such plan named "${planName}"`);
+      throw new TypeError(`No such plan named "${planName}"`);
     }
     const urls = Array.isArray(url) ? url : [url];
 
@@ -201,14 +199,14 @@ export default class NodeSpider extends EventEmitter {
    */
   public save(pipeName: string, data: { [index: string]: any }) {
     if (typeof pipeName !== "string") {
-      throw new TypeError(`methdo save: the parameter "pipeName" should be a string`);
+      throw new TypeError(`pipeName is required and must be a string`);
     }
     if (typeof data !== "object") {
-      throw new TypeError(`method save: the parameter "data" should be an object`);
+      throw new TypeError(`data is required and must be a object`);
     }
     const pipe = this._STATE.pipeStore.find((p) => p.name === pipeName);
     if (!pipe) {
-      throw new TypeError(`method save: no such pipe named ${pipeName}`);
+      throw new TypeError(`No such pipe named ${pipeName}`);
     }
 
     if (! pipe.items) {

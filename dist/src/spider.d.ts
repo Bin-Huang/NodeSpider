@@ -20,10 +20,10 @@ export default class NodeSpider extends EventEmitter {
     has(url: string): boolean;
     /**
      * 过滤掉一个数组中的重复链接，以及所有已被添加的链接，返回一个新数组
-     * @param urlArray {array}
+     * @param urls {array}
      * @returns {array}
      */
-    filter(urlArray: string[]): string[];
+    filter(urls: string[]): string[];
     /**
      * add new plan
      * @param  {IPlan}  plan plan object
