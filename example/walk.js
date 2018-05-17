@@ -18,7 +18,7 @@ s.plan(jqPlan({
       s.addU("take a walk", $("a").urls());
     }
   },
-  onFailed: console.log,
+  failed: console.log,
 }));
 
 s.add("take a walk", "http://www.baidu.com");
