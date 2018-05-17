@@ -49,7 +49,8 @@ s.plan(jqPlan({
     const title = $("title").text() // 你想要的 jq 选择器
     console.log(title)
     s.save("data", {
-      count: $("body").text().length, url: current.url
+      count: $("body").text().length,
+      url: current.url,
     }) // 使用管道保存数据
     s.addU("extract", $("a").urls())  // 添加新任务
   },
