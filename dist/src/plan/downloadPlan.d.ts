@@ -18,7 +18,7 @@ export interface IOption {
     path: string;
     retries?: number;
     handle?: (current: ICurrent, s: Spider) => Promise<any> | any;
-    catch?: (error: Error, task: ITask, spider: Spider) => any;
+    failed?: (error: Error, task: ITask, spider: Spider) => any;
     requestOpts?: http.RequestOptions;
 }
 export default function downloadPlan(option: IOption): IPlan;

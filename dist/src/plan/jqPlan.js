@@ -6,7 +6,7 @@ const requestPlan_1 = require("./requestPlan");
 function jqPlan(option) {
     return requestPlan_1.default({
         name: option.name,
-        catch: option.catch,
+        failed: option.failed,
         retries: option.retries,
         toUtf8: option.toUtf8,
         requestOpts: option.requestOpts,

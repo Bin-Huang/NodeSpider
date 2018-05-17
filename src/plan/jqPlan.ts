@@ -17,7 +17,7 @@ export type IHandle =
 export interface IOption {
   name: string;
   handle: IHandle;
-  catch?: (error: Error, task: ITask, spider: Spider) => any;
+  failed?: (error: Error, task: ITask, spider: Spider) => any;
   retries?: number;
   toUtf8?: boolean;
   requestOpts?: http.RequestOptions;  // encoding 必须为 null
@@ -26,7 +26,7 @@ export interface IOption {
 export default function jqPlan(option: IOption): IPlan {
   return requestPlan({
     name: option.name,
-    catch: option.catch,
+    failed: option.failed,
     retries: option.retries,
     toUtf8: option.toUtf8,
     requestOpts: option.requestOpts,  // encoding 必须为 null

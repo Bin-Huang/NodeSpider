@@ -231,7 +231,7 @@ async function startTask(task: ITask, spider: NodeSpider) {
 
   const plan = spider._STATE.planStore.find((p) => p.name === task.planName) as IPlan;
   await pRetry(() => plan.process(task, spider), { retries: plan.retries })
-    .catch((err) => plan.catch(err, task, spider));
+    .catch((err) => plan.failed(err, task, spider));
 
   spider._STATE.currentTasks = spider._STATE.currentTasks.filter(({ uid }) => uid !== task.uid);
   spider.emit(event.taskDone, task);

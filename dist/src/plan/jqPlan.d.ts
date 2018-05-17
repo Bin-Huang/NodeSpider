@@ -8,7 +8,7 @@ export declare type IHandle = ($: IJq, current: ICurrent, spider: Spider) => any
 export interface IOption {
     name: string;
     handle: IHandle;
-    catch?: (error: Error, task: ITask, spider: Spider) => any;
+    failed?: (error: Error, task: ITask, spider: Spider) => any;
     retries?: number;
     toUtf8?: boolean;
     requestOpts?: http.RequestOptions;

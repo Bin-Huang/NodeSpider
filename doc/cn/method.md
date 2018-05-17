@@ -26,7 +26,7 @@ s.plan({
   process: async (task) => {
     console.log("from", task.info.from);  // 将打印 "from google"
   },
-  catch: console.log,
+  failed: console.log,
   retries: 3,
 });
 

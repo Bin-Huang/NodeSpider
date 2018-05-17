@@ -4,7 +4,7 @@ const charset = require("charset");
 const got = require("got");
 const iconv = require("iconv-lite");
 const defaultOption = {
-    catch: (error) => { throw error; },
+    failed: (error) => { throw error; },
     toUtf8: true,
     requestOpts: { encoding: null },
     retries: 3,
@@ -15,7 +15,7 @@ function requestPlan(option) {
     return {
         name: opts.name,
         retries: opts.retries,
-        catch: opts.catch,
+        failed: opts.failed,
         process: async (task, spider) => {
             const res = await got(task.url, opts.requestOpts);
             const current = Object.assign({}, task, { response: res, body: res.body.toString() });

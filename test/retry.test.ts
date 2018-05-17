@@ -7,7 +7,7 @@ import { IPlan } from "../src/interfaces";
 test("testing 1 for retry", async (t) => {
   const s = new Spider();
 
-  const catchSpy = sinon.spy();
+  const failedSpy = sinon.spy();
   const handleSpy = sinon.spy();
 
   const plan: IPlan = {
@@ -17,14 +17,14 @@ test("testing 1 for retry", async (t) => {
       handleSpy();
       throw new Error("error");
     },
-    catch: catchSpy,
+    failed: failedSpy,
     retries: 3,
   };
   s.plan(plan);
   s.add("test", "http://test1.com");
 
   await delay(10000);
-  t.is(1, catchSpy.callCount);
+  t.is(1, failedSpy.callCount);
   t.is(4, handleSpy.callCount);
 
 });
@@ -32,7 +32,7 @@ test("testing 1 for retry", async (t) => {
 test("testing 2 for retry", async (t) => {
   const s = new Spider();
 
-  const catchSpy = sinon.spy();
+  const failedSpy = sinon.spy();
   const handleSpy = sinon.spy();
 
   const plan: IPlan = {
@@ -42,14 +42,14 @@ test("testing 2 for retry", async (t) => {
       handleSpy();
       throw new Error("error");
     },
-    catch: catchSpy,
+    failed: failedSpy,
     retries: 1,
   };
   s.plan(plan);
   s.add("test", "http://test1.com");
 
   await delay(10000);
-  t.is(1, catchSpy.callCount);
+  t.is(1, failedSpy.callCount);
   t.is(2, handleSpy.callCount);
 
 });
@@ -57,7 +57,7 @@ test("testing 2 for retry", async (t) => {
 test("testing 3 for retry", async (t) => {
   const s = new Spider();
 
-  const catchSpy = sinon.spy();
+  const failedSpy = sinon.spy();
   const handleSpy = sinon.spy();
 
   let isErr = true;
@@ -73,13 +73,13 @@ test("testing 3 for retry", async (t) => {
         return null;
       }
     },
-    catch: catchSpy,
+    failed: failedSpy,
     retries: 4,
   };
   s.plan(plan);
   s.add("test", "http://test1.com");
 
   await delay(10000);
-  t.is(0, catchSpy.callCount);
+  t.is(0, failedSpy.callCount);
   t.is(2, handleSpy.callCount);
 });

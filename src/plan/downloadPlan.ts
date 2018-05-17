@@ -24,13 +24,13 @@ export interface IOption {
   path: string;
   retries?: number;
   handle?: (current: ICurrent, s: Spider) => Promise<any> | any;
-  catch?: (error: Error, task: ITask, spider: Spider) => any;
+  failed?: (error: Error, task: ITask, spider: Spider) => any;
   requestOpts?: http.RequestOptions;
 }
 const defaultOpts = {
   retries: 3,
   handle: (current: ICurrent, s: Spider) => null,
-  catch: (error: Error) => { throw error; },
+  failed: (error: Error) => { throw error; },
 };
 
 export default function downloadPlan(option: IOption): IPlan {
@@ -38,7 +38,7 @@ export default function downloadPlan(option: IOption): IPlan {
   return {
     name: opts.name,
     retries: opts.retries,
-    catch: opts.catch,
+    failed: opts.failed,
     process: async (task: ITask, spider: Spider) => {
       let filename: string; // 将url转化为合法的文件名
       if (task.info && typeof task.info.filename === "string") {

@@ -8,7 +8,7 @@ ava_1.default("test for method 'filter' & 'has'", async (t) => {
         name: "test",
         process: async () => null,
         retries: 3,
-        catch: () => null,
+        failed: () => null,
     });
     const url1 = "http://www.test.com/1";
     t.is(false, s.has(url1));

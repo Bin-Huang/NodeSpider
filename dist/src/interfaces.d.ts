@@ -4,7 +4,7 @@ export interface IPlan {
     name: string;
     retries: number;
     process: (task: ITask, spider: Spider) => Promise<any>;
-    catch: (error: Error, task: ITask, spider: Spider) => any;
+    failed: (error: Error, task: ITask, spider: Spider) => any;
 }
 export interface IQueue {
     add: (task: ITask) => void;

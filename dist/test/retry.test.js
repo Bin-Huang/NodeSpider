@@ -6,7 +6,7 @@ const sinon = require("sinon");
 const index_1 = require("../src/index");
 ava_1.default("testing 1 for retry", async (t) => {
     const s = new index_1.Spider();
-    const catchSpy = sinon.spy();
+    const failedSpy = sinon.spy();
     const handleSpy = sinon.spy();
     const plan = {
         name: "test",
@@ -15,18 +15,18 @@ ava_1.default("testing 1 for retry", async (t) => {
             handleSpy();
             throw new Error("error");
         },
-        catch: catchSpy,
+        failed: failedSpy,
         retries: 3,
     };
     s.plan(plan);
     s.add("test", "http://test1.com");
     await delay(10000);
-    t.is(1, catchSpy.callCount);
+    t.is(1, failedSpy.callCount);
     t.is(4, handleSpy.callCount);
 });
 ava_1.default("testing 2 for retry", async (t) => {
     const s = new index_1.Spider();
-    const catchSpy = sinon.spy();
+    const failedSpy = sinon.spy();
     const handleSpy = sinon.spy();
     const plan = {
         name: "test",
@@ -35,18 +35,18 @@ ava_1.default("testing 2 for retry", async (t) => {
             handleSpy();
             throw new Error("error");
         },
-        catch: catchSpy,
+        failed: failedSpy,
         retries: 1,
     };
     s.plan(plan);
     s.add("test", "http://test1.com");
     await delay(10000);
-    t.is(1, catchSpy.callCount);
+    t.is(1, failedSpy.callCount);
     t.is(2, handleSpy.callCount);
 });
 ava_1.default("testing 3 for retry", async (t) => {
     const s = new index_1.Spider();
-    const catchSpy = sinon.spy();
+    const failedSpy = sinon.spy();
     const handleSpy = sinon.spy();
     let isErr = true;
     const plan = {
@@ -62,13 +62,13 @@ ava_1.default("testing 3 for retry", async (t) => {
                 return null;
             }
         },
-        catch: catchSpy,
+        failed: failedSpy,
         retries: 4,
     };
     s.plan(plan);
     s.add("test", "http://test1.com");
     await delay(10000);
-    t.is(0, catchSpy.callCount);
+    t.is(0, failedSpy.callCount);
     t.is(2, handleSpy.callCount);
 });
 //# sourceMappingURL=retry.test.js.map

@@ -8,7 +8,7 @@ s._STATE.status = "pause";
 s.plan({
     name: "test",
     process: async () => null,
-    catch: () => null,
+    failed: () => null,
     retries: 3,
 });
 const addTaskHandler = sinon.spy();

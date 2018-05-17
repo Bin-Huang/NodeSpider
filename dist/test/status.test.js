@@ -19,7 +19,7 @@ ava_1.default("testing 2 for status", async (t) => {
             await delay(1000);
             return null;
         },
-        catch: () => null,
+        failed: () => null,
         retries: 3,
     });
     await delay(1000);
@@ -37,7 +37,7 @@ ava_1.default("testing 3 for status", async (t) => {
             await delay(1000);
             return null;
         },
-        catch: () => null,
+        failed: () => null,
         retries: 3,
     });
     await delay(1000);
@@ -60,7 +60,7 @@ ava_1.default("testing 4 for status", async (t) => {
             await delay(200);
             return null;
         },
-        catch: () => null,
+        failed: () => null,
         retries: 3,
     });
     await delay(4100);

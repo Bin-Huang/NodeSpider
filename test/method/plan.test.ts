@@ -9,7 +9,7 @@ test.serial("test for method 'plan'", async (t) => {
   const plan = {
     name: "test",
     process: sinon.spy(),
-    catch: sinon.spy(),
+    failed: sinon.spy(),
     retries: 3,
   };
   s.plan(plan);

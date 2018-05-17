@@ -19,14 +19,14 @@ export type IHandle =
 export interface IOption {
   name: string;
   handle: IHandle;
-  catch?: (error: Error, task: ITask, spider: Spider) => any;
+  failed?: (error: Error, task: ITask, spider: Spider) => any;
   retries?: number;
   toUtf8?: boolean;
   requestOpts?: http.RequestOptions;  // encoding 必须为 null
 }
 
 const defaultOption = {
-  catch: (error) => { throw error; },
+  failed: (error) => { throw error; },
   toUtf8: true,
   requestOpts: { encoding: null },  // 当输入 option 有requestOpts 设置，将可能导致encoding 不为 null
   retries: 3,
@@ -44,7 +44,7 @@ export default function requestPlan(option: IOption): IPlan {
   return {
     name: opts.name,
     retries: opts.retries,
-    catch: opts.catch,
+    failed: opts.failed,
     process: async (task, spider) => {
       const res: got.Response<Buffer> = await got(task.url, opts.requestOpts);
       const current = { ...task, response: res, body: res.body.toString() };

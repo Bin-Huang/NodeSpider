@@ -15,7 +15,7 @@ s.plan({
     console.log(res.body)
   },
   retries: 3,
-  catch: (e) => console.log(e),
+  failed: (e) => console.log(e),
 })
 s.add("showBody", "https://github.com/Bin-Huang/NodeSpider")
 ```
@@ -45,7 +45,7 @@ plan object 封装了计划名称、对任务进行的操作、任务操作失�
   name, // 计划名称
   process,  // 对任务进行的操作
   retries,  // 任务操作失败后的重试次数
-  catch,  // 达到最大重试次数后的错误处理
+  failed,  // 达到最大重试次数后的错误处理
 }
 ```
 
@@ -70,11 +70,11 @@ Spider 会调用 `process` 以执行任务。当调用时，将传入两个参�
   - `info`  当前任务附带的 info 对象。*object*
 - `spider` 当前爬虫实例对象
 
-当执行 `process` 返回的 promise 进入 fulfilled 状态则代表任务成功完成，而当进入 rejected 状态则代表任务失败。任务失败时，Spider 会自动重试，直到达到最大重试次数，这时将调用 `catch` 函数。
+当执行 `process` 返回的 promise 进入 fulfilled 状态则代表任务成功完成，而当进入 rejected 状态则代表任务失败。任务失败时，Spider 会自动重试，直到达到最大重试次数，这时将调用 `failed` 函数。
 
-**catch**
+**failed**
 
-当任务失败，并且重试次数达到最大次数时，将调用 catch 函数，这时将传入三个参数 `error`, `task` 与 `spider`：
+当任务失败，并且重试次数达到最大次数时，将调用 failed 函数，这时将传入三个参数 `error`, `task` 与 `spider`：
 
 - `error` 任务失败时捕获的错误
 - `task` 当前任务
@@ -84,7 +84,7 @@ Spider 会调用 `process` 以执行任务。当调用时，将传入两个参�
   - `info`  当前任务附带的 info 对象。*object*
 - `spider` 当前爬虫实例对象
 
-catch 可以是普通函数、async function 或返回 promise 的函数，当 catch 执行结束，或者返回的 promise 进入 fulfilled 阶段，则认为当前任务已经结束。
+failed 可以是普通函数、async function 或返回 promise 的函数，当 failed 执行结束，或者返回的 promise 进入 fulfilled 阶段，则认为当前任务已经结束。
 
 ## 内置 Plan 模板
 
@@ -150,9 +150,9 @@ s.plan(requestPlan({
 
 *number*。当任务失败时，最多重试多少次。默认为 `3`。NodeSpider 会在任务失败时自动进行重试。
 
-**catch**（可选）
+**failed**（可选）
 
-当任务失败，且重试次数超过重试次数限制后，将执行 `catch` 函数，这时有三个参数 `error`, `task`, `spider` 传入：
+当任务失败，且重试次数超过重试次数限制后，将执行 `failed` 函数，这时有三个参数 `error`, `task`, `spider` 传入：
 
 - `error` 报错 Error
 - `task`  当前失败任务的信息
@@ -162,7 +162,7 @@ s.plan(requestPlan({
   - `info`  当前任务附带的 info 对象。*object*
 - `spider`  爬虫实例对象
 
-`catch` 函数可以是普通函数、async function 或者返回 promise 的函数。如果 `catch` 未被设置，将默认抛出错误。
+`failed` 函数可以是普通函数、async function 或者返回 promise 的函数。如果 `failed` 未被设置，将默认抛出错误。
 
 **requestOpts**（可选）
 
@@ -225,9 +225,9 @@ s.plan(jqPlan({
 
 *number*。当任务失败时，最多重试多少次。默认为 `3`。NodeSpider 会在任务失败时自动进行重试。
 
-**catch**（可选）
+**failed**（可选）
 
-当任务失败，且重试次数超过重试次数限制后，将执行 `catch` 函数，这时有三个参数 `error`, `task`, `spider` 传入：
+当任务失败，且重试次数超过重试次数限制后，将执行 `failed` 函数，这时有三个参数 `error`, `task`, `spider` 传入：
 
 - `error` 报错 Error
 - `task`  当前失败任务的信息
@@ -237,7 +237,7 @@ s.plan(jqPlan({
   - `info`  当前任务附带的 info 对象。*object*
 - `spider`  爬虫实例对象
 
-`catch` 函数可以是普通函数、async function 或者返回 promise 的函数。如果 `catch` 未被设置，将默认抛出错误。
+`failed` 函数可以是普通函数、async function 或者返回 promise 的函数。如果 `failed` 未被设置，将默认抛出错误。
 
 **requestOpts**（可选）
 
@@ -292,9 +292,9 @@ s.plan(downloadPlan({
 
 `handle` 函数可以是普通函数、async function 或者返回 `promise` 的函数
 
-**catch**（可选）
+**failed**（可选）
 
-当任务失败，且重试次数超过重试次数限制后，将执行 `catch` 函数，这时有三个参数 `error`, `task`, `spider` 传入：
+当任务失败，且重试次数超过重试次数限制后，将执行 `failed` 函数，这时有三个参数 `error`, `task`, `spider` 传入：
 
 - `error` 报错 Error
 - `task`  当前失败任务的信息
@@ -304,7 +304,7 @@ s.plan(downloadPlan({
   - `info`  当前任务附带的 info 对象。*object*
 - `spider`  爬虫实例对象
 
-`catch` 函数可以是普通函数、async function 或者返回 promise 的函数。如果 `catch` 未被设置，将默认抛出错误。
+`failed` 函数可以是普通函数、async function 或者返回 promise 的函数。如果 `failed` 未被设置，将默认抛出错误。
 
 **requestOpts**（可选）
 

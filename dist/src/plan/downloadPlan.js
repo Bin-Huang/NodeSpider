@@ -7,14 +7,14 @@ const path = require("path");
 const defaultOpts = {
     retries: 3,
     handle: (current, s) => null,
-    catch: (error) => { throw error; },
+    failed: (error) => { throw error; },
 };
 function downloadPlan(option) {
     const opts = Object.assign({}, defaultOpts, option);
     return {
         name: opts.name,
         retries: opts.retries,
-        catch: opts.catch,
+        failed: opts.failed,
         process: async (task, spider) => {
             let filename; // 将url转化为合法的文件名
             if (task.info && typeof task.info.filename === "string") {

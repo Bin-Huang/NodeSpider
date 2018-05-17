@@ -9,7 +9,7 @@ export interface IOption {
     name: string;
     handle: (stream: got.GotEmitter & stream.Duplex, done: (e?: Error) => any, current: ITask, s: Spider) => any;
     retries?: number;
-    catch?: (error: Error, task: ITask, spider: Spider) => any;
+    failed?: (error: Error, task: ITask, spider: Spider) => any;
     requestOpts?: http.RequestOptions;
 }
 export default function streamPlan(option: IOption): IPlan;

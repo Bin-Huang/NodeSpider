@@ -24,7 +24,7 @@ test("testing 2 for status", async (t) => {
       await delay(1000);
       return null;
     },
-    catch: () => null,
+    failed: () => null,
     retries: 3,
   });
 
@@ -46,7 +46,7 @@ test("testing 3 for status", async (t) => {
       await delay(1000);
       return null;
     },
-    catch: () => null,
+    failed: () => null,
     retries: 3,
   });
 
@@ -76,7 +76,7 @@ test("testing 4 for status", async (t) => {
       await delay(200);
       return null;
     },
-    catch: () => null,
+    failed: () => null,
     retries: 3,
   });
 
