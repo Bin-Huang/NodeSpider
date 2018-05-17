@@ -21,3 +21,7 @@ s.plan(jqPlan({
 }));
 
 s.add("take a walk", "http://www.baidu.com");
+
+/**
+ * 注意，当抓取到一定数量后，百度将对 ip 限速甚至屏蔽。这只是一个例子。
+ */
