@@ -11,8 +11,7 @@ import requestPlan from "./requestPlan";
 import { ICurrent } from "./requestPlan";
 
 export type IHandle =
-  ($: IJq, current: ICurrent, spider: Spider)
-    => any | Promise<any>;
+  ($: IJq, current: ICurrent, spider: Spider) => any | Promise<any>;
 
 export interface IOption {
   name: string;

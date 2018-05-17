@@ -21,8 +21,8 @@ export interface IRequestPlan {
     (name: string, handle: IHandle): IPlan;
     (option: IOption): IPlan;
 }
-export default function requestPlan(option: IOption): IPlan;
+export default function requestPlan({name, handle, failed, toUtf8, requestOpts, retries}: IOption): IPlan;
 /**
  * 根据当前任务的response.header和response.body中的编码格式，将currentTask.body转码为utf8格式
  */
-export declare function toUtf8(res: got.Response<Buffer>): string;
+export declare function decodeToUtf8(res: got.Response<Buffer>): string;

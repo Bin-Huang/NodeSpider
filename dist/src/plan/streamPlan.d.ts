@@ -12,4 +12,4 @@ export interface IOption {
     failed?: (error: Error, task: ITask, spider: Spider) => any;
     requestOpts?: http.RequestOptions;
 }
-export default function streamPlan(option: IOption): IPlan;
+export default function streamPlan({name, requestOpts, handle, retries, failed}: IOption): IPlan;

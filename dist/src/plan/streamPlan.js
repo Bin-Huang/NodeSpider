@@ -1,19 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const got = require("got");
-const defaultOption = {
-    retries: 3,
-    failed: (err) => { throw err; },
-};
-function streamPlan(option) {
-    const opts = Object.assign({}, defaultOption, option);
+function streamPlan({ name, requestOpts, handle, retries = 3, failed = (err) => { throw err; }, }) {
     return {
-        name: opts.name,
-        retries: opts.retries,
-        failed: opts.failed,
+        name,
+        retries,
+        failed,
         process: async (task, spider) => {
             return new Promise((resolve, reject) => {
-                const flow = got.stream(task.url, opts.requestOpts);
+                const flow = got.stream(task.url, requestOpts);
                 const done = (err) => {
                     if (err) {
                         reject(err);
@@ -22,7 +17,7 @@ function streamPlan(option) {
                         resolve();
                     }
                 };
-                opts.handle(flow, done, task, spider);
+                handle(flow, done, task, spider);
             });
         },
     };

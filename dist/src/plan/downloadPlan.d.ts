@@ -21,4 +21,4 @@ export interface IOption {
     failed?: (error: Error, task: ITask, spider: Spider) => any;
     requestOpts?: http.RequestOptions;
 }
-export default function downloadPlan(option: IOption): IPlan;
+export default function downloadPlan({name, path, requestOpts, retries, handle, failed}: IOption): IPlan;

@@ -3,18 +3,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const filenamifyUrl = require("filenamify-url");
 const fs = require("fs-extra");
 const got = require("got");
-const path = require("path");
+const path_1 = require("path");
 const defaultOpts = {
     retries: 3,
     handle: (current, s) => null,
     failed: (error) => { throw error; },
 };
-function downloadPlan(option) {
-    const opts = Object.assign({}, defaultOpts, option);
+function downloadPlan({ name, path, requestOpts, retries = 3, handle = (current, s) => null, failed = (error) => { throw error; }, }) {
     return {
-        name: opts.name,
-        retries: opts.retries,
-        failed: opts.failed,
+        name,
+        retries,
+        failed,
         process: async (task, spider) => {
             let filename; // 将url转化为合法的文件名
             if (task.info && typeof task.info.filename === "string") {
@@ -23,9 +22,9 @@ function downloadPlan(option) {
             else {
                 filename = filenamifyUrl(task.url); // 将url转化为合法的文件名
             }
-            const filepath = path.resolve(opts.path, filename); // 安全地拼接保存路径
-            await downloadAsync(task.url, filepath, opts.requestOpts);
-            await opts.handle(Object.assign({}, task, { filepath }), spider);
+            const filepath = path_1.resolve(path, filename); // 安全地拼接保存路径
+            await downloadAsync(task.url, filepath, requestOpts);
+            await handle(Object.assign({}, task, { filepath }), spider);
         },
     };
 }

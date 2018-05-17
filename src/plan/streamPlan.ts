@@ -12,20 +12,20 @@ export interface IOption {
   requestOpts?: http.RequestOptions;
 }
 
-const defaultOption = {
-  retries: 3,
-  failed: (err: Error) => { throw err; },
-};
-
-export default function streamPlan(option: IOption): IPlan {
-  const opts = { ...defaultOption, ...option };
+export default function streamPlan({
+  name,
+  requestOpts,
+  handle,
+  retries = 3,
+  failed = (err: Error) => { throw err; },
+}: IOption): IPlan {
   return {
-    name: opts.name,
-    retries: opts.retries,
-    failed: opts.failed,
+    name,
+    retries,
+    failed,
     process: async (task, spider) => {
       return new Promise((resolve, reject) => {
-        const flow = got.stream(task.url, opts.requestOpts);
+        const flow = got.stream(task.url, requestOpts);
         const done = (err?: Error) => {
           if (err) {
             reject(err);
@@ -33,7 +33,7 @@ export default function streamPlan(option: IOption): IPlan {
             resolve();
           }
         };
-        opts.handle(flow, done, task, spider);
+        handle(flow, done, task, spider);
       });
     },
   };
