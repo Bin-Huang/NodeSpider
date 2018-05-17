@@ -3,12 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const cheerio = require("cheerio");
 const url = require("url");
 const requestPlan_1 = require("./requestPlan");
-const defaultOption = {
-    toUtf8: true,
-    requestOpts: { encoding: null },
-    catch: (error) => { throw error; },
-    retries: 3,
-};
 function jqPlan(option) {
     return requestPlan_1.default({
         name: option.name,
@@ -21,20 +15,6 @@ function jqPlan(option) {
             await option.handle($, current, spider);
         },
     });
-    // const requestOpts = (option.requestOpts) ? { ...defaultOption.requestOpts, ...option.requestOpts }   ;
-    // const opts = { ...defaultOption, ...option, requestOpts };
-    // return {
-    //   name: opts.name,
-    //   retries: opts.retries,
-    //   catch: opts.catch,
-    //   process: async (task, spider) => {
-    //     const res: got.Response<Buffer> = await got(task.url, opts.requestOpts);
-    //     const current = { ...task, response: res, body: res.body.toString() };
-    //     if (opts.toUtf8) { current.body = preToUtf8(current.response as got.Response<Buffer>); }
-    //     const $ = loadJq(current);
-    //     return await opts.handle($, current, spider);
-    //   },
-    // };
 }
 exports.default = jqPlan;
 /**

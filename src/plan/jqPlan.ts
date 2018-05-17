@@ -23,13 +23,6 @@ export interface IOption {
   requestOpts?: http.RequestOptions;  // encoding 必须为 null
 }
 
-const defaultOption = {
-  toUtf8: true,
-  requestOpts: { encoding: null },  // 当输入 option 有requestOpts 设置，将可能导致encoding 不为 null
-  catch: (error) => { throw error; },
-  retries: 3,
-};
-
 export default function jqPlan(option: IOption): IPlan {
   return requestPlan({
     name: option.name,
@@ -42,22 +35,6 @@ export default function jqPlan(option: IOption): IPlan {
       await option.handle($, current, spider);
     },
   });
-  // const requestOpts = (option.requestOpts) ? { ...defaultOption.requestOpts, ...option.requestOpts }   ;
-  // const opts = { ...defaultOption, ...option, requestOpts };
-  // return {
-  //   name: opts.name,
-  //   retries: opts.retries,
-  //   catch: opts.catch,
-  //   process: async (task, spider) => {
-  //     const res: got.Response<Buffer> = await got(task.url, opts.requestOpts);
-  //     const current = { ...task, response: res, body: res.body.toString() };
-
-  //     if (opts.toUtf8) { current.body = preToUtf8(current.response as got.Response<Buffer>); }
-  //     const $ = loadJq(current);
-
-  //     return await opts.handle($, current, spider);
-  //   },
-  // };
 }
 
 export interface IJq extends CheerioStatic {
