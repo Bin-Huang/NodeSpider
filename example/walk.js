@@ -7,10 +7,6 @@ const { Spider, jqPlan } = require("../dist/src/index");
 const s = new Spider();
 
 s.on("statusChange", (c, p) => console.log(`${p} -> ${c}`));
-// s.on("addTask", (task) => console.log(task.uid));
-// s.on("goodbye", () => console.log("goodbye"));
-// s.on("heartbeat", () => console.log("b"));
-// s.on("queueEmpty", () => console.log("empty"));
 
 let i = 0;
 s.plan(jqPlan({
