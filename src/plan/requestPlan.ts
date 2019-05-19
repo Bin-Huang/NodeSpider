@@ -22,7 +22,7 @@ export interface IOption {
   failed?: (error: Error, task: ITask, spider: Spider) => any;
   retries?: number;
   toUtf8?: boolean;
-  requestOpts?: http.RequestOptions;  // encoding 必须为 null
+  requestOpts?: http.RequestOptions & { encoding: null };  // encoding 必须为 null
 }
 
 const defaultOption = {
@@ -54,7 +54,7 @@ export default function requestPlan({
     retries,
     failed,
     process: async (task, spider) => {
-      const res: got.Response<Buffer> = await got(task.url, requestOpts);
+      const res: got.Response<Buffer> = await got(task.url, requestOpts) as any
       const current = { ...task, response: res, body: res.body.toString() };
 
       if (toUtf8) { current.body = decodeToUtf8(current.response as got.Response<Buffer>); }

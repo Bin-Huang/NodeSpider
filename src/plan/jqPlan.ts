@@ -19,7 +19,7 @@ export interface IOption {
   failed?: (error: Error, task: ITask, spider: Spider) => any;
   retries?: number;
   toUtf8?: boolean;
-  requestOpts?: http.RequestOptions;  // encoding 必须为 null
+  requestOpts?: http.RequestOptions & { encoding: null };  // encoding 必须为 null
 }
 
 export default function jqPlan(option: IOption): IPlan {
