@@ -3,33 +3,39 @@ export type IFunc = (data: any) => any
 class Pipeline {
   static Trim: new () => Pipeline
 
-  private pipes: Pipeline[]
+  private prePipes: Pipeline[]
   private func: (data: any) => any
-  constructor(func: Pipeline | IFunc = (d) => d) {
-    this.pipes = []
-    if (func instanceof Pipeline) {
-      this.func = (d) => d
-      this.pipes.push(func)
-    } else {
+  constructor(func: IFunc | Pipeline | (IFunc | Pipeline)[] = (d) => d) {
+    if (func instanceof Function) {
       this.func = func
+      this.prePipes = []
+    } else if (func instanceof Pipeline) {
+      this.func = (d) => d
+      this.prePipes = [ func ]
+    } else if (Array.isArray(func)) {
+      this.func = (d) => d
+      this.prePipes = func.map(raw => {
+        if (raw instanceof Pipeline) {
+          return raw
+        } else if (raw instanceof Function) {
+          return new Pipeline(raw)
+        } else {
+          throw new Error('Invalid parameters')
+        }
+      })
     }
   }
 
   public to(pipe: Pipeline | IFunc) {
-    if (pipe instanceof Pipeline) {
-      this.pipes.push(pipe)
-    } else {
-      this.pipes.push(new Pipeline(pipe))
-    }
-    return this
+    return new Pipeline([ this, pipe ])
   }
 
   public async save(data: any) {
-    let d = this.func(data)
-    for (const pipe of this.pipes) {
+    let d = data
+    for (const pipe of this.prePipes) {
       d = await pipe.save(d)
     }
-    return d
+    return this.func(d)
   }
 
 }
