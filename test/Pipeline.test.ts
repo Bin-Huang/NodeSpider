@@ -25,15 +25,10 @@ test('Test Pipeline processing sequence', async (t) => {
 
 test('Test Pipeline stateless', async (t) => {
   let data = { s: '0' }
-
   const pre = new Pipeline((d) => ({ ...d, p0: true }))
-
   const pl = new Pipeline(pre).to((d) => ({ ...d, p1: true }))
-
   pre.to((d) => ({ ...d, p3: true }))
-
   pl.to((d) => ({ ...d, p4: true }))
-
   t.deepEqual(await pl.save(data), { ...data, p0: true, p1: true })
 })
 
