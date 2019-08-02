@@ -5,29 +5,20 @@ class Pipeline {
 
   private prePipes: Pipeline[]
   private func: (data: any) => any
-  constructor(func: IFunc | Pipeline | (IFunc | Pipeline)[] = (d) => d) {
+  constructor(func: IFunc | Pipeline = (d) => d, prePipe?: Pipeline) {
+    this.prePipes = prePipe ? [ prePipe ] : []
     if (func instanceof Function) {
       this.func = func
-      this.prePipes = []
     } else if (func instanceof Pipeline) {
+      this.prePipes.push(func)
       this.func = (d) => d
-      this.prePipes = [ func ]
-    } else if (Array.isArray(func)) {
-      this.func = (d) => d
-      this.prePipes = func.map(raw => {
-        if (raw instanceof Pipeline) {
-          return raw
-        } else if (raw instanceof Function) {
-          return new Pipeline(raw)
-        } else {
-          throw new Error('Invalid parameters')
-        }
-      })
+    } else {
+      throw new Error('invalid parameters')
     }
   }
 
   public to(pipe: Pipeline | IFunc) {
-    return new Pipeline([ this, pipe ])
+    return new Pipeline(pipe, this)
   }
 
   public async save(data: any) {
