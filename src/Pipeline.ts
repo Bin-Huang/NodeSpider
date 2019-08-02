@@ -1,11 +1,11 @@
-export type IFunc = (data: any) => any
+export type IFunc<D extends { [x: string]: any }, R> = (data: D) => R | Promise<R>
 
-class Pipeline {
-  static Trim: new () => Pipeline
+class Pipeline<D, R> {
+  static Trim: new () => Pipeline<any, any>
 
-  private prePipes: Pipeline[]
+  private prePipes: Pipeline<any, any>[]
   private func: (data: any) => any
-  constructor(func: IFunc | Pipeline = (d) => d, prePipe?: Pipeline) {
+  constructor(func: IFunc<D, R> | Pipeline<D, R> = (d) => d as any, prePipe?: Pipeline<any, D>) {
     this.prePipes = prePipe ? [ prePipe ] : []
     if (func instanceof Function) {
       this.func = func
@@ -17,7 +17,7 @@ class Pipeline {
     }
   }
 
-  public to(pipe: Pipeline | IFunc) {
+  public to<N>(pipe: Pipeline<R, N> | IFunc<R, N>): Pipeline<R, N> {
     return new Pipeline(pipe, this)
   }
 
@@ -31,7 +31,7 @@ class Pipeline {
 
 }
 
-class Trim extends Pipeline {
+class Trim<D, R> extends Pipeline<D, R> {
   constructor() {
     const convert = (data: any) => {
       for (const key of Object.keys(data)) {
