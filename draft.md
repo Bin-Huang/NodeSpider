@@ -6,15 +6,14 @@ const csv = new Pipe()
   .to(new Pipe.Trim())
   .to(new Pipe((data) => ({ ...data, name: 'ben' })))
   .to((data) => ({ ...data, name: 'ben' }))
-  .to(new Pipe.Csv('hello.csv'))
-  .onError((e) => console.log(e))
+  .to(new Pipe.Csv('hello.csv', (e) => console.log(e)))
 
 const queue = new Queues.SimpleQueue({
   allowDuplicate: true,
   defaultMaxRetries: 3,
   stillAlive: true, // refactor it
   onFailed(e, current, this) {
-    // this.retry(current, { maxRetries: 3 })
+    // after retries
   }
 })
 
@@ -32,6 +31,8 @@ const extractUrls = new Actions.Request('html'))
     const urls = $('a').getUrls()
     queue.add(urls)
   })
+
+extractUrls.exec({ uri: 'http://www.baidu.com' })
 
 queue.handle(extractUrls, { concurrency: 100 })
 ```
