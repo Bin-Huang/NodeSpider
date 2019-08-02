@@ -1,18 +1,18 @@
 import Base, { IFunc } from './Base'
 
-class Pipeline<D, R> extends Base<D, R> {
+class Pipeline<I, O> extends Base<I, O> {
 
   static Trim: new <T>() => Pipeline<T, T>
 
-  constructor(func: IFunc<D, R> | Pipeline<D, R> = (d) => d as any, prePipe?: Pipeline<any, D>) {
+  constructor(func: IFunc<I, O> | Pipeline<I, O> = (d) => d as any, prePipe?: Pipeline<any, I>) {
     super(func, prePipe)
   }
 
-  public to<N>(pipe: Pipeline<R, N> | IFunc<R, N>): Pipeline<R, N> {
-    return new Pipeline(pipe, this)
+  public to<N>(pipe: Pipeline<O, N> | IFunc<O, N>): Pipeline<I, N> {
+    return new Pipeline(pipe as Pipeline<any, N>, this)
   }
 
-  public async save(data: D) {
+  public async save(data: I) {
     return this.exec(data)
   }
 
