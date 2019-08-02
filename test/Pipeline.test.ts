@@ -18,7 +18,7 @@ test('Test Action stateless', async (t) => {
   const pl = new Pipeline(pre).to((d) => ({ ...d, p1: true }))
   pre.to((d) => ({ ...d, p3: true }))
   pl.to((d) => ({ ...d, p4: true }))
-  t.deepEqual(await pl.save(data), { ...data, p1: true })
+  t.deepEqual(await pl.save(data), { ...data, p0: true, p1: true })
 })
 
 test('Test Action types', async (t) => {

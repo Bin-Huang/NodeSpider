@@ -16,14 +16,14 @@ class Base<I, O> {
     }
   }
 
-  protected next<N>(action: Base<O, N> | IFunc<O, N>): Base<O, N> {
+  protected connect<N>(action: Base<O, N> | IFunc<O, N>): Base<O, N> {
     return new Base(action, this)
   }
 
-  protected async exec(task: I) {
+  protected async run(task: I) {
     let t = task
     for (const action of this.preActions) {
-      t = await action.exec(t)
+      t = await action.run(t)
     }
     return this.func(t)
   }

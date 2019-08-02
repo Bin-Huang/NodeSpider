@@ -13,7 +13,7 @@ class Pipeline<I, O> extends Base<I, O> {
   }
 
   public async save(data: I) {
-    return this.exec(data)
+    return this.run(data)
   }
 
 }
