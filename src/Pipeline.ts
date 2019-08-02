@@ -1,7 +1,8 @@
-
 export type IFunc = (data: any) => any
 
-export default class Pipeline {
+class Pipeline {
+  static Trim: new () => Pipeline
+
   private pipes: Pipeline[]
   private func: (data: any) => any
   constructor(func: Pipeline | IFunc = (d) => d) {
@@ -32,3 +33,22 @@ export default class Pipeline {
   }
 
 }
+
+class Trim extends Pipeline {
+  constructor() {
+    const convert = (data: any) => {
+      for (const key of Object.keys(data)) {
+        const value = data[key]
+        if (typeof value === 'string') {
+          data[key] = value.trim()
+        }
+      }
+      return data
+    }
+    super(convert)
+  }
+}
+
+Pipeline.Trim = Trim
+
+export default Pipeline

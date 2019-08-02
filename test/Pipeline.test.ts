@@ -13,3 +13,13 @@ test('Test Pipeline scaffold', async (t) => {
 
   await pl.save(data)
 })
+
+test('Test Pipeline Trim', async (t) => {
+  let data = { num: 0, str: '   demo value ', bool: true }
+
+  const pl = new Pipeline()
+    .to(new Pipeline.Trim())
+    .to((d) => t.deepEqual(d, { num: 0, str: 'demo value', bool: true }))
+
+  await pl.save(data)
+})
