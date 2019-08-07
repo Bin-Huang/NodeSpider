@@ -1,15 +1,15 @@
 import Base, { IFunc } from './Base'
 
-class Pipeline<I, O> extends Base<I, O> {
+class Pipe<I, O> extends Base<I, O> {
 
-  static Trim: new <T>() => Pipeline<T, T>
+  static Trim: new <T>() => Pipe<T, T>
 
-  constructor(func: IFunc<I, O> | Pipeline<I, O> = (d) => d as any, prePipe?: Pipeline<any, I>) {
+  constructor(func: IFunc<I, O> | Pipe<I, O> = (d) => d as any, prePipe?: Pipe<any, I>) {
     super(func, prePipe)
   }
 
-  public to<N>(pipe: Pipeline<O, N> | IFunc<O, N>): Pipeline<I, N> {
-    return new Pipeline(pipe as Pipeline<any, N>, this)
+  public to<N>(pipe: Pipe<O, N> | IFunc<O, N>): Pipe<I, N> {
+    return new Pipe(pipe as Pipe<any, N>, this)
   }
 
   public async save(data: I) {
@@ -18,7 +18,7 @@ class Pipeline<I, O> extends Base<I, O> {
 
 }
 
-class Trim<T> extends Pipeline<T, T> {
+class Trim<T> extends Pipe<T, T> {
   constructor() {
     const convert = (data: any) => {
       for (const key of Object.keys(data)) {
@@ -33,6 +33,6 @@ class Trim<T> extends Pipeline<T, T> {
   }
 }
 
-Pipeline.Trim = Trim
+Pipe.Trim = Trim
 
-export default Pipeline
+export default Pipe

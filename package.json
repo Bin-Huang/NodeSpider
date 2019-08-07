@@ -31,7 +31,7 @@
     "@types/sinon": "4.3.1"
   },
   "scripts": {
-    "test": "ava dist/test",
+    "test": "tsc && ava dist/test",
     "clean": "rm -rf dist && mkdir dist",
     "refresh": "rm -rf dist && mkdir dist && tsc",
     "prepublish": "tsc && npm test"
